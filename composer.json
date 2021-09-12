@@ -1,0 +1,14 @@
+{
+    "name": "phalcon/debugbar",
+    "description": "Web Debug bar for Phalcon Framework",
+    "keywords": [
+        "php",
+        "phalcon",
+        "debugbar"
+    ],
+    "license": "MIT",
+    "require": {
+        "php": ">=7.4",
+        "ext-phalcon": ">=4.0.0"
+    }
+}
