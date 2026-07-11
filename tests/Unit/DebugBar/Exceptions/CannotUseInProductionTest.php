@@ -13,8 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Unit\DebugBar\Exceptions;
 
+use Phalcon\DebugBar\Contracts\DebugBarThrowable;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
-use Phalcon\DebugBar\Exceptions\DebugBarThrowable;
 use Phalcon\DebugBar\Exceptions\Exception;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Throwable;
@@ -29,7 +29,7 @@ final class CannotUseInProductionTest extends AbstractUnitTestCase
         $this->assertInstanceOf(Throwable::class, $exception);
     }
 
-    public function testIsDebugBarThrowableAndPackageException(): void
+    public function testIsThrowableMarkerAndPackageException(): void
     {
         $exception = new CannotUseInProduction('nope');
 

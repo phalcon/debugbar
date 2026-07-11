@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\Exceptions;
 
 use Exception as BaseException;
+use Phalcon\DebugBar\Contracts\DebugBarThrowable;
 
 /**
  * Base exception for the debug bar package.

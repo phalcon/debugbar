@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Phalcon\DebugBar\Exceptions;
+namespace Phalcon\DebugBar\Contracts;
 
 use Throwable;
 
