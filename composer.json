@@ -41,8 +41,12 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Phalcon\\Tests\\": "tests/"
-        }
+            "Phalcon\\Tests\\": "tests/",
+            "Phalcon\\Tests\\Support\\": "tests/support/"
+        },
+        "exclude-from-classmap": [
+            "tests/support/assets/"
+        ]
     },
     "config": {
         "sort-packages": true,
