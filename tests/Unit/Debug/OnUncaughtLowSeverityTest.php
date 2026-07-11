@@ -38,7 +38,12 @@ final class OnUncaughtLowSeverityTest extends AbstractUnitTestCase
         $previous = error_reporting(error_reporting() | E_WARNING);
 
         try {
-            $debug->onUncaughtLowSeverity(E_WARNING, 'Test warning message', __FILE__, __LINE__);
+            $debug->onUncaughtLowSeverity(
+                E_WARNING,
+                'Test warning message',
+                __FILE__,
+                __LINE__
+            );
         } finally {
             error_reporting($previous);
         }

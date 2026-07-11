@@ -14,7 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\Debug;
 
 use Phalcon\Debug;
-use Phalcon\Debug\Exception;
+use Phalcon\Debug\Exceptions\RequestHalted;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
 final class HaltTest extends AbstractUnitTestCase
@@ -25,7 +25,7 @@ final class HaltTest extends AbstractUnitTestCase
      */
     public function testSupportDebugHalt(): void
     {
-        $this->expectException(Exception::class);
+        $this->expectException(RequestHalted::class);
         $this->expectExceptionMessage('Halted request');
         $debug = new Debug();
         $debug->halt();

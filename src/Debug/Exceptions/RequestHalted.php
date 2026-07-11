@@ -13,9 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\Debug\Exceptions;
 
-use Phalcon\Debug\Exception as DebugException;
-
-class RequestHalted extends DebugException
+class RequestHalted extends Exception
 {
     public function __construct()
     {
