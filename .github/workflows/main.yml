@@ -1,0 +1,149 @@
+name: "Phalcon DebugBar CI"
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+  pull_request:
+  workflow_dispatch:
+
+env:
+  # Phalcon v5 C extension constraint (installed from source via PIE)
+  PHALCON_CONSTRAINT: "^5.0"
+  EXTENSIONS: "fileinfo, json, mbstring, pdo, xml"
+
+permissions: { }
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  quality:
+    name: "Code quality"
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: "Setup PHP"
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: ${{ env.EXTENSIONS }}
+          tools: composer:v2
+
+      # Quality tools do not need the Phalcon extension: phpstan analyses the
+      # phalcon/phalcon (v6) source pulled in by Composer.
+      - name: "Validate composer"
+        run: composer validate --no-check-all --no-check-publish
+
+      - name: "Install dependencies"
+        uses: ramsey/composer-install@v4
+        with:
+          composer-options: "--prefer-dist"
+
+      - name: "PHPCS"
+        run: composer cs
+
+      - name: "PHPStan"
+        run: composer analyze
+
+      - name: "PHP CS Fixer (dry-run)"
+        run: composer cs-fixer
+
+  tests:
+    name: "Tests (PHP ${{ matrix.php }}, Phalcon ${{ matrix.variant }})"
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    needs:
+      - quality
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2', '8.3', '8.4', '8.5']
+        variant:
+          # v5 = cphalcon C extension; v6 = phalcon/phalcon composer package
+          - 'v5'
+          - 'v6'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: "Setup PHP"
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: ${{ env.EXTENSIONS }}
+          tools: composer:v2
+
+      # v5 = cphalcon C extension, built from source via PIE (pecl caps at PHP 8.4).
+      # v6 needs no extension: it runs on the phalcon/phalcon composer dev dependency.
+      - name: "Install Phalcon v5 (cphalcon) via PIE"
+        if: matrix.variant == 'v5'
+        run: |
+          curl -fsSL https://github.com/php/pie/releases/latest/download/pie.phar -o pie.phar
+          sudo "$(which php)" pie.phar install --no-interaction "phalcon/cphalcon:${{ env.PHALCON_CONSTRAINT }}"
+          php -m | grep -i phalcon
+
+      - name: "Install dependencies"
+        uses: ramsey/composer-install@v4
+        with:
+          composer-options: "--prefer-dist"
+
+      - name: "Tests"
+        run: composer test
+
+  coverage:
+    name: "Coverage"
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: read
+    runs-on: ubuntu-latest
+    needs:
+      - quality
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # octocov uses full history for the base-branch diff.
+          fetch-depth: 0
+
+      # Coverage runs on the v6 composer package (no extension needed) with pcov.
+      - name: "Setup PHP"
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: ${{ env.EXTENSIONS }}
+          coverage: pcov
+          tools: composer:v2
+
+      - name: "Install dependencies"
+        uses: ramsey/composer-install@v4
+        with:
+          composer-options: "--prefer-dist"
+
+      - name: "Tests with coverage"
+        run: composer test-coverage
+
+      # SonarQube first (push only) so a failing octocov gate can't skip the upload.
+      - name: "SonarQube Scan"
+        if: github.event_name == 'push'
+        uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=phalcon
+            -Dsonar.projectKey=phalcon_debugbar
+            -Dsonar.sources=src
+            -Dsonar.tests=tests
+            -Dsonar.exclusions=resources/**
+            -Dsonar.php.coverage.reportPaths=tests/_output/coverage.xml
+
+      - name: "octocov"
+        uses: k1LoW/octocov-action@v1
+        with:
+          config: ${{ github.event_name == 'pull_request' && 'resources/octocov.pr.yml' || 'resources/octocov.yml' }}
