@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
+use Phalcon\DebugBar\Collector\MessagesCollector;
+use Phalcon\DebugBar\Collector\TimeCollector;
 use Phalcon\DebugBar\Collector\VersionCollector;
 use Phalcon\DebugBar\Contracts\Collector;
 use Phalcon\DebugBar\Contracts\Subscriber;
@@ -198,6 +200,14 @@ class Provider
 
         if ($this->isCollectorEnabled(VersionCollector::NAME)) {
             $collectors[] = new VersionCollector();
+        }
+
+        if ($this->isCollectorEnabled(MessagesCollector::NAME)) {
+            $collectors[] = new MessagesCollector();
+        }
+
+        if ($this->isCollectorEnabled(TimeCollector::NAME)) {
+            $collectors[] = new TimeCollector();
         }
 
         return $collectors;
