@@ -13,12 +13,15 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Unit\DebugBar;
 
-use Phalcon\Container\ContainerFactory;
 use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\DebugBar\Provider;
 use Phalcon\Di\Di;
+use Phalcon\Events\Manager;
+use Phalcon\Http\Request;
+use Phalcon\Http\Response;
+use Phalcon\Mvc\Application;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use PHPUnit\Framework\Attributes\BackupGlobals;
 
@@ -41,38 +44,60 @@ final class ProviderTest extends AbstractUnitTestCase
         parent::tearDown();
     }
 
-    public function testBlockedEnvironmentThrowsAndBindsNothing(): void
+    public function testBlockedEnvironmentThrows(): void
     {
         $_ENV[self::ENV_VAR] = 'production';
-        $di                  = new Di();
         $thrown              = false;
 
         try {
-            $this->provider()->register($di);
+            $this->provider($this->application(new Manager()))->boot();
         } catch (CannotUseInProduction) {
             $thrown = true;
         }
 
         $this->assertTrue($thrown);
-        $this->assertFalse($di->has('debugbar'));
         $this->assertNull(Debug::getBar());
     }
 
-    public function testDisabledBindsNothing(): void
+    public function testBootInjectsTheBarOnBeforeSendResponse(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
-        $di                  = new Di();
+        $em                  = new Manager();
+        $app                 = $this->application($em);
 
-        (new Provider(['env' => ['var' => self::ENV_VAR], 'enabled' => false]))
-            ->register($di);
+        $this->provider($app)->boot();
 
-        $this->assertFalse($di->has('debugbar'));
+        $response = new Response();
+        $response->setContent('<html><body>hi</body></html>');
+        $em->fire('application:beforeSendResponse', $app, $response);
+
+        $this->assertStringContainsString('phalcon-debugbar-data', $response->getContent());
+        $this->assertInstanceOf(DebugBar::class, Debug::getBar());
+    }
+
+    public function testBootWithoutEventsManagerSetsFacadeOnly(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $app                 = new Application(new Di());
+
+        $this->provider($app)->boot();
+
+        $this->assertInstanceOf(DebugBar::class, Debug::getBar());
+    }
+
+    public function testDisabledBootsNothing(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $app                 = $this->application(new Manager());
+
+        (new Provider($app, ['env' => ['var' => self::ENV_VAR], 'enabled' => false]))->boot();
+
         $this->assertNull(Debug::getBar());
     }
 
     public function testIsAllowedTracksTheEnvironment(): void
     {
-        $provider = $this->provider();
+        $provider = $this->provider($this->application(new Manager()));
 
         $this->assertFalse($provider->isAllowed());
 
@@ -83,31 +108,35 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertTrue($provider->isAllowed());
     }
 
-    public function testProvideOnContainerBindsTheService(): void
+    public function testRedirectResponseIsNotInjected(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
+        $em                  = new Manager();
+        $app                 = $this->application($em);
 
-        $factory = new ContainerFactory();
-        $factory->addProvider($this->provider());
-        $container = $factory->newContainer();
+        $this->provider($app)->boot();
 
-        $this->assertInstanceOf(DebugBar::class, $container->get('debugbar'));
+        $response = new Response();
+        $response->setContent('<html><body></body></html>');
+        $response->setStatusCode(302);
+        $em->fire('application:beforeSendResponse', $app, $response);
+
+        $this->assertStringNotContainsString('phalcon-debugbar-data', $response->getContent());
     }
 
-    public function testRegisterOnDiBindsTheServiceAndFacade(): void
+    private function application(Manager $em): Application
     {
-        $_ENV[self::ENV_VAR] = 'dev';
-        $di                  = new Di();
+        $di = new Di();
+        $di->setShared('request', new Request());
 
-        $this->provider()->register($di);
+        $app = new Application($di);
+        $app->setEventsManager($em);
 
-        $this->assertTrue($di->has('debugbar'));
-        $this->assertInstanceOf(DebugBar::class, $di->get('debugbar'));
-        $this->assertSame($di->get('debugbar'), Debug::getBar());
+        return $app;
     }
 
-    private function provider(): Provider
+    private function provider(Application $app): Provider
     {
-        return new Provider(['env' => ['var' => self::ENV_VAR]]);
+        return new Provider($app, ['env' => ['var' => self::ENV_VAR]]);
     }
 }

@@ -13,14 +13,9 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
-use Phalcon\Contracts\Container\Service\Collection;
-use Phalcon\Contracts\Container\Service\Provider as ContainerServiceProvider;
-use Phalcon\DebugBar\Binder\Container as ContainerBinder;
-use Phalcon\DebugBar\Binder\Di as DiBinder;
-use Phalcon\DebugBar\Contracts\Binder;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
-use Phalcon\Di\DiInterface;
-use Phalcon\Di\ServiceProviderInterface;
+use Phalcon\DebugBar\Security\AccessGate;
+use Phalcon\Mvc\Application;
 
 use function getenv;
 use function in_array;
@@ -28,14 +23,32 @@ use function is_string;
 use function mb_strtolower;
 
 /**
- * Registers the debug bar on either container. Used with the classic DI via
- * `$di->register(new Provider($config))`, or with the newer container via
- * `$factory->addProvider(new Provider($config))`. Both delegate to one neutral
- * `run()` through a `Binder`.
+ * Boots the debug bar against an MVC application. Its whole coupling to the app
+ * is: hold the `Application`, reach its EventsManager, and attach listeners.
+ * There is no DI service to register and no container-specific wiring — the
+ * app hands over its container and event bus.
  */
-class Provider implements ServiceProviderInterface, ContainerServiceProvider
+class Provider
 {
-    public const SERVICE = 'debugbar';
+    /**
+     * @var (callable(): bool)|null
+     */
+    private $accessCallback;
+
+    /**
+     * @var list<string>
+     */
+    private array $allowedIps;
+
+    /**
+     * @var Application
+     */
+    private Application $app;
+
+    /**
+     * @var string
+     */
+    private string $assetUri;
 
     /**
      * @var list<string>
@@ -53,15 +66,89 @@ class Provider implements ServiceProviderInterface, ContainerServiceProvider
     private string $envVar;
 
     /**
-     * @param array{env?: array{var?: string, blocked?: list<string>}, enabled?: bool} $config
+     * @var bool
      */
-    public function __construct(array $config = [])
-    {
-        $env = $config['env'] ?? [];
+    private bool $headers;
 
-        $this->envVar  = $env['var'] ?? 'APP_ENV';
-        $this->blocked = $env['blocked'] ?? ['production', 'prod'];
-        $this->enabled = $config['enabled'] ?? true;
+    /**
+     * @var string|null
+     */
+    private ?string $nonce;
+
+    /**
+     * @param Application $app
+     * @param array{
+     *     env?: array{var?: string, blocked?: list<string>},
+     *     enabled?: bool,
+     *     assets?: array{uri?: string, nonce?: string|null},
+     *     access?: array{allow_ips?: list<string>, callback?: (callable(): bool)|null},
+     *     headers?: bool
+     * } $config
+     */
+    public function __construct(Application $app, array $config = [])
+    {
+        $this->app = $app;
+
+        $env    = $config['env'] ?? [];
+        $assets = $config['assets'] ?? [];
+        $access = $config['access'] ?? [];
+
+        $this->envVar         = $env['var'] ?? 'APP_ENV';
+        $this->blocked        = $env['blocked'] ?? ['production', 'prod'];
+        $this->enabled        = $config['enabled'] ?? true;
+        $this->assetUri       = $assets['uri'] ?? 'https://assets.phalcon.io/debug/6.0.x/';
+        $this->nonce          = $assets['nonce'] ?? null;
+        $this->allowedIps     = $access['allow_ips'] ?? [];
+        $this->accessCallback = $access['callback'] ?? null;
+        $this->headers        = $config['headers'] ?? true;
+    }
+
+    /**
+     * Creates the bar, points the `Debug` facade at it, and — when the app has
+     * an EventsManager — attaches the response listener to it.
+     *
+     * @return void
+     * @throws CannotUseInProduction
+     */
+    public function boot(): void
+    {
+        if (true !== $this->isAllowed()) {
+            throw new CannotUseInProduction(
+                'The debug bar cannot boot: the "' . $this->envVar
+                . '" environment is undefined or blocked.'
+            );
+        }
+
+        if (true !== $this->enabled) {
+            return;
+        }
+
+        $bar = new DebugBar();
+
+        // Enabled collectors (per the config map) are added and subscribed here
+        // in Phase 3; today the bar boots empty.
+
+        Debug::setBar($bar);
+
+        $eventsManager = $this->app->getEventsManager();
+        $container     = $this->app->getDI();
+        if (null === $eventsManager || null === $container) {
+            return;
+        }
+
+        $eventsManager->attach(
+            'application:beforeSendResponse',
+            new ResponseListener(
+                $bar,
+                new Renderer(),
+                new Injector(),
+                new AccessGate($this->allowedIps, $this->accessCallback),
+                $container,
+                $this->assetUri,
+                $this->nonce,
+                $this->headers
+            )
+        );
     }
 
     /**
@@ -77,28 +164,6 @@ class Provider implements ServiceProviderInterface, ContainerServiceProvider
         }
 
         return !in_array(mb_strtolower($value), $this->blocked, true);
-    }
-
-    /**
-     * @param Collection $services
-     *
-     * @return void
-     * @throws CannotUseInProduction
-     */
-    public function provide(Collection $services): void
-    {
-        $this->run(new ContainerBinder($services));
-    }
-
-    /**
-     * @param DiInterface $di
-     *
-     * @return void
-     * @throws CannotUseInProduction
-     */
-    public function register(DiInterface $di): void
-    {
-        $this->run(new DiBinder($di));
     }
 
     /**
@@ -119,34 +184,5 @@ class Provider implements ServiceProviderInterface, ContainerServiceProvider
         }
 
         return '';
-    }
-
-    /**
-     * @param Binder $binder
-     *
-     * @return void
-     * @throws CannotUseInProduction
-     */
-    private function run(Binder $binder): void
-    {
-        if (true !== $this->isAllowed()) {
-            throw new CannotUseInProduction(
-                'The debug bar cannot be registered: the "' . $this->envVar
-                . '" environment is undefined or blocked.'
-            );
-        }
-
-        if (true !== $this->enabled) {
-            return;
-        }
-
-        $bar = new DebugBar();
-
-        // Collector registration (per the config map) arrives in Phase 3; the
-        // response hook / injection is wired by the Output sub-plan (2c).
-
-        $binder->set(self::SERVICE, fn (): DebugBar => $bar);
-
-        Debug::setBar($bar);
     }
 }
