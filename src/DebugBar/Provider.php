@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
+use Phalcon\DebugBar\Collector\CacheCollector;
 use Phalcon\DebugBar\Collector\DatabaseCollector;
 use Phalcon\DebugBar\Collector\MessagesCollector;
 use Phalcon\DebugBar\Collector\RouteCollector;
@@ -230,6 +231,10 @@ class Provider
 
         if ($this->isCollectorEnabled(RouteCollector::NAME)) {
             $collectors[] = new RouteCollector();
+        }
+
+        if ($this->isCollectorEnabled(CacheCollector::NAME)) {
+            $collectors[] = new CacheCollector();
         }
 
         return $collectors;
