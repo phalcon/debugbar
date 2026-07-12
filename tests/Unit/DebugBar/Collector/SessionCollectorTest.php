@@ -42,13 +42,19 @@ final class SessionCollectorTest extends AbstractUnitTestCase
     public function testActiveSessionIsSnapshotAndRedacted(): void
     {
         session_start(['use_cookies' => false, 'cache_limiter' => '']);
-        $_SESSION = ['user' => 'sarah-connor', 'password' => 'secret'];
+        $_SESSION = [
+            'user'           => 'sarah-connor',
+            'password'       => 'secret',
+            '$PHALCON/CSRF$' => 'token-value',
+        ];
 
         $panel = (new SessionCollector(new Redactor()))->collect()['panel'];
 
-        $this->assertArrayHasKey('ID', $panel);
+        $this->assertArrayHasKey('Name', $panel);
         $this->assertSame('sarah-connor', $panel['Data.user']);
         $this->assertSame('***', $panel['Data.password']);
+        $this->assertArrayNotHasKey('ID', $panel);
+        $this->assertArrayNotHasKey('Data.$PHALCON/CSRF$', $panel);
     }
 
     public function testEmptyPanelWhenNoSession(): void

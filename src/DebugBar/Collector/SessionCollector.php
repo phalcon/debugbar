@@ -15,9 +15,10 @@ namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Security\Redactor;
 
-use function session_id;
+use function is_string;
 use function session_name;
 use function session_status;
+use function str_starts_with;
 
 use const PHP_SESSION_ACTIVE;
 
@@ -68,11 +69,10 @@ final class SessionCollector extends AbstractCollector
         }
 
         $grid = [
-            'ID'   => session_id() ?: '',
             'Name' => session_name() ?: '',
         ];
 
-        foreach ($this->flatten($this->redactor->redact($_SESSION)) as $key => $value) {
+        foreach ($this->flatten($this->redactor->redact($this->applicationData())) as $key => $value) {
             $grid['Data.' . $key] = $value;
         }
 
@@ -80,5 +80,26 @@ final class SessionCollector extends AbstractCollector
             'panel' => $grid,
             'badge' => null,
         ];
+    }
+
+    /**
+     * Session data with Phalcon's internal keys (such as the CSRF token) removed
+     * — those are framework internals, not application state, and must never be
+     * shown. The raw session id is likewise omitted (session-hijacking risk).
+     *
+     * @return array<array-key, mixed>
+     */
+    private function applicationData(): array
+    {
+        $data = [];
+        foreach ($_SESSION as $key => $value) {
+            if (is_string($key) && str_starts_with($key, '$PHALCON/')) {
+                continue;
+            }
+
+            $data[$key] = $value;
+        }
+
+        return $data;
     }
 }
