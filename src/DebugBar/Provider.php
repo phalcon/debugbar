@@ -15,6 +15,7 @@ namespace Phalcon\DebugBar;
 
 use Phalcon\DebugBar\Collector\DatabaseCollector;
 use Phalcon\DebugBar\Collector\MessagesCollector;
+use Phalcon\DebugBar\Collector\RouteCollector;
 use Phalcon\DebugBar\Collector\TimeCollector;
 use Phalcon\DebugBar\Collector\VersionCollector;
 use Phalcon\DebugBar\Collector\ViewCollector;
@@ -225,6 +226,10 @@ class Provider
 
         if ($this->isCollectorEnabled(ViewCollector::NAME)) {
             $collectors[] = new ViewCollector();
+        }
+
+        if ($this->isCollectorEnabled(RouteCollector::NAME)) {
+            $collectors[] = new RouteCollector();
         }
 
         return $collectors;
