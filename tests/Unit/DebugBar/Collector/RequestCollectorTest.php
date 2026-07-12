@@ -35,7 +35,7 @@ final class RequestCollectorTest extends AbstractUnitTestCase
     public function testRequestDataIsFlattenedAndRedacted(): void
     {
         $_GET                      = ['q' => 'phalcon', 'n' => null];
-        $_POST                     = ['username' => 'nikos', 'password' => 'secret-value'];
+        $_POST                     = ['username' => 'sarah-connor', 'password' => 'secret-value'];
         $_SERVER['REQUEST_METHOD'] = 'POST';
 
         $collector = new RequestCollector(new Redactor());
@@ -45,7 +45,7 @@ final class RequestCollectorTest extends AbstractUnitTestCase
         $this->assertSame('POST', $panel['Method']);
         $this->assertSame('phalcon', $panel['Query.q']);
         $this->assertSame('', $panel['Query.n']);
-        $this->assertSame('nikos', $panel['Post.username']);
+        $this->assertSame('sarah-connor', $panel['Post.username']);
         $this->assertSame('***', $panel['Post.password']);
     }
 

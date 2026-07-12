@@ -21,12 +21,12 @@ final class RedactorTest extends AbstractUnitTestCase
     public function testHiddenKeysAreOmittedEntirely(): void
     {
         $redacted = (new Redactor(['password'], ['internal']))->redact([
-            'user'     => 'nikos',
+            'user'     => 'sarah-connor',
             'password' => 'hunter2',
             'internal' => 'gone',
         ]);
 
-        $this->assertSame('nikos', $redacted['user']);
+        $this->assertSame('sarah-connor', $redacted['user']);
         $this->assertSame('***', $redacted['password']);
         $this->assertArrayNotHasKey('internal', $redacted);
     }
@@ -34,12 +34,12 @@ final class RedactorTest extends AbstractUnitTestCase
     public function testRedactsConfiguredKeysCaseInsensitively(): void
     {
         $redacted = (new Redactor())->redact([
-            'user'     => 'nikos',
+            'user'     => 'sarah-connor',
             'password' => 'hunter2',
             'Token'    => 'abc',
         ]);
 
-        $this->assertSame('nikos', $redacted['user']);
+        $this->assertSame('sarah-connor', $redacted['user']);
         $this->assertSame('***', $redacted['password']);
         $this->assertSame('***', $redacted['Token']);
     }
