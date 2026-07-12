@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Security;
 
+use Closure;
+
 use function in_array;
 
 /**
@@ -23,23 +25,13 @@ use function in_array;
 final class AccessGate
 {
     /**
-     * @var list<string>
+     * @param list<string>           $allowedIps empty allows any client
+     * @param (Closure(): bool)|null $callback
      */
-    private array $allowedIps;
-
-    /**
-     * @var (callable(): bool)|null
-     */
-    private $callback;
-
-    /**
-     * @param list<string>            $allowedIps empty allows any client
-     * @param (callable(): bool)|null $callback
-     */
-    public function __construct(array $allowedIps = [], ?callable $callback = null)
-    {
-        $this->allowedIps = $allowedIps;
-        $this->callback   = $callback;
+    public function __construct(
+        private readonly array $allowedIps = [],
+        private readonly ?Closure $callback = null
+    ) {
     }
 
     /**
