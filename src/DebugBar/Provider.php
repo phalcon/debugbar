@@ -17,6 +17,7 @@ use Phalcon\Config\ConfigInterface;
 use Phalcon\DebugBar\Collector\CacheCollector;
 use Phalcon\DebugBar\Collector\ConfigCollector;
 use Phalcon\DebugBar\Collector\DatabaseCollector;
+use Phalcon\DebugBar\Collector\ExceptionsCollector;
 use Phalcon\DebugBar\Collector\MessagesCollector;
 use Phalcon\DebugBar\Collector\RequestCollector;
 use Phalcon\DebugBar\Collector\RouteCollector;
@@ -231,6 +232,10 @@ class Provider
 
         if ($this->isCollectorEnabled(MessagesCollector::NAME)) {
             $collectors[] = new MessagesCollector();
+        }
+
+        if ($this->isCollectorEnabled(ExceptionsCollector::NAME)) {
+            $collectors[] = new ExceptionsCollector();
         }
 
         if ($this->isCollectorEnabled(TimeCollector::NAME)) {
