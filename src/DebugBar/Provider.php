@@ -16,6 +16,7 @@ namespace Phalcon\DebugBar;
 use Phalcon\DebugBar\Collector\CacheCollector;
 use Phalcon\DebugBar\Collector\DatabaseCollector;
 use Phalcon\DebugBar\Collector\MessagesCollector;
+use Phalcon\DebugBar\Collector\RequestCollector;
 use Phalcon\DebugBar\Collector\RouteCollector;
 use Phalcon\DebugBar\Collector\TimeCollector;
 use Phalcon\DebugBar\Collector\VersionCollector;
@@ -24,6 +25,7 @@ use Phalcon\DebugBar\Contracts\Collector;
 use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\DebugBar\Security\AccessGate;
+use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Di\DiInterface;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Mvc\Application;
@@ -235,6 +237,10 @@ class Provider
 
         if ($this->isCollectorEnabled(CacheCollector::NAME)) {
             $collectors[] = new CacheCollector();
+        }
+
+        if ($this->isCollectorEnabled(RequestCollector::NAME)) {
+            $collectors[] = new RequestCollector(new Redactor());
         }
 
         return $collectors;
