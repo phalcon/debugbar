@@ -1,2 +1,7 @@
-vendor/
+/vendor/
+/.phpunit.cache/
+/tests/_output/*
+!/tests/_output/.gitkeep
+.phpunit.result.cache
+.env
 composer.phar

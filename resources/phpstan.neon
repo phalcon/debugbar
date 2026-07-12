@@ -1,0 +1,10 @@
+parameters:
+    level: max
+    paths:
+        - %currentWorkingDirectory%/src
+        - %currentWorkingDirectory%/tests
+    excludePaths:
+        - %currentWorkingDirectory%/tests/_output
+    bootstrapFiles:
+        - %currentWorkingDirectory%/vendor/autoload.php
+    treatPhpDocTypesAsCertain: false

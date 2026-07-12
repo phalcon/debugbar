@@ -1,0 +1,7 @@
+.git
+.idea
+.env
+vendor
+composer.lock
+tests/_output/*
+*.md

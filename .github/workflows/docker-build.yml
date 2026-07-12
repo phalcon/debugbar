@@ -1,0 +1,38 @@
+name: "Docker build"
+
+on:
+  push:
+    paths:
+      - 'resources/docker/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/docker-build.yml'
+  pull_request:
+    paths:
+      - 'resources/docker/**'
+      - 'docker-compose.yml'
+  workflow_dispatch:
+
+permissions: { }
+
+jobs:
+  build:
+    name: "Build image (PHP ${{ matrix.php }}, ${{ matrix.variant }})"
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.4', '8.5']
+        variant: ['v5', 'v6']
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: "Build the image"
+        run: |
+          docker build \
+            --file resources/docker/Dockerfile \
+            --build-arg PHP_VERSION=${{ matrix.php }} \
+            --build-arg PHALCON_VARIANT=${{ matrix.variant }} \
+            --tag debugbar:php${{ matrix.php }}-${{ matrix.variant }} \
+            .

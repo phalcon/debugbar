@@ -1,0 +1,29 @@
+<?php
+
+/**
+ * This file is part of the Phalcon Framework.
+ *
+ * (c) Phalcon Team <team@phalcon.io>
+ *
+ * For the full copyright and license information, please view the LICENSE.txt
+ * file that was distributed with this source code.
+ */
+
+declare(strict_types=1);
+
+namespace Phalcon\DebugBar\Contracts;
+
+/**
+ * A collector that also describes its tab/panel. The `panel` value selects the
+ * client renderer ('grid' | 'list' | 'code' | 'html'); the tab count comes from
+ * `collect()['badge']`, not from here.
+ */
+interface Renderable extends Collector
+{
+    /**
+     * Describes the tab and panel for this collector.
+     *
+     * @return array{label: string, icon: string, panel: string}
+     */
+    public function getWidget(): array;
+}

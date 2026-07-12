@@ -1,14 +1,69 @@
 {
     "name": "phalcon/debugbar",
-    "description": "Web Debug bar for Phalcon Framework",
-    "keywords": [
-        "php",
-        "phalcon",
-        "debugbar"
+    "description": "Web Debug bar and debugger for the Phalcon Framework",
+    "type": "library",
+    "license": "BSD-3-Clause",
+    "keywords": ["php", "phalcon", "debugbar", "debug", "profiler"],
+    "authors": [
+        {
+            "name": "Phalcon Team",
+            "email": "team@phalcon.io",
+            "homepage": "https://phalcon.io"
+        },
+        {
+            "name": "snowair",
+            "homepage": "https://github.com/snowair/phalcon-debugbar",
+            "role": "Original Phalcon Debugbar author"
+        }
     ],
-    "license": "MIT",
     "require": {
-        "php": ">=7.4",
-        "ext-phalcon": ">=4.0.0"
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3",
+        "pds/composer-script-names": "^1",
+        "pds/skeleton": "^1",
+        "phalcon/phalcon": "6.0.x-dev",
+        "phalcon/talon": "^0.6",
+        "phalcon/traits": "^4.0",
+        "phpstan/phpstan": "^2",
+        "phpunit/phpunit": "^10.5",
+        "squizlabs/php_codesniffer": "^4.0"
+    },
+    "suggest": {
+        "ext-phalcon": "Phalcon C extension (^5) - run the debug bar on Phalcon v5",
+        "phalcon/phalcon": "Phalcon PHP implementation (^6) - run the debug bar on Phalcon v6"
+    },
+    "autoload": {
+        "psr-4": {
+            "Phalcon\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Phalcon\\Tests\\": "tests/",
+            "Phalcon\\Tests\\Support\\": "tests/support/"
+        },
+        "exclude-from-classmap": [
+            "tests/support/assets/"
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pds/skeleton": false
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "scripts": {
+        "analyze": "phpstan analyse -c resources/phpstan.neon --memory-limit 1024M",
+        "cs": "phpcs --standard=resources/phpcs.xml",
+        "cs-fix": "phpcbf --standard=resources/phpcs.xml",
+        "cs-fixer": "php-cs-fixer fix --config=resources/php-cs-fixer.php --dry-run --diff",
+        "cs-fixer-fix": "php-cs-fixer fix --config=resources/php-cs-fixer.php",
+        "test": "talon run",
+        "test-coverage": "talon run unit -- --coverage-clover tests/_output/coverage.xml",
+        "test-coverage-html": "talon run unit -- --coverage-html tests/_output/coverage"
     }
 }
