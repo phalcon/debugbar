@@ -15,10 +15,6 @@ namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Security\Redactor;
 
-use function is_array;
-use function is_bool;
-use function is_float;
-use function is_int;
 use function is_string;
 use function str_replace;
 use function str_starts_with;
@@ -33,6 +29,8 @@ use function ucwords;
  */
 final class RequestCollector extends AbstractCollector
 {
+    use FlattensToGrid;
+
     public const NAME = 'request';
 
     /**
@@ -88,32 +86,6 @@ final class RequestCollector extends AbstractCollector
     }
 
     /**
-     * @param array<array-key, mixed> $data
-     * @param string                  $prefix
-     *
-     * @return array<string, scalar>
-     */
-    private function flatten(array $data, string $prefix = ''): array
-    {
-        $result = [];
-        foreach ($data as $key => $value) {
-            $name = ('' === $prefix) ? (string) $key : $prefix . '.' . $key;
-
-            if (is_array($value)) {
-                foreach ($this->flatten($value, $name) as $nestedKey => $nestedValue) {
-                    $result[$nestedKey] = $nestedValue;
-                }
-
-                continue;
-            }
-
-            $result[$name] = $this->stringify($value);
-        }
-
-        return $result;
-    }
-
-    /**
      * @return array<string, mixed>
      */
     private function headers(): array
@@ -150,27 +122,5 @@ final class RequestCollector extends AbstractCollector
         $value = $_SERVER[$key] ?? '';
 
         return is_string($value) ? $value : '';
-    }
-
-    /**
-     * @param mixed $value
-     *
-     * @return string
-     */
-    private function stringify(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        if (is_bool($value)) {
-            return $value ? 'true' : 'false';
-        }
-
-        if (is_int($value) || is_float($value)) {
-            return (string) $value;
-        }
-
-        return '';
     }
 }

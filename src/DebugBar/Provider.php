@@ -13,11 +13,14 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
+use Phalcon\Config\ConfigInterface;
 use Phalcon\DebugBar\Collector\CacheCollector;
+use Phalcon\DebugBar\Collector\ConfigCollector;
 use Phalcon\DebugBar\Collector\DatabaseCollector;
 use Phalcon\DebugBar\Collector\MessagesCollector;
 use Phalcon\DebugBar\Collector\RequestCollector;
 use Phalcon\DebugBar\Collector\RouteCollector;
+use Phalcon\DebugBar\Collector\SessionCollector;
 use Phalcon\DebugBar\Collector\TimeCollector;
 use Phalcon\DebugBar\Collector\VersionCollector;
 use Phalcon\DebugBar\Collector\ViewCollector;
@@ -94,6 +97,11 @@ class Provider
     private ?string $nonce;
 
     /**
+     * @var Redactor
+     */
+    private Redactor $redactor;
+
+    /**
      * @param Application $app
      * @param array{
      *     env?: array{var?: string, blocked?: list<string>},
@@ -101,7 +109,8 @@ class Provider
      *     assets?: array{uri?: string, nonce?: string|null},
      *     access?: array{allow_ips?: list<string>, callback?: (callable(): bool)|null},
      *     collectors?: array<string, bool>,
-     *     headers?: bool
+     *     headers?: bool,
+     *     redact?: array{mask?: list<string>, hidden?: list<string>}
      * } $config
      */
     public function __construct(Application $app, array $config = [])
@@ -111,6 +120,7 @@ class Provider
         $env    = $config['env'] ?? [];
         $assets = $config['assets'] ?? [];
         $access = $config['access'] ?? [];
+        $redact = $config['redact'] ?? [];
 
         $this->envVar           = $env['var'] ?? 'APP_ENV';
         $this->blocked          = $env['blocked'] ?? ['production', 'prod'];
@@ -121,6 +131,10 @@ class Provider
         $this->accessCallback   = $access['callback'] ?? null;
         $this->collectorsConfig = $config['collectors'] ?? [];
         $this->headers          = $config['headers'] ?? true;
+        $this->redactor         = new Redactor(
+            [...Redactor::DEFAULT_KEYS, ...($redact['mask'] ?? [])],
+            $redact['hidden'] ?? []
+        );
     }
 
     /**
@@ -240,7 +254,15 @@ class Provider
         }
 
         if ($this->isCollectorEnabled(RequestCollector::NAME)) {
-            $collectors[] = new RequestCollector(new Redactor());
+            $collectors[] = new RequestCollector($this->redactor);
+        }
+
+        if (null !== $container && $this->isCollectorEnabled(ConfigCollector::NAME)) {
+            $collectors[] = new ConfigCollector($this->resolveConfig($container), $this->redactor);
+        }
+
+        if ($this->isCollectorEnabled(SessionCollector::NAME)) {
+            $collectors[] = new SessionCollector($this->redactor);
         }
 
         return $collectors;
@@ -254,6 +276,22 @@ class Provider
     private function isCollectorEnabled(string $name): bool
     {
         return $this->collectorsConfig[$name] ?? true;
+    }
+
+    /**
+     * @param DiInterface $container
+     *
+     * @return ConfigInterface|null
+     */
+    private function resolveConfig(DiInterface $container): ?ConfigInterface
+    {
+        if (!$container->has('config')) {
+            return null;
+        }
+
+        $config = $container->get('config');
+
+        return $config instanceof ConfigInterface ? $config : null;
     }
 
     /**
