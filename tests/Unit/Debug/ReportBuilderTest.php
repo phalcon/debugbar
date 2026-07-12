@@ -94,6 +94,7 @@ final class ReportBuilderTest extends AbstractUnitTestCase
 
         $this->assertNull($functionLink->invoke($builder, 'phalcon_undefined_function_xyz'));
         $this->assertNull($functionLink->invoke($builder, 'supportDir'));
+        $this->assertNull($functionLink->invoke($builder, 'trigger_deprecation'));
     }
     public function testMetaWithoutBacktrace(): void
     {

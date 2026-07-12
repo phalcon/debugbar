@@ -18,6 +18,7 @@ use Phalcon\DebugBar\DebugBar;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\Fixtures\RecordingMessagesCollector;
 use Phalcon\Tests\Support\DebugBar\Fixtures\RecordingTimeCollector;
+use ReflectionClass;
 use RuntimeException;
 
 final class DebugTest extends AbstractUnitTestCase
@@ -34,6 +35,21 @@ final class DebugTest extends AbstractUnitTestCase
         Debug::setBar(null);
 
         parent::tearDown();
+    }
+
+    public function testConstructorIsPrivate(): void
+    {
+        $reflection  = new ReflectionClass(Debug::class);
+        $constructor = $reflection->getConstructor();
+
+        if (null === $constructor) {
+            self::fail('The Debug facade must declare a constructor.');
+        }
+
+        $this->assertTrue($constructor->isPrivate());
+
+        $constructor->setAccessible(true);
+        $constructor->invoke($reflection->newInstanceWithoutConstructor());
     }
 
     public function testDelegatesEveryConvenienceMethod(): void

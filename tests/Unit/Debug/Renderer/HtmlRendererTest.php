@@ -218,5 +218,7 @@ final class HtmlRendererTest extends AbstractUnitTestCase
         $this->assertStringContainsString('Array(', (string)$renderer->dumpVar([[[['deep']]]]));
 
         fclose($resource);
+
+        $this->assertStringContainsString('resource (closed)', (string)$renderer->dumpArr([$resource]));
     }
 }
