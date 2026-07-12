@@ -37,3 +37,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Per-collector enable/disable, asset, header, environment, access, and
   redaction (`mask` / `hidden`) configuration on the `Provider`. The bar ships
   under PHPStan level max with 100% line, method, and class coverage.
+- The bar's front-end (`debugbar.js` / `debugbar.css`): a tabbed bottom bar with
+  a panel per collector, badges, and a collapse toggle that shrinks it to a
+  corner handle so it never covers the host page's own controls.
+- Assets are minified with `matthiasmullie/minify` and injected inline, so the
+  bar carries no external asset dependency; the optional `assets.output_path`
+  also writes the compiled files to disk.
+- The `database` collector renders each query's bound parameters next to the
+  statement; the `session` collector omits the session id and Phalcon's internal
+  keys (such as the CSRF token).
