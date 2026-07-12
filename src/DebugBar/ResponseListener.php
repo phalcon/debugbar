@@ -73,7 +73,7 @@ final class ResponseListener
         if (true === $this->injector->shouldInject($response, $isAjax)) {
             $this->injector->inject(
                 $response,
-                $this->renderer->renderHead($this->options->assetUri, $this->options->nonce),
+                $this->renderer->renderHead($this->options->nonce),
                 $this->renderer->render($collected, $this->options->nonce)
             );
         }

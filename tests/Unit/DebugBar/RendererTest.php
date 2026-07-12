@@ -16,6 +16,8 @@ namespace Phalcon\Tests\Unit\DebugBar;
 use Phalcon\DebugBar\Renderer;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
+use function dirname;
+
 final class RendererTest extends AbstractUnitTestCase
 {
     public function testCapturedScriptTagCannotBreakTheDataBlock(): void
@@ -32,7 +34,7 @@ final class RendererTest extends AbstractUnitTestCase
         $renderer = new Renderer();
 
         $this->assertStringContainsString('nonce="abc123"', $renderer->render([], 'abc123'));
-        $this->assertStringContainsString('nonce="abc123"', $renderer->renderHead('https://cdn/', 'abc123'));
+        $this->assertStringContainsString('nonce="abc123"', $renderer->renderHead('abc123'));
     }
 
     public function testRenderEmitsTheJsonDataBlock(): void
@@ -43,12 +45,28 @@ final class RendererTest extends AbstractUnitTestCase
         $this->assertStringContainsString('"collectors":2', $html);
     }
 
-    public function testRenderHeadEmitsAssetTags(): void
+    public function testRenderHeadInlinesMinifiedAssets(): void
     {
-        $html = (new Renderer())->renderHead('https://cdn/');
+        $html = (new Renderer())->renderHead();
 
-        $this->assertStringContainsString('https://cdn/debugbar.css', $html);
-        $this->assertStringContainsString('https://cdn/debugbar.js', $html);
+        $this->assertStringContainsString('<style>', $html);
+        $this->assertStringContainsString('#phalcon-debugbar', $html);
+        $this->assertStringContainsString('<script', $html);
+        $this->assertStringContainsString('phalcon-debugbar-data', $html);
+    }
+
+    public function testRenderHeadWritesCompiledFilesWhenOutputPathIsGiven(): void
+    {
+        $dir = dirname(__DIR__, 2) . '/_output';
+
+        $html = (new Renderer($dir))->renderHead();
+
+        $this->assertFileExists($dir . '/debugbar.min.css');
+        $this->assertFileExists($dir . '/debugbar.min.js');
+        $this->assertStringContainsString('#phalcon-debugbar', $html);
+
+        $this->safeDeleteFile($dir . '/debugbar.min.css');
+        $this->safeDeleteFile($dir . '/debugbar.min.js');
     }
 
     public function testTemplatesAreOverridable(): void

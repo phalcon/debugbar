@@ -13,8 +13,12 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
+use MatthiasMullie\Minify\CSS as CssMinifier;
+use MatthiasMullie\Minify\JS as JsMinifier;
+
 use function array_keys;
 use function array_values;
+use function dirname;
 use function json_encode;
 use function str_replace;
 
@@ -27,8 +31,10 @@ use const JSON_UNESCAPED_UNICODE;
 
 /**
  * Produces the bar's HTML: the collected data as a `<script type="application/
- * json">` block (never executable JS) and the asset `<link>`/`<script>` tags.
- * Templates are overridable and both script tags accept a CSP nonce.
+ * json">` block (never executable JS) and the CSS/JS injected inline (minified),
+ * so the bar has no external asset dependency. When an output path is given the
+ * compiled files are also written there. Templates are overridable and every
+ * tag accepts a CSP nonce.
  */
 class Renderer
 {
@@ -36,6 +42,13 @@ class Renderer
      * @var array<string, string>
      */
     protected array $templates = [];
+
+    /**
+     * @param string|null $outputPath
+     */
+    public function __construct(private readonly ?string $outputPath = null)
+    {
+    }
 
     /**
      * @param string $name
@@ -73,20 +86,21 @@ class Renderer
     }
 
     /**
-     * Renders the asset tags pointing at the configured base URI.
+     * Renders the head: the minified CSS and JS injected inline, so the bar
+     * carries no external asset dependency.
      *
-     * @param string      $uri
      * @param string|null $nonce
      *
      * @return string
      */
-    public function renderHead(string $uri, ?string $nonce = null): string
+    public function renderHead(?string $nonce = null): string
     {
         return $this->interpolate(
             $this->getTemplate('head'),
             [
-                '%uri%'   => $uri,
                 '%nonce%' => $this->nonceAttribute($nonce),
+                '%css%'   => $this->asset('css'),
+                '%js%'    => $this->asset('js'),
             ]
         );
     }
@@ -105,6 +119,16 @@ class Renderer
     }
 
     /**
+     * The package directory holding the source `debugbar.css`/`debugbar.js`.
+     *
+     * @return string
+     */
+    protected function assetsPath(): string
+    {
+        return dirname(__DIR__, 2) . '/resources/assets/';
+    }
+
+    /**
      * @param string $name
      *
      * @return string
@@ -112,13 +136,33 @@ class Renderer
     protected function defaultTemplate(string $name): string
     {
         return match ($name) {
-            'head'  => '<link rel="stylesheet" href="%uri%debugbar.css">' . "\n"
-                . '<script src="%uri%debugbar.js"%nonce% defer></script>',
+            'head'  => '<style%nonce%>%css%</style>' . "\n"
+                . '<script%nonce% defer>%js%</script>',
             'bar'   => '<script type="application/json" id="phalcon-debugbar-data"%nonce%>'
                 . '%data%</script>' . "\n"
                 . '<div id="phalcon-debugbar"></div>',
             default => '',
         };
+    }
+
+    /**
+     * Returns the minified asset ('css' or 'js'). When an output path is set the
+     * compiled file is written there as well.
+     *
+     * @param string $type
+     *
+     * @return string
+     */
+    private function asset(string $type): string
+    {
+        $source   = $this->assetsPath() . 'debugbar.' . $type;
+        $minifier = ('css' === $type) ? new CssMinifier($source) : new JsMinifier($source);
+
+        if (null === $this->outputPath) {
+            return $minifier->minify();
+        }
+
+        return $minifier->minify($this->outputPath . '/debugbar.min.' . $type);
     }
 
     /**

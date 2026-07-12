@@ -14,20 +14,17 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar;
 
 /**
- * Immutable output options for the debug bar: where the assets load from, the
- * CSP nonce stamped on the injected tags, and whether the diagnostic headers
- * are set. A single bag so new primitives can be added without widening every
- * constructor that carries them.
+ * Immutable output options for the debug bar: the CSP nonce stamped on the
+ * injected tags and whether the diagnostic headers are set. A single bag so new
+ * primitives can be added without widening every constructor that carries them.
  */
 final class BarOptions
 {
     /**
-     * @param string      $assetUri
      * @param bool        $headers
      * @param string|null $nonce
      */
     public function __construct(
-        public readonly string $assetUri,
         public readonly bool $headers,
         public readonly ?string $nonce
     ) {

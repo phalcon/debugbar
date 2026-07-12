@@ -79,7 +79,7 @@ final class ResponseListenerTest extends AbstractUnitTestCase
             new Injector(),
             new AccessGate($allowedIps, null),
             null,
-            new BarOptions('https://assets.phalcon.io/debug/6.0.x/', $headers, null)
+            new BarOptions($headers, null)
         );
     }
 }

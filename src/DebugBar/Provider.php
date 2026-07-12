@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
+use Closure;
 use Phalcon\Config\ConfigInterface;
 use Phalcon\DebugBar\Collector\CacheCollector;
 use Phalcon\DebugBar\Collector\ConfigCollector;
@@ -48,24 +49,14 @@ use function mb_strtolower;
 class Provider
 {
     /**
-     * @var (callable(): bool)|null
+     * @var (Closure(): bool)|null
      */
-    private $accessCallback;
+    private ?Closure $accessCallback;
 
     /**
      * @var list<string>
      */
     private array $allowedIps;
-
-    /**
-     * @var Application
-     */
-    private Application $app;
-
-    /**
-     * @var string
-     */
-    private string $assetUri;
 
     /**
      * @var list<string>
@@ -98,6 +89,11 @@ class Provider
     private ?string $nonce;
 
     /**
+     * @var string|null
+     */
+    private ?string $outputPath;
+
+    /**
      * @var Redactor
      */
     private Redactor $redactor;
@@ -107,17 +103,15 @@ class Provider
      * @param array{
      *     env?: array{var?: string, blocked?: list<string>},
      *     enabled?: bool,
-     *     assets?: array{uri?: string, nonce?: string|null},
-     *     access?: array{allow_ips?: list<string>, callback?: (callable(): bool)|null},
+     *     assets?: array{output_path?: string|null, nonce?: string|null},
+     *     access?: array{allow_ips?: list<string>, callback?: (Closure(): bool)|null},
      *     collectors?: array<string, bool>,
      *     headers?: bool,
      *     redact?: array{mask?: list<string>, hidden?: list<string>}
      * } $config
      */
-    public function __construct(Application $app, array $config = [])
+    public function __construct(private readonly Application $app, array $config = [])
     {
-        $this->app = $app;
-
         $env    = $config['env'] ?? [];
         $assets = $config['assets'] ?? [];
         $access = $config['access'] ?? [];
@@ -126,7 +120,7 @@ class Provider
         $this->envVar           = $env['var'] ?? 'APP_ENV';
         $this->blocked          = $env['blocked'] ?? ['production', 'prod'];
         $this->enabled          = $config['enabled'] ?? true;
-        $this->assetUri         = $assets['uri'] ?? 'https://assets.phalcon.io/debug/6.0.x/';
+        $this->outputPath       = $assets['output_path'] ?? null;
         $this->nonce            = $assets['nonce'] ?? null;
         $this->allowedIps       = $access['allow_ips'] ?? [];
         $this->accessCallback   = $access['callback'] ?? null;
@@ -184,11 +178,11 @@ class Provider
             'application:beforeSendResponse',
             new ResponseListener(
                 $bar,
-                new Renderer(),
+                new Renderer($this->outputPath),
                 new Injector(),
                 new AccessGate($this->allowedIps, $this->accessCallback),
                 $request,
-                new BarOptions($this->assetUri, $this->headers, $this->nonce)
+                new BarOptions($this->headers, $this->nonce)
             )
         );
     }
