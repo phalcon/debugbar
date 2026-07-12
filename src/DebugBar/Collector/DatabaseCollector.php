@@ -20,6 +20,8 @@ use Phalcon\Events\ManagerInterface;
 
 use function count;
 use function hrtime;
+use function is_string;
+use function json_encode;
 use function round;
 
 /**
@@ -65,7 +67,7 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
         foreach ($this->queries as $query) {
             $rows[] = [
                 'label'   => round($query['time'] / 1e6, 2) . 'ms',
-                'message' => $query['sql'],
+                'message' => $this->formatQuery($query['sql'], $query['bindings']),
             ];
         }
 
@@ -101,5 +103,25 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
                 }
             }
         );
+    }
+
+    /**
+     * Appends the bound parameters (e.g. `:APL0`) to the statement so the panel
+     * shows the actual values sent to the database.
+     *
+     * @param string                  $sql
+     * @param array<array-key, mixed> $bindings
+     *
+     * @return string
+     */
+    private function formatQuery(string $sql, array $bindings): string
+    {
+        if ([] === $bindings) {
+            return $sql;
+        }
+
+        $encoded = json_encode($bindings);
+
+        return $sql . '  ' . (is_string($encoded) ? $encoded : '');
     }
 }

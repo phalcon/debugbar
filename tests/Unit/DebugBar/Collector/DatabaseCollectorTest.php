@@ -31,6 +31,25 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
         $this->assertPanelContract($collector);
     }
 
+    public function testBindingsAreAppendedToTheQuery(): void
+    {
+        $collector     = new DatabaseCollector();
+        $eventsManager = new Manager();
+        $collector->subscribe($eventsManager);
+
+        $connection = $this->createMock(AbstractAdapter::class);
+        $connection->method('getSQLStatement')->willReturn('SELECT * FROM users WHERE id = :APL0');
+        $connection->method('getSQLVariables')->willReturn(['APL0' => 5]);
+
+        $eventsManager->fire('db:beforeQuery', $connection);
+        $eventsManager->fire('db:afterQuery', $connection);
+
+        $message = $collector->collect()['panel'][0]['message'];
+
+        $this->assertStringContainsString('WHERE id = :APL0', $message);
+        $this->assertStringContainsString('"APL0":5', $message);
+    }
+
     public function testQueriesAreRecordedFromEvents(): void
     {
         $collector      = new DatabaseCollector();
