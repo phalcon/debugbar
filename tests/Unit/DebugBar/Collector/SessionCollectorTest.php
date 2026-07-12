@@ -17,20 +17,31 @@ use Phalcon\DebugBar\Collector\SessionCollector;
 use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
-use PHPUnit\Framework\Attributes\PreserveGlobalState;
-use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 
 use function session_start;
+use function session_status;
+use function session_write_close;
+
+use const PHP_SESSION_ACTIVE;
 
 final class SessionCollectorTest extends AbstractUnitTestCase
 {
     use PanelContractTrait;
 
-    #[RunInSeparateProcess]
-    #[PreserveGlobalState(false)]
+    protected function tearDown(): void
+    {
+        if (PHP_SESSION_ACTIVE === session_status()) {
+            session_write_close();
+        }
+
+        $_SESSION = [];
+
+        parent::tearDown();
+    }
+
     public function testActiveSessionIsSnapshotAndRedacted(): void
     {
-        session_start();
+        session_start(['use_cookies' => false, 'cache_limiter' => '']);
         $_SESSION = ['user' => 'sarah-connor', 'password' => 'secret'];
 
         $panel = (new SessionCollector(new Redactor()))->collect()['panel'];
