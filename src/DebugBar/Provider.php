@@ -13,8 +13,12 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
+use Phalcon\DebugBar\Collector\VersionCollector;
+use Phalcon\DebugBar\Contracts\Collector;
+use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\DebugBar\Security\AccessGate;
+use Phalcon\Di\DiInterface;
 use Phalcon\Mvc\Application;
 
 use function getenv;
@@ -56,6 +60,11 @@ class Provider
     private array $blocked;
 
     /**
+     * @var array<string, bool>
+     */
+    private array $collectorsConfig;
+
+    /**
      * @var bool
      */
     private bool $enabled;
@@ -82,6 +91,7 @@ class Provider
      *     enabled?: bool,
      *     assets?: array{uri?: string, nonce?: string|null},
      *     access?: array{allow_ips?: list<string>, callback?: (callable(): bool)|null},
+     *     collectors?: array<string, bool>,
      *     headers?: bool
      * } $config
      */
@@ -93,19 +103,21 @@ class Provider
         $assets = $config['assets'] ?? [];
         $access = $config['access'] ?? [];
 
-        $this->envVar         = $env['var'] ?? 'APP_ENV';
-        $this->blocked        = $env['blocked'] ?? ['production', 'prod'];
-        $this->enabled        = $config['enabled'] ?? true;
-        $this->assetUri       = $assets['uri'] ?? 'https://assets.phalcon.io/debug/6.0.x/';
-        $this->nonce          = $assets['nonce'] ?? null;
-        $this->allowedIps     = $access['allow_ips'] ?? [];
-        $this->accessCallback = $access['callback'] ?? null;
-        $this->headers        = $config['headers'] ?? true;
+        $this->envVar           = $env['var'] ?? 'APP_ENV';
+        $this->blocked          = $env['blocked'] ?? ['production', 'prod'];
+        $this->enabled          = $config['enabled'] ?? true;
+        $this->assetUri         = $assets['uri'] ?? 'https://assets.phalcon.io/debug/6.0.x/';
+        $this->nonce            = $assets['nonce'] ?? null;
+        $this->allowedIps       = $access['allow_ips'] ?? [];
+        $this->accessCallback   = $access['callback'] ?? null;
+        $this->collectorsConfig = $config['collectors'] ?? [];
+        $this->headers          = $config['headers'] ?? true;
     }
 
     /**
-     * Creates the bar, points the `Debug` facade at it, and — when the app has
-     * an EventsManager — attaches the response listener to it.
+     * Creates the bar with its enabled collectors, points the `Debug` facade at
+     * it, and — when the app has an EventsManager — subscribes the streamed
+     * collectors and attaches the response listener.
      *
      * @return void
      * @throws CannotUseInProduction
@@ -123,17 +135,24 @@ class Provider
             return;
         }
 
-        $bar = new DebugBar();
+        $container = $this->app->getDI();
 
-        // Enabled collectors (per the config map) are added and subscribed here
-        // in Phase 3; today the bar boots empty.
+        $bar = new DebugBar();
+        foreach ($this->buildCollectors($container) as $collector) {
+            $bar->addCollector($collector);
+        }
 
         Debug::setBar($bar);
 
         $eventsManager = $this->app->getEventsManager();
-        $container     = $this->app->getDI();
         if (null === $eventsManager || null === $container) {
             return;
+        }
+
+        foreach ($bar->getCollectors() as $collector) {
+            if ($collector instanceof Subscriber) {
+                $collector->subscribe($eventsManager);
+            }
         }
 
         $eventsManager->attach(
@@ -164,6 +183,34 @@ class Provider
         }
 
         return !in_array(mb_strtolower($value), $this->blocked, true);
+    }
+
+    /**
+     * Builds the enabled collectors (per the config map; all on by default).
+     *
+     * @param DiInterface|null $container
+     *
+     * @return list<Collector>
+     */
+    private function buildCollectors(?DiInterface $container): array
+    {
+        $collectors = [];
+
+        if ($this->isCollectorEnabled(VersionCollector::NAME)) {
+            $collectors[] = new VersionCollector();
+        }
+
+        return $collectors;
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return bool
+     */
+    private function isCollectorEnabled(string $name): bool
+    {
+        return $this->collectorsConfig[$name] ?? true;
     }
 
     /**
