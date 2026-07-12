@@ -175,9 +175,7 @@ class Provider
                 new Injector(),
                 new AccessGate($this->allowedIps, $this->accessCallback),
                 $request,
-                $this->assetUri,
-                $this->nonce,
-                $this->headers
+                new BarOptions($this->assetUri, $this->headers, $this->nonce)
             )
         );
     }

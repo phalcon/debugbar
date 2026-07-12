@@ -34,9 +34,7 @@ final class ResponseListener
      * @param Injector              $injector
      * @param AccessGate            $accessGate
      * @param RequestInterface|null $request
-     * @param string                $assetUri
-     * @param string|null           $nonce
-     * @param bool                  $headers
+     * @param BarOptions            $options
      */
     public function __construct(
         private readonly DebugBar $bar,
@@ -44,9 +42,7 @@ final class ResponseListener
         private readonly Injector $injector,
         private readonly AccessGate $accessGate,
         private readonly ?RequestInterface $request,
-        private readonly string $assetUri,
-        private readonly ?string $nonce,
-        private readonly bool $headers
+        private readonly BarOptions $options
     ) {
     }
 
@@ -70,15 +66,15 @@ final class ResponseListener
 
         $collected = $this->bar->collect();
 
-        if (true === $this->headers) {
+        if (true === $this->options->headers) {
             $response->setHeader('X-Debug-Bar', (string) count($collected['data']));
         }
 
         if (true === $this->injector->shouldInject($response, $isAjax)) {
             $this->injector->inject(
                 $response,
-                $this->renderer->renderHead($this->assetUri, $this->nonce),
-                $this->renderer->render($collected, $this->nonce)
+                $this->renderer->renderHead($this->options->assetUri, $this->options->nonce),
+                $this->renderer->render($collected, $this->options->nonce)
             );
         }
     }
