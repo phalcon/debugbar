@@ -17,6 +17,7 @@ use Phalcon\DebugBar\Collector\DatabaseCollector;
 use Phalcon\DebugBar\Collector\MessagesCollector;
 use Phalcon\DebugBar\Collector\TimeCollector;
 use Phalcon\DebugBar\Collector\VersionCollector;
+use Phalcon\DebugBar\Collector\ViewCollector;
 use Phalcon\DebugBar\Contracts\Collector;
 use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
@@ -220,6 +221,10 @@ class Provider
 
         if ($this->isCollectorEnabled(DatabaseCollector::NAME)) {
             $collectors[] = new DatabaseCollector();
+        }
+
+        if ($this->isCollectorEnabled(ViewCollector::NAME)) {
+            $collectors[] = new ViewCollector();
         }
 
         return $collectors;
