@@ -1,0 +1,158 @@
+/**
+ * This file is part of the Phalcon Framework.
+ *
+ * (c) Phalcon Team <team@phalcon.io>
+ *
+ * For the full copyright and license information, please view the LICENSE.txt
+ * file that was distributed with this source code.
+ *
+ * Phalcon DebugBar styles. Scoped under #phalcon-debugbar so the bar never
+ * bleeds into (or inherits from) the host application.
+ */
+#phalcon-debugbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2147483000;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #e2e2ef;
+}
+
+/* Collapsed: shrink to the bottom-right handle so the host page's own
+   bottom-left controls (logout, etc.) are never covered. */
+#phalcon-debugbar.is-collapsed {
+    left: auto;
+}
+
+#phalcon-debugbar.is-collapsed .phalcon-debugbar-body,
+#phalcon-debugbar.is-collapsed .phalcon-debugbar-tabs {
+    display: none;
+}
+
+#phalcon-debugbar *,
+#phalcon-debugbar *::before,
+#phalcon-debugbar *::after {
+    box-sizing: border-box;
+}
+
+#phalcon-debugbar .phalcon-debugbar-bar {
+    display: flex;
+    flex-direction: column;
+    background: #1c1c28;
+    border-top: 2px solid #7c3aed;
+    box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.45);
+}
+
+#phalcon-debugbar .phalcon-debugbar-row {
+    display: flex;
+    align-items: stretch;
+}
+
+#phalcon-debugbar .phalcon-debugbar-tabs {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: stretch;
+    overflow-x: auto;
+}
+
+#phalcon-debugbar .phalcon-debugbar-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    background: transparent;
+    border: 0;
+    border-right: 1px solid #2b2b40;
+    color: #b9b9d4;
+    font: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+#phalcon-debugbar .phalcon-debugbar-tab:hover {
+    background: #26263a;
+    color: #ffffff;
+}
+
+#phalcon-debugbar .phalcon-debugbar-tab.is-active {
+    background: #7c3aed;
+    color: #ffffff;
+}
+
+#phalcon-debugbar .phalcon-debugbar-badge {
+    padding: 1px 7px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.16);
+    font-size: 11px;
+}
+
+#phalcon-debugbar .phalcon-debugbar-tab.is-active .phalcon-debugbar-badge {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+#phalcon-debugbar .phalcon-debugbar-toggle {
+    flex: 0 0 auto;
+    padding: 7px 12px;
+    background: #7c3aed;
+    border: 0;
+    color: #ffffff;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+#phalcon-debugbar .phalcon-debugbar-toggle:hover {
+    background: #8b4ff5;
+}
+
+#phalcon-debugbar .phalcon-debugbar-body {
+    max-height: 42vh;
+    overflow: auto;
+    padding: 10px 14px;
+    background: #14141d;
+    border-bottom: 1px solid #2b2b40;
+}
+
+#phalcon-debugbar table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#phalcon-debugbar th,
+#phalcon-debugbar td {
+    padding: 4px 10px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid #23233440;
+    word-break: break-word;
+}
+
+/* Key columns (grid keys and list labels) shrink to their content, so the
+   value/message column gets the remaining width. */
+#phalcon-debugbar .phalcon-debugbar-grid th,
+#phalcon-debugbar .phalcon-debugbar-key {
+    width: 1%;
+    color: #9a9ac8;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+#phalcon-debugbar .phalcon-debugbar-value {
+    color: #e2e2ef;
+}
+
+#phalcon-debugbar .phalcon-debugbar-code {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+#phalcon-debugbar .phalcon-debugbar-empty {
+    padding: 6px 2px;
+    color: #6b6b8c;
+    font-style: italic;
+}
