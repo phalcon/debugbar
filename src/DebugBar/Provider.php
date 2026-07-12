@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
+use Phalcon\DebugBar\Collector\DatabaseCollector;
 use Phalcon\DebugBar\Collector\MessagesCollector;
 use Phalcon\DebugBar\Collector\TimeCollector;
 use Phalcon\DebugBar\Collector\VersionCollector;
@@ -21,6 +22,7 @@ use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Di\DiInterface;
+use Phalcon\Http\RequestInterface;
 use Phalcon\Mvc\Application;
 
 use function getenv;
@@ -157,6 +159,14 @@ class Provider
             }
         }
 
+        $request = null;
+        if ($container->has('request')) {
+            $candidate = $container->get('request');
+            if ($candidate instanceof RequestInterface) {
+                $request = $candidate;
+            }
+        }
+
         $eventsManager->attach(
             'application:beforeSendResponse',
             new ResponseListener(
@@ -164,7 +174,7 @@ class Provider
                 new Renderer(),
                 new Injector(),
                 new AccessGate($this->allowedIps, $this->accessCallback),
-                $container,
+                $request,
                 $this->assetUri,
                 $this->nonce,
                 $this->headers
@@ -208,6 +218,10 @@ class Provider
 
         if ($this->isCollectorEnabled(TimeCollector::NAME)) {
             $collectors[] = new TimeCollector();
+        }
+
+        if ($this->isCollectorEnabled(DatabaseCollector::NAME)) {
+            $collectors[] = new DatabaseCollector();
         }
 
         return $collectors;

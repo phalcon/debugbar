@@ -14,7 +14,6 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar;
 
 use Phalcon\DebugBar\Security\AccessGate;
-use Phalcon\Di\DiInterface;
 use Phalcon\Events\EventInterface;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
@@ -30,21 +29,21 @@ use function is_string;
 final class ResponseListener
 {
     /**
-     * @param DebugBar    $bar
-     * @param Renderer    $renderer
-     * @param Injector    $injector
-     * @param AccessGate  $accessGate
-     * @param DiInterface $di
-     * @param string      $assetUri
-     * @param string|null $nonce
-     * @param bool        $headers
+     * @param DebugBar              $bar
+     * @param Renderer              $renderer
+     * @param Injector              $injector
+     * @param AccessGate            $accessGate
+     * @param RequestInterface|null $request
+     * @param string                $assetUri
+     * @param string|null           $nonce
+     * @param bool                  $headers
      */
     public function __construct(
         private readonly DebugBar $bar,
         private readonly Renderer $renderer,
         private readonly Injector $injector,
         private readonly AccessGate $accessGate,
-        private readonly DiInterface $di,
+        private readonly ?RequestInterface $request,
         private readonly string $assetUri,
         private readonly ?string $nonce,
         private readonly bool $headers
@@ -89,17 +88,12 @@ final class ResponseListener
      */
     private function requestContext(): array
     {
-        if (true !== $this->di->has('request')) {
+        if (null === $this->request) {
             return [null, false];
         }
 
-        $request = $this->di->get('request');
-        if (!$request instanceof RequestInterface) {
-            return [null, false];
-        }
+        $clientIp = $this->request->getClientAddress();
 
-        $clientIp = $request->getClientAddress();
-
-        return [is_string($clientIp) ? $clientIp : null, $request->isAjax()];
+        return [is_string($clientIp) ? $clientIp : null, $this->request->isAjax()];
     }
 }
