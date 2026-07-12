@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Unit\DebugBar;
 
+use Phalcon\Config\Config;
 use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
@@ -128,6 +129,7 @@ final class ProviderTest extends AbstractUnitTestCase
     {
         $di = new Di();
         $di->setShared('request', new Request());
+        $di->setShared('config', new Config(['app' => ['name' => 'test']]));
 
         $app = new Application($di);
         $app->setEventsManager($em);

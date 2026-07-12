@@ -30,6 +30,17 @@ final class ViewCollectorTest extends AbstractUnitTestCase
         $this->assertPanelContract($collector);
     }
 
+    public function testUnmatchedAfterRenderIsIgnored(): void
+    {
+        $collector     = new ViewCollector();
+        $eventsManager = new Manager();
+        $collector->subscribe($eventsManager);
+
+        $eventsManager->fire('view:afterRenderView', $this);
+
+        $this->assertSame(0, $collector->collect()['badge']);
+    }
+
     public function testRenderedViewsAreRecordedFromEvents(): void
     {
         $collector     = new ViewCollector();

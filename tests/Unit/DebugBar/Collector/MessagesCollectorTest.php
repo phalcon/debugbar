@@ -35,6 +35,18 @@ final class MessagesCollectorTest extends AbstractUnitTestCase
         $this->assertSame('{"a":1}', $envelope['panel'][1]['message']);
     }
 
+    public function testStringifiesScalarMessages(): void
+    {
+        $collector = new MessagesCollector();
+        $collector->addMessage(42, 'info');
+        $collector->addMessage(true, 'debug');
+
+        $panel = $collector->collect()['panel'];
+
+        $this->assertSame('42', $panel[0]['message']);
+        $this->assertSame('1', $panel[1]['message']);
+    }
+
     public function testNameAndPanelContract(): void
     {
         $collector = new MessagesCollector();

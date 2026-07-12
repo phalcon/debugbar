@@ -32,6 +32,21 @@ final class ConfigCollectorTest extends AbstractUnitTestCase
         $this->assertPanelContract($collector);
     }
 
+    public function testFlattensScalarTypes(): void
+    {
+        $config = new Config([
+            'debug'   => true,
+            'workers' => 4,
+            'ratio'   => 1.5,
+        ]);
+
+        $panel = (new ConfigCollector($config, new Redactor()))->collect()['panel'];
+
+        $this->assertSame('true', $panel['debug']);
+        $this->assertSame('4', $panel['workers']);
+        $this->assertSame('1.5', $panel['ratio']);
+    }
+
     public function testConfigIsFlattenedAndRedacted(): void
     {
         $config = new Config([

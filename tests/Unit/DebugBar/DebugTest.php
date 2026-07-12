@@ -17,6 +17,7 @@ use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\Fixtures\RecordingMessagesCollector;
+use Phalcon\Tests\Support\DebugBar\Fixtures\RecordingTimeCollector;
 use RuntimeException;
 
 final class DebugTest extends AbstractUnitTestCase
@@ -33,6 +34,26 @@ final class DebugTest extends AbstractUnitTestCase
         Debug::setBar(null);
 
         parent::tearDown();
+    }
+
+    public function testDelegatesEveryConvenienceMethod(): void
+    {
+        $messages = new RecordingMessagesCollector();
+        $time     = new RecordingTimeCollector();
+        $bar      = new DebugBar();
+        $bar->addCollector($messages);
+        $bar->addCollector($time);
+
+        Debug::setBar($bar);
+        Debug::debug('d');
+        Debug::notice('n');
+        Debug::warning('w');
+        Debug::error('e');
+        Debug::startMeasure('m', 'M');
+        Debug::stopMeasure('m');
+
+        $this->assertCount(4, $messages->getMessages());
+        $this->assertCount(2, $time->getMeasures());
     }
 
     public function testDelegatesToTheBarWhenSet(): void
