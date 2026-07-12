@@ -18,6 +18,19 @@ use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
 final class RedactorTest extends AbstractUnitTestCase
 {
+    public function testHiddenKeysAreOmittedEntirely(): void
+    {
+        $redacted = (new Redactor(['password'], ['internal']))->redact([
+            'user'     => 'nikos',
+            'password' => 'hunter2',
+            'internal' => 'gone',
+        ]);
+
+        $this->assertSame('nikos', $redacted['user']);
+        $this->assertSame('***', $redacted['password']);
+        $this->assertArrayNotHasKey('internal', $redacted);
+    }
+
     public function testRedactsConfiguredKeysCaseInsensitively(): void
     {
         $redacted = (new Redactor())->redact([
