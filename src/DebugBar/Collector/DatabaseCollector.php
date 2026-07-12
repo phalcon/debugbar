@@ -19,7 +19,7 @@ use Phalcon\Events\EventInterface;
 use Phalcon\Events\ManagerInterface;
 
 use function count;
-use function microtime;
+use function hrtime;
 use function round;
 
 /**
@@ -47,14 +47,14 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
     protected string $panel = 'list';
 
     /**
-     * @var list<array{sql: string, bindings: array<array-key, mixed>, time: float}>
+     * @var list<array{sql: string, bindings: array<array-key, mixed>, time: int|float}>
      */
     private array $queries = [];
 
     /**
-     * @var float
+     * @var int|float
      */
-    private float $started = 0.0;
+    private int|float $started = 0;
 
     /**
      * @return array{panel: list<array{label: string, message: string}>, badge: scalar|null}
@@ -64,7 +64,7 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
         $rows = [];
         foreach ($this->queries as $query) {
             $rows[] = [
-                'label'   => round($query['time'] * 1000, 2) . 'ms',
+                'label'   => round($query['time'] / 1e6, 2) . 'ms',
                 'message' => $query['sql'],
             ];
         }
@@ -85,7 +85,7 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
         $eventsManager->attach(
             'db:beforeQuery',
             function (): void {
-                $this->started = microtime(true);
+                $this->started = hrtime(true);
             }
         );
 
@@ -96,7 +96,7 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
                     $this->queries[] = [
                         'sql'      => $connection->getSQLStatement(),
                         'bindings' => $connection->getSQLVariables(),
-                        'time'     => microtime(true) - $this->started,
+                        'time'     => hrtime(true) - $this->started,
                     ];
                 }
             }

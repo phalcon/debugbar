@@ -19,8 +19,8 @@ use Phalcon\Events\ManagerInterface;
 
 use function array_pop;
 use function count;
+use function hrtime;
 use function is_string;
-use function microtime;
 use function round;
 
 /**
@@ -49,12 +49,12 @@ final class ViewCollector extends AbstractCollector implements Subscriber
     protected string $panel = 'list';
 
     /**
-     * @var list<array{path: string, start: float}>
+     * @var list<array{path: string, start: int|float}>
      */
     private array $pending = [];
 
     /**
-     * @var list<array{path: string, time: float}>
+     * @var list<array{path: string, time: int|float}>
      */
     private array $rendered = [];
 
@@ -66,7 +66,7 @@ final class ViewCollector extends AbstractCollector implements Subscriber
         $rows = [];
         foreach ($this->rendered as $view) {
             $rows[] = [
-                'label'   => round($view['time'] * 1000, 2) . 'ms',
+                'label'   => round($view['time'] / 1e6, 2) . 'ms',
                 'message' => $view['path'],
             ];
         }
@@ -89,7 +89,7 @@ final class ViewCollector extends AbstractCollector implements Subscriber
             function (EventInterface $event, mixed $view, mixed $path): void {
                 $this->pending[] = [
                     'path'  => is_string($path) ? $path : '',
-                    'start' => microtime(true),
+                    'start' => hrtime(true),
                 ];
             }
         );
@@ -104,7 +104,7 @@ final class ViewCollector extends AbstractCollector implements Subscriber
 
                 $this->rendered[] = [
                     'path' => $entry['path'],
-                    'time' => microtime(true) - $entry['start'],
+                    'time' => hrtime(true) - $entry['start'],
                 ];
             }
         );

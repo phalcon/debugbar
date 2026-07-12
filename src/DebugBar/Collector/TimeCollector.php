@@ -15,6 +15,7 @@ namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Contracts\TimeAware;
 
+use function hrtime;
 use function is_float;
 use function microtime;
 use function round;
@@ -43,7 +44,7 @@ final class TimeCollector extends AbstractCollector implements TimeAware
     protected string $panel = 'list';
 
     /**
-     * @var array<string, array{label: string, start: float, end: float|null}>
+     * @var array<string, array{label: string, start: int|float, end: int|float|null}>
      */
     private array $measures = [];
 
@@ -52,17 +53,17 @@ final class TimeCollector extends AbstractCollector implements TimeAware
      */
     public function collect(): array
     {
-        $start = $this->requestStart();
-        $now   = microtime(true);
+        $requestMs = (microtime(true) - $this->requestStart()) * 1000;
+        $hrNow     = hrtime(true);
 
-        $rows = [$this->row('Request', $now - $start)];
+        $rows = [$this->row('Request', $requestMs)];
         foreach ($this->measures as $measure) {
-            $rows[] = $this->row($measure['label'], ($measure['end'] ?? $now) - $measure['start']);
+            $rows[] = $this->row($measure['label'], (($measure['end'] ?? $hrNow) - $measure['start']) / 1e6);
         }
 
         return [
             'panel' => $rows,
-            'badge' => round(($now - $start) * 1000, 2) . 'ms',
+            'badge' => round($requestMs, 2) . 'ms',
         ];
     }
 
@@ -76,7 +77,7 @@ final class TimeCollector extends AbstractCollector implements TimeAware
     {
         $this->measures[$name] = [
             'label' => $label ?? $name,
-            'start' => microtime(true),
+            'start' => hrtime(true),
             'end'   => null,
         ];
     }
@@ -89,7 +90,7 @@ final class TimeCollector extends AbstractCollector implements TimeAware
     public function stopMeasure(string $name): void
     {
         if (isset($this->measures[$name])) {
-            $this->measures[$name]['end'] = microtime(true);
+            $this->measures[$name]['end'] = hrtime(true);
         }
     }
 
@@ -105,15 +106,15 @@ final class TimeCollector extends AbstractCollector implements TimeAware
 
     /**
      * @param string $label
-     * @param float  $seconds
+     * @param float  $milliseconds
      *
      * @return array{label: string, message: string}
      */
-    private function row(string $label, float $seconds): array
+    private function row(string $label, float $milliseconds): array
     {
         return [
             'label'   => $label,
-            'message' => round($seconds * 1000, 2) . 'ms',
+            'message' => round($milliseconds, 2) . 'ms',
         ];
     }
 }
