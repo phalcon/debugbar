@@ -160,9 +160,10 @@ class Provider
         }
 
         $container = $this->app->getDI();
+        $request   = $this->resolveRequest($container);
 
         $bar = new DebugBar();
-        foreach ($this->buildCollectors($container) as $collector) {
+        foreach ($this->buildCollectors($container, $request) as $collector) {
             $bar->addCollector($collector);
         }
 
@@ -176,14 +177,6 @@ class Provider
         foreach ($bar->getCollectors() as $collector) {
             if ($collector instanceof Subscriber) {
                 $collector->subscribe($eventsManager);
-            }
-        }
-
-        $request = null;
-        if ($container->has('request')) {
-            $candidate = $container->get('request');
-            if ($candidate instanceof RequestInterface) {
-                $request = $candidate;
             }
         }
 
@@ -218,11 +211,12 @@ class Provider
     /**
      * Builds the enabled collectors (per the config map; all on by default).
      *
-     * @param DiInterface|null $container
+     * @param DiInterface|null      $container
+     * @param RequestInterface|null $request
      *
      * @return list<Collector>
      */
-    private function buildCollectors(?DiInterface $container): array
+    private function buildCollectors(?DiInterface $container, ?RequestInterface $request): array
     {
         $collectors = [];
 
@@ -259,7 +253,7 @@ class Provider
         }
 
         if ($this->isCollectorEnabled(RequestCollector::NAME)) {
-            $collectors[] = new RequestCollector($this->redactor);
+            $collectors[] = new RequestCollector($request, $this->redactor);
         }
 
         if (null !== $container && $this->isCollectorEnabled(ConfigCollector::NAME)) {
@@ -297,6 +291,22 @@ class Provider
         $config = $container->get('config');
 
         return $config instanceof ConfigInterface ? $config : null;
+    }
+
+    /**
+     * @param DiInterface|null $container
+     *
+     * @return RequestInterface|null
+     */
+    private function resolveRequest(?DiInterface $container): ?RequestInterface
+    {
+        if (null === $container || !$container->has('request')) {
+            return null;
+        }
+
+        $request = $container->get('request');
+
+        return $request instanceof RequestInterface ? $request : null;
     }
 
     /**

@@ -14,18 +14,15 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Security\Redactor;
+use Phalcon\Http\RequestInterface;
 
-use function is_string;
-use function str_replace;
-use function str_starts_with;
-use function strtolower;
-use function substr;
-use function ucwords;
+use function is_array;
 
 /**
- * Snapshots the incoming request from the superglobals — query, post, cookies,
- * and headers — redacting sensitive keys and flattening the nested arrays into a
- * single grid. Reads raw PHP state, so nothing is resolved from the container.
+ * Snapshots the incoming request — method, URI, query, post, and headers —
+ * redacting sensitive keys and flattening the nested arrays into a single grid.
+ * The request object is resolved once by the provider and injected here, so the
+ * collector reads it directly rather than the superglobals.
  */
 final class RequestCollector extends AbstractCollector
 {
@@ -49,10 +46,13 @@ final class RequestCollector extends AbstractCollector
     protected string $panel = 'grid';
 
     /**
-     * @param Redactor $redactor
+     * @param RequestInterface|null $request
+     * @param Redactor              $redactor
      */
-    public function __construct(private readonly Redactor $redactor)
-    {
+    public function __construct(
+        private readonly ?RequestInterface $request,
+        private readonly Redactor $redactor
+    ) {
     }
 
     /**
@@ -60,21 +60,26 @@ final class RequestCollector extends AbstractCollector
      */
     public function collect(): array
     {
+        if (null === $this->request) {
+            return [
+                'panel' => [],
+                'badge' => null,
+            ];
+        }
+
         $grid = [
-            'Method' => $this->server('REQUEST_METHOD'),
-            'URI'    => $this->server('REQUEST_URI'),
+            'Method' => $this->request->getMethod(),
+            'URI'    => $this->request->getURI(),
         ];
 
         $sections = [
-            'Query'   => $_GET,
-            'Post'    => $_POST,
-            'Cookies' => $_COOKIE,
-            'Headers' => $this->headers(),
+            'Query'   => $this->toArray($this->request->getQuery()),
+            'Post'    => $this->toArray($this->request->getPost()),
+            'Headers' => $this->request->getHeaders(),
         ];
 
         foreach ($sections as $label => $values) {
-            $flat = $this->flatten($this->redactor->redact($values));
-            foreach ($flat as $key => $value) {
+            foreach ($this->flatten($this->redactor->redact($values)) as $key => $value) {
                 $grid[$label . '.' . $key] = $value;
             }
         }
@@ -86,41 +91,12 @@ final class RequestCollector extends AbstractCollector
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    private function headers(): array
-    {
-        $headers = [];
-        foreach ($_SERVER as $key => $value) {
-            if (is_string($key) && str_starts_with($key, 'HTTP_')) {
-                $headers[$this->headerName($key)] = $value;
-            }
-        }
-
-        return $headers;
-    }
-
-    /**
-     * @param string $key
+     * @param mixed $value
      *
-     * @return string
+     * @return array<array-key, mixed>
      */
-    private function headerName(string $key): string
+    private function toArray(mixed $value): array
     {
-        $name = str_replace('_', ' ', strtolower(substr($key, 5)));
-
-        return str_replace(' ', '-', ucwords($name));
-    }
-
-    /**
-     * @param string $key
-     *
-     * @return string
-     */
-    private function server(string $key): string
-    {
-        $value = $_SERVER[$key] ?? '';
-
-        return is_string($value) ? $value : '';
+        return is_array($value) ? $value : [];
     }
 }
