@@ -20,6 +20,7 @@ use Phalcon\Debug\ReportBuilder;
 use Phalcon\Support\Exception;
 use Phalcon\Support\Version;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
+use Phalcon\Tests\Support\DebugBar\Fixtures\DumpableFixture;
 
 final class HtmlRendererTest extends AbstractUnitTestCase
 {
@@ -43,6 +44,130 @@ final class HtmlRendererTest extends AbstractUnitTestCase
     <script src='{$uri}debug.js'></script>";
 
         $this->assertSame($expected, (new HtmlRenderer())->getJsSources($uri));
+    }
+
+    public function testRenderExactBacktraceSections(): void
+    {
+        $actual = (new HtmlRenderer())->render($this->buildReport());
+
+        $frameApp = "\n        <details class='frame app' open>"
+            . "\n            <summary><div class='frame-head'>"
+            . "\n                <span class='frame-num'>#0</span>"
+            . "\n                <span class='frame-call'>"
+            . "<span class='cls'>"
+            . "<a href='https://docs.example/My_Service' target='_new'>My\\Service</a>"
+            . "</span><span class='op'>-></span>"
+            . "<span class='fn'>methodA</span>"
+            . "<span class='op'>(</span>argOne, 42<span class='op'>)</span>"
+            . "</span><span class='tag-app'>app</span>"
+            . "\n                <span class='chev'>&#9656;</span>"
+            . "\n            </div></summary>"
+            . "\n            <div class='frame-file' data-file='/app/x.php' data-line='5'>"
+            . "\n                <span class='path'><b>/app/x.php</b> : 5</span>"
+            . "\n            </div>"
+            . "\n            <div class='code'><table>"
+            . "<tr><td class='ln'>3</td><td class='src'>AAA  tabbed</td></tr>"
+            . "<tr class='hl'><td class='ln'>4</td><td class='src'>line&lt;four&gt;</td></tr>"
+            . "<tr><td class='ln'>5</td><td class='src'>line five</td></tr>"
+            . "</table></div>"
+            . "\n        </details>";
+
+        $frameVendor = "\n        <details class='frame vendor'>"
+            . "\n            <summary><div class='frame-head'>"
+            . "\n                <span class='frame-num'>#1</span>"
+            . "\n                <span class='frame-call'><span class='fn'>"
+            . "<a href='https://secure.php.net/manual/en/function.array-map.php'"
+            . " target='_new'>array_map</a></span></span>"
+            . "\n                <span class='chev'>&#9656;</span>"
+            . "\n            </div></summary>"
+            . "\n        </details>";
+
+        $this->assertStringContainsString($frameApp, $actual);
+        $this->assertStringContainsString($frameVendor, $actual);
+        $this->assertStringContainsString(
+            "\n        </details>\n    </div>\n    <div class='panel' id='request'>",
+            $actual
+        );
+    }
+
+    public function testRenderExactDataSections(): void
+    {
+        $actual = (new HtmlRenderer())->render($this->buildReport());
+
+        $request = "\n    <div class='panel' id='request'>"
+            . "<table class='grid'><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>"
+            . "<tr><td class='k'>reqKey</td><td class='v'>reqVal</td></tr>"
+            . "<tr><td class='k'>7</td><td class='v'>intKeyed</td></tr>"
+            . "</tbody></table>"
+            . "\n    </div>";
+
+        $server = "\n    <div class='panel' id='server'>"
+            . "<table class='grid'><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>"
+            . "<tr><td class='k'>SRV</td><td class='v'>srvVal</td></tr>"
+            . "</tbody></table>"
+            . "\n    </div>";
+
+        $files = "\n    <div class='panel' id='files'>"
+            . "<table class='grid'><thead><tr><th>#</th><th>Path</th></tr></thead><tbody>"
+            . "<tr><td class='k'>0</td><td class='v'>/app/a.php</td></tr>"
+            . "<tr><td class='k'>1</td><td class='v'>/vendor/b.php</td></tr>"
+            . "</tbody></table>"
+            . "\n    </div>";
+
+        $memory = "\n    <div class='panel' id='memory'>"
+            . "\n        <div class='stats'>"
+            . "\n            <div class='stat'><div class='label'>Memory usage (real)</div>"
+            . "<div class='value'>1.5 <small>MB</small></div></div>"
+            . "\n            <div class='stat'><div class='label'>Peak usage</div>"
+            . "<div class='value'>2.5 <small>MB</small></div></div>"
+            . "\n        </div>"
+            . "\n    </div>";
+
+        $variables = "\n    <div class='panel' id='variables'>"
+            . "<table class='grid'><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>"
+            . "<tr><td class='k'>myVar</td><td class='v'>hello</td></tr>"
+            . "</tbody></table>"
+            . "\n    </div>";
+
+        $this->assertStringContainsString($request, $actual);
+        $this->assertStringContainsString($server, $actual);
+        $this->assertStringContainsString($files, $actual);
+        $this->assertStringContainsString($memory, $actual);
+        $this->assertStringContainsString($variables, $actual);
+    }
+
+    public function testRenderExactHeadSections(): void
+    {
+        $actual = (new HtmlRenderer())->render($this->buildReport());
+
+        $errorMain = "\n    <div class='error-card'>"
+            . "\n        <span class='error-type'>My\\Ex</span>"
+            . "\n        <h1 class='error-message'>boom\\nsecond</h1>"
+            . "\n        <div class='meta'>"
+            . "\n            <span class='item'><code>/app/x.php</code> : <code>5</code></span>"
+            . "\n            <span class='sep'>|</span><span class='item'>PHP <code>"
+            . PHP_VERSION
+            . "</code></span>"
+            . "\n        </div>"
+            . "\n    </div>";
+
+        $tabs = "\n    <div class='tabs' role='tablist'>"
+            . "\n        <button class='tab is-active' data-tab='backtrace'>"
+            . "Backtrace <span class='count'>2</span></button>"
+            . "\n        <button class='tab' data-tab='request'>"
+            . "Request <span class='count'>2</span></button>"
+            . "\n        <button class='tab' data-tab='server'>"
+            . "Server <span class='count'>1</span></button>"
+            . "\n        <button class='tab' data-tab='files'>"
+            . "Included Files <span class='count'>2</span></button>"
+            . "\n        <button class='tab' data-tab='memory'>Memory</button>"
+            . "\n        <button class='tab' data-tab='variables'>"
+            . "Variables <span class='count'>1</span></button>"
+            . "\n    </div>";
+
+        $this->assertStringStartsWith('<!DOCTYPE html>', $actual);
+        $this->assertStringContainsString($errorMain, $actual);
+        $this->assertStringContainsString($tabs, $actual);
     }
 
     public function testRenderNoBacktraceDocument(): void
@@ -158,6 +283,11 @@ final class HtmlRendererTest extends AbstractUnitTestCase
         $this->assertSame('OVERRIDDEN', $renderer->getTemplate('version'));
     }
 
+    public function testTemplatesFallThrough(): void
+    {
+        $this->assertSame('', (new HtmlRenderer())->getTemplate('does-not-exist'));
+    }
+
     public function testVarDumpAndArrayDumpBranches(): void
     {
         $renderer = new class () extends HtmlRenderer {
@@ -200,25 +330,97 @@ final class HtmlRendererTest extends AbstractUnitTestCase
         $this->assertSame('resource', $renderer->dumpVar($resource));
         $this->assertSame('Object(stdClass)', $renderer->dumpVar(new \stdClass()));
         $this->assertStringContainsString('a&lt;b', $renderer->dumpVar('a<b'));
+        $this->assertSame("a\\nb", $renderer->dumpVar("a\nb"));
         $this->assertStringContainsString('Array(', $renderer->dumpVar([1, 2]));
         $this->assertStringContainsString('=&gt;', $renderer->dumpVar($object));
 
+        $this->assertSame('Array([0] =&gt; 1, [1] =&gt; 2)', $renderer->dumpVar([1, 2]));
+        $this->assertSame(
+            'Array([0] =&gt; Array([0] =&gt; Array([0] =&gt; Array())))',
+            $renderer->dumpVar([[[['deep']]]])
+        );
+        $this->assertSame(
+            'Object(' . DumpableFixture::class . ': [alpha] =&gt; beta)',
+            $renderer->dumpVar(new DumpableFixture())
+        );
+
         $this->assertNull($renderer->dumpArr([]));
+        $this->assertSame('10', $renderer->dumpArr(range(1, 10)));
         $this->assertSame('12', $renderer->dumpArr(range(1, 12)));
 
         $dump = $renderer->dumpArr(['', 5, [1], new \stdClass(), null, $resource]);
 
         /** @var string $dump */
-        $this->assertStringContainsString('(empty string)', $dump);
-        $this->assertStringContainsString('Array(', $dump);
-        $this->assertStringContainsString('Object(stdClass)', $dump);
-        $this->assertStringContainsString('null', $dump);
-        $this->assertStringContainsString('Resource', $dump);
-
-        $this->assertStringContainsString('Array(', (string)$renderer->dumpVar([[[['deep']]]]));
+        $this->assertStringContainsString('[0] =&gt; (empty string)', $dump);
+        $this->assertStringContainsString('[1] =&gt; 5', $dump);
+        $this->assertStringContainsString('[2] =&gt; Array([0] =&gt; 1)', $dump);
+        $this->assertStringContainsString('[3] =&gt; Object(stdClass)', $dump);
+        $this->assertStringContainsString('[4] =&gt; null', $dump);
 
         fclose($resource);
 
         $this->assertStringContainsString('resource (closed)', (string)$renderer->dumpArr([$resource]));
+    }
+
+    private function buildReport(): ExceptionReport
+    {
+        $fragment = [
+            'mode'      => 'fragment',
+            'firstLine' => 3,
+            'line'      => 4,
+            'lastLine'  => 5,
+            'lines'     => [
+                "line one\r\n",
+                "line two\r\n",
+                "AAA\ttabbed\r\n",
+                "line<four>\r\n",
+                "line five\r\n",
+            ],
+        ];
+
+        $frame = new BacktraceItem(
+            'methodA',
+            '->',
+            'My\\Service',
+            'https://docs.example/My_Service',
+            null,
+            true,
+            ['argOne', 42],
+            '/app/x.php',
+            5,
+            $fragment
+        );
+
+        $function = new BacktraceItem(
+            'array_map',
+            null,
+            null,
+            null,
+            'https://secure.php.net/manual/en/function.array-map.php',
+            false,
+            [],
+            null,
+            null,
+            null
+        );
+
+        $report = new ExceptionReport(
+            'My\\Ex',
+            "boom\nsecond",
+            '/app/x.php',
+            5,
+            true,
+            self::URI
+        );
+
+        $report->setBacktrace([$frame, $function]);
+        $report->setRequest(['reqKey' => 'reqVal', 7 => 'intKeyed']);
+        $report->setServer(['SRV' => 'srvVal']);
+        $report->setIncludedFiles(['/app/a.php', '/vendor/b.php']);
+        $report->setMemoryUsage(1572864);
+        $report->setPeakMemoryUsage(2621440);
+        $report->setVariables(['myVar' => 'hello']);
+
+        return $report;
     }
 }

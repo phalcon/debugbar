@@ -18,9 +18,25 @@ use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
 final class SetTemplateTest extends AbstractUnitTestCase
 {
+    public function testGetTemplateConstructorExact(): void
+    {
+        $expected = "-><span style=\"%style%\">%method%</span>(); "
+            . "[<b style=\"%style%\">constructor</b>]\n";
+
+        $this->assertSame(
+            $expected,
+            (new Dump())->getTemplate('objectMethodConstructor'),
+        );
+    }
+
     public function testGetTemplateReturnsDefaultWhenNotOverridden(): void
     {
         $this->assertStringContainsString('<pre', (new Dump())->getTemplate('pre'));
+    }
+
+    public function testGetTemplateUnknownReturnsEmpty(): void
+    {
+        $this->assertSame('', (new Dump())->getTemplate('does-not-exist'));
     }
 
     public function testSetTemplateOverridesBold(): void

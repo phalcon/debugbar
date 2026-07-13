@@ -18,6 +18,11 @@ use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
 final class GetSetDetailedTest extends AbstractUnitTestCase
 {
+    public function testDefaultDetailedIsFalse(): void
+    {
+        $this->assertFalse((new Dump())->getDetailed());
+    }
+
     /**
      * @author Phalcon Team <team@phalcon.io>
      * @since  2020-09-09

@@ -18,17 +18,27 @@ use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
 final class RedactorTest extends AbstractUnitTestCase
 {
+    public function testConfiguredMultibyteKeysAreLowered(): void
+    {
+        $redacted = (new Redactor(['ПАРОЛЬ']))->redact([
+            'пароль' => 'hunter2',
+        ]);
+
+        $this->assertSame('***', $redacted['пароль']);
+    }
+
     public function testHiddenKeysAreOmittedEntirely(): void
     {
         $redacted = (new Redactor(['password'], ['internal']))->redact([
+            'internal' => 'gone',
             'user'     => 'sarah-connor',
             'password' => 'hunter2',
-            'internal' => 'gone',
         ]);
 
+        $this->assertArrayNotHasKey('internal', $redacted);
+        $this->assertArrayHasKey('user', $redacted);
         $this->assertSame('sarah-connor', $redacted['user']);
         $this->assertSame('***', $redacted['password']);
-        $this->assertArrayNotHasKey('internal', $redacted);
     }
 
     public function testRedactsConfiguredKeysCaseInsensitively(): void
@@ -42,6 +52,15 @@ final class RedactorTest extends AbstractUnitTestCase
         $this->assertSame('sarah-connor', $redacted['user']);
         $this->assertSame('***', $redacted['password']);
         $this->assertSame('***', $redacted['Token']);
+    }
+
+    public function testRedactsMultibyteKeyCaseInsensitively(): void
+    {
+        $redacted = (new Redactor(['пароль']))->redact([
+            'ПАРОЛЬ' => 'hunter2',
+        ]);
+
+        $this->assertSame('***', $redacted['ПАРОЛЬ']);
     }
 
     public function testRedactsNestedKeys(): void

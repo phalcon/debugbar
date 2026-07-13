@@ -1,0 +1,7 @@
+<b style="color:purple">Object</b> stdClass (
+  -><span style="color:purple">items</span> (<span style="color:purple">public</span>) = <b style="color:red">Array</b> (<span style="color:red">1</span>) (
+    [<span style="color:red">k</span>] => <b style="color:teal">String</b> (<span style="color:teal">1</span>) "<span style="color:teal">v</span>"
+  )
+  stdClass <b style="color:purple">methods</b>: (<span style="color:purple">0</span>) (
+  )
+)

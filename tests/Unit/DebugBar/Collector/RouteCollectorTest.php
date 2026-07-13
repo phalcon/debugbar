@@ -18,6 +18,7 @@ use Phalcon\Events\Manager;
 use Phalcon\Mvc\RouterInterface;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
+use stdClass;
 
 final class RouteCollectorTest extends AbstractUnitTestCase
 {
@@ -29,6 +30,17 @@ final class RouteCollectorTest extends AbstractUnitTestCase
 
         $this->assertSame('route', $collector->getName());
         $this->assertPanelContract($collector);
+    }
+
+    public function testNonRouterSourceIsIgnored(): void
+    {
+        $collector     = new RouteCollector();
+        $eventsManager = new Manager();
+        $collector->subscribe($eventsManager);
+
+        $eventsManager->fire('router:matchedRoute', new stdClass(), null);
+
+        $this->assertSame([], $collector->collect()['panel']);
     }
 
     public function testRouteIsSnapshotFromTheRouter(): void
@@ -49,6 +61,8 @@ final class RouteCollectorTest extends AbstractUnitTestCase
         $panel = $collector->collect()['panel'];
 
         $this->assertSame('frontend', $panel['Module']);
+        $this->assertArrayHasKey('Namespace', $panel);
+        $this->assertSame('App\Controllers', $panel['Namespace']);
         $this->assertSame('session', $panel['Controller']);
         $this->assertSame('login', $panel['Action']);
         $this->assertSame('{"id":5}', $panel['Params']);

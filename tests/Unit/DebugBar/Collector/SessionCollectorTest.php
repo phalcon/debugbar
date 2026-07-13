@@ -18,6 +18,7 @@ use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
 
+use function session_name;
 use function session_start;
 use function session_status;
 use function session_write_close;
@@ -43,14 +44,14 @@ final class SessionCollectorTest extends AbstractUnitTestCase
     {
         session_start(['use_cookies' => false, 'cache_limiter' => '']);
         $_SESSION = [
+            '$PHALCON/CSRF$' => 'token-value',
             'user'           => 'sarah-connor',
             'password'       => 'secret',
-            '$PHALCON/CSRF$' => 'token-value',
         ];
 
         $panel = (new SessionCollector(new Redactor()))->collect()['panel'];
 
-        $this->assertArrayHasKey('Name', $panel);
+        $this->assertSame(session_name(), $panel['Name']);
         $this->assertSame('sarah-connor', $panel['Data.user']);
         $this->assertSame('***', $panel['Data.password']);
         $this->assertArrayNotHasKey('ID', $panel);

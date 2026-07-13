@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Unit\Debug\Dump;
 
+use Phalcon\Container\Container;
 use Phalcon\Debug\Dump;
 use Phalcon\Di\Di;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
@@ -21,12 +22,64 @@ use Phalcon\Tests\Support\Support\Dump\SampleMethods;
 
 final class OutputBranchesTest extends AbstractUnitTestCase
 {
+    public function testAlreadyListedIndentNested(): void
+    {
+        $dump = new Dump();
+
+        // First pass registers the class so a later dump is "[already listed]".
+        $this->callProtectedMethod($dump, 'output', new SampleMethods());
+
+        /** @var string $actual */
+        $actual = $this->callProtectedMethod(
+            $dump,
+            'output',
+            ['z' => new SampleMethods()],
+        );
+
+        // Nested at tab 2 the marker carries a four-space indentation.
+        $this->assertStringContainsString("\n    [already listed]\n", $actual);
+    }
+
     public function testAlreadyListedMethods(): void
     {
         $dump   = new Dump();
         $actual = $dump->variables(new SampleMethods(), new SampleMethods());
 
         $this->assertStringContainsString('[already listed]', $actual);
+    }
+
+    public function testArrayLogicalConditionsAllRequired(): void
+    {
+        $dump = new Dump();
+
+        // Empty name plus an empty-string key: the self-reference "continue"
+        // must NOT trigger, so the value has to be printed.
+        /** @var string $actual */
+        $actual = $this->callProtectedMethod(
+            $dump,
+            'output',
+            ['' => 'keepme'],
+            '',
+        );
+
+        $this->assertStringContainsString('keepme', $actual);
+    }
+
+    public function testArraySelfReferenceContinuesNotBreaks(): void
+    {
+        $dump = new Dump();
+
+        // The key matching the name is skipped, but later keys must still print.
+        /** @var string $actual */
+        $actual = $this->callProtectedMethod(
+            $dump,
+            'output',
+            ['self' => 'skipme', 'other' => 'keepme'],
+            'self',
+        );
+
+        $this->assertStringContainsString('keepme', $actual);
+        $this->assertStringNotContainsString('skipme', $actual);
     }
 
     public function testArraySelfReferenceKeyIsSkipped(): void
@@ -46,6 +99,25 @@ final class OutputBranchesTest extends AbstractUnitTestCase
 
         $this->assertStringContainsString('TRUE', $dump->variable(true));
         $this->assertStringContainsString('FALSE', $dump->variable(false));
+    }
+
+    public function testContainerIsSkipped(): void
+    {
+        $dump = new Dump();
+
+        /** @var string $actual */
+        $actual = $this->callProtectedMethod(
+            $dump,
+            'output',
+            new Container(),
+        );
+
+        $this->assertStringContainsString('[skipped]', $actual);
+        $this->assertStringContainsString(" (\n  [skipped]\n", $actual);
+        $this->assertStringContainsString(
+            '<b style="color:purple">Object</b>',
+            $actual,
+        );
     }
 
     public function testDetailedObjectUsesReflection(): void
@@ -91,6 +163,34 @@ final class OutputBranchesTest extends AbstractUnitTestCase
         fclose($resource);
 
         $this->assertStringContainsString('Resource', $actual);
+    }
+
+    public function testResourceOutputBranch(): void
+    {
+        /** @var resource $resource */
+        $resource = fopen('php://memory', 'r');
+
+        $dump = new Dump();
+
+        /** @var string $actual */
+        $actual = $this->callProtectedMethod($dump, 'output', $resource, 'lbl');
+        fclose($resource);
+
+        // Name prefix kept, style placeholder resolved.
+        $this->assertStringStartsWith('lbl ', $actual);
+        $this->assertStringNotContainsString('%style%', $actual);
+        $this->assertStringContainsString('color:maroon', $actual);
+    }
+
+    public function testSkippedIndentNested(): void
+    {
+        $dump = new Dump();
+
+        /** @var string $actual */
+        $actual = $this->callProtectedMethod($dump, 'output', [new Di()]);
+
+        // Nested at tab 2 the marker carries a four-space indentation.
+        $this->assertStringContainsString("\n    [skipped]\n", $actual);
     }
 
     public function testSkipsDiInterface(): void

@@ -22,6 +22,8 @@ use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Events\Event;
 use Phalcon\Http\Response;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
+use Phalcon\Tests\Support\DebugBar\Fixtures\GridCollector;
+use Phalcon\Tests\Support\DebugBar\Fixtures\ListCollector;
 
 final class ResponseListenerTest extends AbstractUnitTestCase
 {
@@ -58,6 +60,29 @@ final class ResponseListenerTest extends AbstractUnitTestCase
         $listener($this->event(), null, $response);
 
         $this->assertStringNotContainsString('phalcon-debugbar-data', $response->getContent());
+    }
+
+    public function testSetsDiagnosticHeaderWhenEnabled(): void
+    {
+        $bar = new DebugBar();
+        $bar->addCollector(new GridCollector())
+            ->addCollector(new ListCollector());
+
+        $listener = new ResponseListener(
+            $bar,
+            new Renderer(),
+            new Injector(),
+            new AccessGate([], null),
+            null,
+            new BarOptions(true, null)
+        );
+
+        $response = new Response();
+        $response->setContent('<html><body>hi</body></html>');
+
+        $listener($this->event(), null, $response);
+
+        $this->assertSame('2', $response->getHeaders()->get('X-Debug-Bar'));
     }
 
     private function event(): Event

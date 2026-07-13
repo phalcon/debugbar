@@ -39,10 +39,26 @@ final class InjectorTest extends AbstractUnitTestCase
         $this->assertSame('<html><body>hi<assets><bar></body></html>', $response->getContent());
     }
 
+    public function testShouldInjectForClientErrorStatus(): void
+    {
+        $response = new Response();
+        $response->setStatusCode(400);
+
+        $this->assertTrue((new Injector())->shouldInject($response));
+    }
+
     public function testShouldInjectForHtml(): void
     {
         $response = new Response();
         $response->setContent('<html><body></body></html>');
+
+        $this->assertTrue((new Injector())->shouldInject($response));
+    }
+
+    public function testShouldInjectForOkStatus(): void
+    {
+        $response = new Response();
+        $response->setStatusCode(200);
 
         $this->assertTrue((new Injector())->shouldInject($response));
     }
@@ -56,6 +72,14 @@ final class InjectorTest extends AbstractUnitTestCase
     {
         $response = new Response();
         $response->setContentType('application/json');
+
+        $this->assertFalse((new Injector())->shouldInject($response));
+    }
+
+    public function testShouldNotInjectForMultipleChoicesStatus(): void
+    {
+        $response = new Response();
+        $response->setStatusCode(300);
 
         $this->assertFalse((new Injector())->shouldInject($response));
     }

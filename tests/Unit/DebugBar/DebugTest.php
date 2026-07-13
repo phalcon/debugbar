@@ -90,7 +90,12 @@ final class DebugTest extends AbstractUnitTestCase
     {
         Debug::message('x');
         Debug::info('y');
+        Debug::debug('d');
+        Debug::notice('n');
+        Debug::warning('w');
+        Debug::error('e');
         Debug::startMeasure('z');
+        Debug::stopMeasure('z');
         Debug::addException(new RuntimeException('boom'));
 
         $this->assertNull(Debug::getBar());

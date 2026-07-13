@@ -13,8 +13,10 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Unit\Debug;
 
+use Closure;
 use Phalcon\Debug;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
+use ReflectionFunction;
 
 final class ListenLowSeverityTest extends AbstractUnitTestCase
 {
@@ -24,12 +26,55 @@ final class ListenLowSeverityTest extends AbstractUnitTestCase
      */
     public function testSupportDebugListenLowSeverity(): void
     {
-        $debug  = new Debug();
-        $result = $debug->listenLowSeverity();
+        $debug = new Debug();
+
+        $result           = $debug->listenLowSeverity();
+        $errorHandler     = $this->peekErrorHandler();
+        $exceptionHandler = $this->peekExceptionHandler();
 
         restore_error_handler();
         restore_exception_handler();
 
         $this->assertInstanceOf(Debug::class, $result);
+        /**
+         * The method installs the error handler pointing to
+         * `Debug::onUncaughtLowSeverity()`.
+         */
+        $this->assertBoundTo($debug, 'onUncaughtLowSeverity', $errorHandler);
+        /**
+         * It also installs the exception handler pointing to
+         * `Debug::onUncaughtException()`.
+         */
+        $this->assertBoundTo($debug, 'onUncaughtException', $exceptionHandler);
+    }
+
+    private function assertBoundTo(
+        object $expectedThis,
+        string $expectedMethod,
+        ?callable $handler
+    ): void {
+        $this->assertInstanceOf(Closure::class, $handler);
+
+        /** @var Closure $handler */
+        $reflection = new ReflectionFunction($handler);
+
+        $this->assertSame($expectedThis, $reflection->getClosureThis());
+        $this->assertSame($expectedMethod, $reflection->getName());
+    }
+
+    private function peekErrorHandler(): ?callable
+    {
+        $handler = set_error_handler(null);
+        restore_error_handler();
+
+        return $handler;
+    }
+
+    private function peekExceptionHandler(): ?callable
+    {
+        $handler = set_exception_handler(null);
+        restore_exception_handler();
+
+        return $handler;
     }
 }

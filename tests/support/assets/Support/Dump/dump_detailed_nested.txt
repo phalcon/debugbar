@@ -1,0 +1,9 @@
+<b style="color:red">Array</b> (<span style="color:red">1</span>) (
+  [<span style="color:red">x</span>] => <b style="color:purple">Object</b> Phalcon\Tests\Support\Support\Dump\NestedProperties (
+    -><span style="color:purple">data</span> (<span style="color:purple">private</span>) = <b style="color:red">Array</b> (<span style="color:red">1</span>) (
+      [<span style="color:red">k</span>] => <b style="color:teal">String</b> (<span style="color:teal">1</span>) "<span style="color:teal">v</span>"
+    )
+    Phalcon\Tests\Support\Support\Dump\NestedProperties <b style="color:purple">methods</b>: (<span style="color:purple">0</span>) (
+    )
+  )
+)

@@ -15,6 +15,7 @@ namespace Phalcon\Tests\Unit\Debug;
 
 use ErrorException;
 use Phalcon\Debug;
+use Phalcon\Debug\Exceptions\RuntimeWarning;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
 final class OnUncaughtLowSeverityTest extends AbstractUnitTestCase
@@ -27,6 +28,7 @@ final class OnUncaughtLowSeverityTest extends AbstractUnitTestCase
     {
         $this->expectException(ErrorException::class);
         $this->expectExceptionMessage('Test warning message');
+        $this->expectExceptionCode(0);
 
         $debug = new Debug();
 
@@ -47,5 +49,37 @@ final class OnUncaughtLowSeverityTest extends AbstractUnitTestCase
         } finally {
             error_reporting($previous);
         }
+    }
+
+    /**
+     * @author Phalcon Team <team@phalcon.io>
+     * @since  2026-07-13
+     */
+    public function testSupportDebugOnUncaughtLowSeverityMaskedSeverity(): void
+    {
+        $debug  = new Debug();
+        $thrown = false;
+
+        /**
+         * When the severity is not part of the current error_reporting() mask
+         * the handler must stay silent. This proves the guard uses a bitwise
+         * AND (not OR) and that the branch is actually taken.
+         */
+        $previous = error_reporting(0);
+
+        try {
+            $debug->onUncaughtLowSeverity(
+                E_WARNING,
+                'Masked warning message',
+                __FILE__,
+                __LINE__
+            );
+        } catch (RuntimeWarning) {
+            $thrown = true;
+        } finally {
+            error_reporting($previous);
+        }
+
+        $this->assertFalse($thrown);
     }
 }

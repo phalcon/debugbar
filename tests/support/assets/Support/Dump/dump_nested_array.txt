@@ -1,0 +1,5 @@
+<b style="color:red">Array</b> (<span style="color:red">1</span>) (
+  [<span style="color:red">a</span>] => <b style="color:red">Array</b> (<span style="color:red">1</span>) (
+    [<span style="color:red">b</span>] => <b style="color:teal">String</b> (<span style="color:teal">1</span>) "<span style="color:teal">c</span>"
+  )
+)

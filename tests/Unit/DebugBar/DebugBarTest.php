@@ -64,6 +64,7 @@ final class DebugBarTest extends AbstractUnitTestCase
         $bar = new DebugBar();
 
         $this->expectException(Exception::class);
+        $this->expectExceptionMessage('Unknown collector: nope');
 
         $bar->getCollector('nope');
     }

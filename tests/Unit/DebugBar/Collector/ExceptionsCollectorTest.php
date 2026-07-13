@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar\Collector;
 
 use Phalcon\DebugBar\Collector\ExceptionsCollector;
+use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\Events\Manager;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
@@ -44,6 +45,39 @@ final class ExceptionsCollectorTest extends AbstractUnitTestCase
 
         $this->assertSame('exceptions', $collector->getName());
         $this->assertPanelContract($collector);
+    }
+
+    public function testNamespacedThrowableLabelIsShortClass(): void
+    {
+        $collector = new ExceptionsCollector();
+        $collector->addThrowable(new CannotUseInProduction('nope'));
+
+        $envelope = $collector->collect();
+
+        $this->assertSame('CannotUseInProduction', $envelope['panel'][0]['label']);
+    }
+
+    public function testNonThrowableEventPayloadIsIgnored(): void
+    {
+        $collector     = new ExceptionsCollector();
+        $eventsManager = new Manager();
+        $collector->subscribe($eventsManager);
+
+        $eventsManager->fire('dispatch:beforeException', $this, 'not-a-throwable');
+
+        $this->assertSame(0, $collector->collect()['badge']);
+    }
+
+    public function testThrowableMessageFormat(): void
+    {
+        $collector = new ExceptionsCollector();
+        $throwable = new RuntimeException('boom');
+        $collector->addThrowable($throwable);
+
+        $expected = $throwable->getMessage()
+            . ' (' . $throwable->getFile() . ':' . $throwable->getLine() . ')';
+
+        $this->assertSame($expected, $collector->collect()['panel'][0]['message']);
     }
 
     public function testThrowablesAreRecorded(): void

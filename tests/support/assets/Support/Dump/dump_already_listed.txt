@@ -1,0 +1,5 @@
+<b style="color:purple">Object</b> Phalcon\Tests\Support\Support\Dump\SampleMethods <b style="color:purple">extends</b> Phalcon\Tests\Support\Support\Dump\ClassProperties (
+  -><span style="color:purple">foo</span> (<span style="color:purple">public</span>) = <b style="color:blue">Integer</b> (<span style="color:blue">1</span>)
+  Phalcon\Tests\Support\Support\Dump\SampleMethods <b style="color:purple">methods</b>: (<span style="color:purple">2</span>) (
+  [already listed]
+)

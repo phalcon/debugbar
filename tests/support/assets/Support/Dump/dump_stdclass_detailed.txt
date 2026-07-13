@@ -1,0 +1,5 @@
+<b style="color:purple">Object</b> stdClass (
+  -><span style="color:purple">x</span> (<span style="color:purple">public</span>) = <b style="color:blue">Integer</b> (<span style="color:blue">5</span>)
+  stdClass <b style="color:purple">methods</b>: (<span style="color:purple">0</span>) (
+  )
+)
