@@ -46,7 +46,7 @@ final class FlattensToGridTest extends AbstractUnitTestCase
 
     public function testUnsupportedLeafBecomesEmptyString(): void
     {
-        $stringable = new class {
+        $stringable = new class () {
             public function __toString(): string
             {
                 return 'OBJECT';
