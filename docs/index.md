@@ -54,7 +54,7 @@ echo $application->handle($_SERVER['REQUEST_URI'])->getContent();
 
 !!! warning "NOTE"
 
-   `boot()` throws `Phalcon\DebugBar\Exceptions\CannotUseInProduction` when the environment is undefined or blocked. The environment is read from `APP_ENV` (`getenv()`, then `$_ENV`, then `$_SERVER`); the default blocked list is `production` and `prod`.
+   Outside a permitted environment the bar does nothing: `boot()` returns without registering anything, so it is safe to call unconditionally. Set `env.strict` to `true` to make it throw `Phalcon\DebugBar\Exceptions\CannotUseInProduction` instead. The environment is read from `APP_ENV` (`getenv()`, then `$_ENV`, then `$_SERVER`); the default blocked list is `production` and `prod`.
 
 If the application has no events manager, `boot()` still registers the `Debug` facade but attaches no response listener, so nothing is injected. Set an events manager to enable the bar.
 
@@ -70,6 +70,7 @@ The second argument to `Provider` is a nested array. Every key is optional.
 | `collectors`       | `array<string, bool>`     | all enabled              | Per-collector switch, keyed by collector name.                   |
 | `enabled`          | `bool`                    | `true`                   | Master switch. When `false`, `boot()` returns after the gate.    |
 | `env.blocked`      | `list<string>`            | `['production', 'prod']` | Environment values that block the bar (case-insensitive).        |
+| `env.strict`       | `bool`                    | `false`                  | When `true`, `boot()` throws in a blocked/undefined environment instead of returning silently. |
 | `env.var`          | `string`                  | `APP_ENV`                | Environment variable inspected by the gate.                      |
 | `headers`          | `bool`                    | `true`                   | Emit the `X-Debug-Bar` diagnostic header.                        |
 | `redact.hidden`    | `list<string>`            | `[]`                     | Keys dropped from the output entirely.                           |

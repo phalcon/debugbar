@@ -2,6 +2,20 @@
 
 All notable changes to `phalcon/debugbar` are documented here. The format is based on [Keep a Changelog][keep_a_changelog] and this project adheres to [Semantic Versioning][semantic_versioning].
 
+## [0.2.0](https://github.com/phalcon/debugbar/releases/tag/v0.2.0) (2026-07-13)
+
+### Changed
+
+- `Provider::boot()` no longer throws `CannotUseInProduction` in a blocked or undefined environment; it returns without registering anything, so the bar is safe to boot unconditionally and never takes down the host application.
+
+### Added
+
+- `env.strict` configuration key (default `false`). When `true`, `Provider::boot()` throws `CannotUseInProduction` in a blocked or undefined environment instead of returning silently, restoring the previous fail-fast behavior for those who want it.
+
+### Fixed
+
+### Removed
+
 ## [0.1.0](https://github.com/phalcon/debugbar/releases/tag/v0.1.0) (2026-07-13)
 
 ### Changed
