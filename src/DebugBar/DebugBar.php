@@ -31,7 +31,7 @@ use function count;
  * delegate to the `messages`/`time`/`exceptions` collectors when present and
  * no-op otherwise, so disabling a collector can never break calling code.
  *
- * @phpstan-import-type payload from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type payload from DebugBarTypes
  */
 class DebugBar
 {

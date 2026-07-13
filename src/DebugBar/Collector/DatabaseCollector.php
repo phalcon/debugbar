@@ -15,6 +15,7 @@ namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\Db\Adapter\AbstractAdapter;
 use Phalcon\DebugBar\Contracts\Subscriber;
+use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\Events\EventInterface;
 use Phalcon\Events\ManagerInterface;
 
@@ -29,7 +30,7 @@ use function round;
  * connection is the event's source, so the statement, bindings, and timing are
  * read straight off it — no `db` service is resolved.
  *
- * @phpstan-import-type list_envelope from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type list_envelope from DebugBarTypes
  */
 final class DatabaseCollector extends AbstractCollector implements Subscriber
 {

@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Collector;
 
+use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\DebugBar\Security\Redactor;
 
 use function is_string;
@@ -28,7 +29,7 @@ use const PHP_SESSION_ACTIVE;
  * PHP's session state — nothing is resolved from the container. Reports nothing
  * when no session is active.
  *
- * @phpstan-import-type grid_envelope from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type grid_envelope from DebugBarTypes
  */
 final class SessionCollector extends AbstractCollector
 {

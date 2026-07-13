@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\Config\ConfigInterface;
+use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\DebugBar\Security\Redactor;
 
 /**
@@ -21,7 +22,7 @@ use Phalcon\DebugBar\Security\Redactor;
  * resolved once by the provider and injected here, so the collector never
  * touches the container; it reads `toArray()` at collect time.
  *
- * @phpstan-import-type grid_envelope from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type grid_envelope from DebugBarTypes
  */
 final class ConfigCollector extends AbstractCollector
 {

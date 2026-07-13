@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Contracts\MessageAware;
+use Phalcon\DebugBar\DebugBarTypes;
 
 use function count;
 use function is_scalar;
@@ -25,8 +26,8 @@ use function json_encode;
  * `warning`, `error`, …). A logger adapter for auto-capturing app logs is a
  * separate, optional piece.
  *
- * @phpstan-import-type list_envelope from \Phalcon\DebugBar\DebugBarTypes
- * @phpstan-import-type list_panel from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type list_envelope from DebugBarTypes
+ * @phpstan-import-type list_panel from DebugBarTypes
  */
 final class MessagesCollector extends AbstractCollector implements MessageAware
 {

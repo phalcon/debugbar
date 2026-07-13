@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Collector;
 
+use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Http\RequestInterface;
 
@@ -24,7 +25,7 @@ use function is_array;
  * The request object is resolved once by the provider and injected here, so the
  * collector reads it directly rather than the superglobals.
  *
- * @phpstan-import-type grid_envelope from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type grid_envelope from DebugBarTypes
  */
 final class RequestCollector extends AbstractCollector
 {

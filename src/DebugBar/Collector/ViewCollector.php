@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Contracts\Subscriber;
+use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\Events\EventInterface;
 use Phalcon\Events\ManagerInterface;
 
@@ -29,7 +30,7 @@ use function round;
  * nothing is resolved from the container. A stack pairs each "before" with its
  * matching "after", so nested partials are timed correctly.
  *
- * @phpstan-import-type list_envelope from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type list_envelope from DebugBarTypes
  */
 final class ViewCollector extends AbstractCollector implements Subscriber
 {

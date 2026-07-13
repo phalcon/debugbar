@@ -13,12 +13,14 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Contracts;
 
+use Phalcon\DebugBar\DebugBarTypes;
+
 /**
  * The data contract every collector implements. `collect()` returns an
  * envelope: `panel` holds the data shaped for the declared panel renderer,
  * `badge` is the optional scalar tab count.
  *
- * @phpstan-import-type envelope from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type envelope from DebugBarTypes
  */
 interface Collector
 {

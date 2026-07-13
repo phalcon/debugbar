@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Contracts\ExceptionAware;
+use Phalcon\DebugBar\DebugBarTypes;
 use Throwable;
 
 use function count;
@@ -25,8 +26,8 @@ use function substr;
  * `addException()`. Keeps a compact list (class + message + location) for the
  * bar; the full report remains the Debug page's job.
  *
- * @phpstan-import-type list_envelope from \Phalcon\DebugBar\DebugBarTypes
- * @phpstan-import-type list_panel from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type list_envelope from DebugBarTypes
+ * @phpstan-import-type list_panel from DebugBarTypes
  */
 final class ExceptionsCollector extends AbstractCollector implements ExceptionAware
 {

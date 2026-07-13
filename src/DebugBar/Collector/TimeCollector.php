@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Contracts\TimeAware;
+use Phalcon\DebugBar\DebugBarTypes;
 
 use function hrtime;
 use function is_float;
@@ -24,8 +25,8 @@ use function round;
  * Reports the total request time plus any named `startMeasure`/`stopMeasure`
  * spans fed through the convenience API.
  *
- * @phpstan-import-type list_envelope from \Phalcon\DebugBar\DebugBarTypes
- * @phpstan-import-type list_row from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type list_envelope from DebugBarTypes
+ * @phpstan-import-type list_row from DebugBarTypes
  */
 final class TimeCollector extends AbstractCollector implements TimeAware
 {

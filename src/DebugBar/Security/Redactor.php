@@ -25,7 +25,15 @@ use function mb_strtolower;
  */
 final class Redactor
 {
-    public const DEFAULT_KEYS = ['password', 'secret', 'token', 'key', 'authorization', 'cookie', 'csrf'];
+    public const DEFAULT_KEYS = [
+        'authorization',
+        'cookie',
+        'csrf',
+        'key',
+        'password',
+        'secret',
+        'token',
+    ];
     public const MASK         = '***';
 
     /**

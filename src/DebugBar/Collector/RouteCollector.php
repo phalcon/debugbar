@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Contracts\Subscriber;
+use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\Events\EventInterface;
 use Phalcon\Events\ManagerInterface;
 use Phalcon\Mvc\RouterInterface;
@@ -27,7 +28,7 @@ use function json_encode;
  * fully resolved (module/controller/action/params), which is not yet true when
  * the event fires. Nothing is resolved from the container.
  *
- * @phpstan-import-type grid_envelope from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type grid_envelope from DebugBarTypes
  */
 final class RouteCollector extends AbstractCollector implements Subscriber
 {

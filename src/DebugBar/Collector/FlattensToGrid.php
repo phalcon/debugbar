@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Collector;
 
+use Phalcon\DebugBar\DebugBarTypes;
+
 use function is_array;
 use function is_bool;
 use function is_float;
@@ -24,7 +26,7 @@ use function is_string;
  * a grid panel expects, joining nested keys with dots and stringifying leaves.
  * Shared by the snapshot collectors that render a grid.
  *
- * @phpstan-import-type grid_panel from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type grid_panel from DebugBarTypes
  */
 trait FlattensToGrid
 {

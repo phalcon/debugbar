@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Contracts\Subscriber;
+use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\Events\EventInterface;
 use Phalcon\Events\ManagerInterface;
 
@@ -25,8 +26,8 @@ use function is_string;
  * is the event data, so it is read straight off the event — the `cache` service
  * is never resolved.
  *
- * @phpstan-import-type list_envelope from \Phalcon\DebugBar\DebugBarTypes
- * @phpstan-import-type list_panel from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type list_envelope from DebugBarTypes
+ * @phpstan-import-type list_panel from DebugBarTypes
  */
 final class CacheCollector extends AbstractCollector implements Subscriber
 {

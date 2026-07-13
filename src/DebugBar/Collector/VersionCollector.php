@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Collector;
 
+use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\Support\Version;
 
 use const PHP_VERSION;
@@ -20,7 +21,7 @@ use const PHP_VERSION;
 /**
  * Reports the running PHP and Phalcon versions.
  *
- * @phpstan-import-type grid_envelope from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type grid_envelope from DebugBarTypes
  */
 final class VersionCollector extends AbstractCollector
 {
