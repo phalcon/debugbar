@@ -203,7 +203,6 @@ The bar sits at the bottom of the page. Each collector is a tab; a tab shows a b
 
 - **grid** panels (version, request, config, session, route) render a key and value table.
 - **list** panels (time, messages, database, view, cache) render labelled rows.
-- **exceptions** panels render one collapsible entry per throwable; the summary   line stays visible and expands to the stack trace.
+- **exceptions** panels render one collapsible entry per throwable; the summary line stays visible and expands to the stack trace.
 
 A handle at the right of the tab row collapses the whole bar to a corner button, so it never covers the host page's own controls. The collapsed state is remembered across page loads.
-```

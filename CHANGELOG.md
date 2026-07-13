@@ -2,7 +2,7 @@
 
 All notable changes to `phalcon/debugbar` are documented here. The format is based on [Keep a Changelog][keep_a_changelog] and this project adheres to [Semantic Versioning][semantic_versioning].
 
-## [0.1.0](https://github.com/phalcon/debugbar/releases/tag/v0.1.0) (2026-07-12)
+## [0.1.0](https://github.com/phalcon/debugbar/releases/tag/v0.1.0) (2026-07-13)
 
 ### Changed
 
