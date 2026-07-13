@@ -24,6 +24,9 @@ use function is_string;
  * Records cache operations by subscribing to the `cache:after*` events. The key
  * is the event data, so it is read straight off the event — the `cache` service
  * is never resolved.
+ *
+ * @phpstan-import-type list_envelope from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type list_panel from \Phalcon\DebugBar\DebugBarTypes
  */
 final class CacheCollector extends AbstractCollector implements Subscriber
 {
@@ -45,12 +48,12 @@ final class CacheCollector extends AbstractCollector implements Subscriber
     protected string $panel = 'list';
 
     /**
-     * @var list<array{label: string, message: string}>
+     * @var list_panel
      */
     private array $operations = [];
 
     /**
-     * @return array{panel: list<array{label: string, message: string}>, badge: scalar|null}
+     * @return list_envelope
      */
     public function collect(): array
     {

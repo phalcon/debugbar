@@ -24,6 +24,9 @@ use function json_encode;
  * Accumulates the messages fed through the `Debug` facade (`info`, `debug`,
  * `warning`, `error`, …). A logger adapter for auto-capturing app logs is a
  * separate, optional piece.
+ *
+ * @phpstan-import-type list_envelope from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type list_panel from \Phalcon\DebugBar\DebugBarTypes
  */
 final class MessagesCollector extends AbstractCollector implements MessageAware
 {
@@ -45,7 +48,7 @@ final class MessagesCollector extends AbstractCollector implements MessageAware
     protected string $panel = 'list';
 
     /**
-     * @var list<array{label: string, message: string}>
+     * @var list_panel
      */
     private array $messages = [];
 
@@ -64,7 +67,7 @@ final class MessagesCollector extends AbstractCollector implements MessageAware
     }
 
     /**
-     * @return array{panel: list<array{label: string, message: string}>, badge: scalar|null}
+     * @return list_envelope
      */
     public function collect(): array
     {

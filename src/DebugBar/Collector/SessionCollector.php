@@ -27,6 +27,8 @@ use const PHP_SESSION_ACTIVE;
  * `$_SESSION` for every adapter, so the data and identity are read straight from
  * PHP's session state — nothing is resolved from the container. Reports nothing
  * when no session is active.
+ *
+ * @phpstan-import-type grid_envelope from \Phalcon\DebugBar\DebugBarTypes
  */
 final class SessionCollector extends AbstractCollector
 {
@@ -57,7 +59,7 @@ final class SessionCollector extends AbstractCollector
     }
 
     /**
-     * @return array{panel: array<string, scalar>, badge: scalar|null}
+     * @return grid_envelope
      */
     public function collect(): array
     {

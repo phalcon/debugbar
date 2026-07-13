@@ -23,6 +23,8 @@ use function is_string;
  * Flattens a nested (already-redacted) array into the flat `array<string, scalar>`
  * a grid panel expects, joining nested keys with dots and stringifying leaves.
  * Shared by the snapshot collectors that render a grid.
+ *
+ * @phpstan-import-type grid_panel from \Phalcon\DebugBar\DebugBarTypes
  */
 trait FlattensToGrid
 {
@@ -30,7 +32,7 @@ trait FlattensToGrid
      * @param array<array-key, mixed> $data
      * @param string                  $prefix
      *
-     * @return array<string, scalar>
+     * @return grid_panel
      */
     private function flatten(array $data, string $prefix = ''): array
     {

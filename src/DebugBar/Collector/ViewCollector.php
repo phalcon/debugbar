@@ -28,6 +28,8 @@ use function round;
  * `view:afterRenderView`. The path is the event data on the "before" event, so
  * nothing is resolved from the container. A stack pairs each "before" with its
  * matching "after", so nested partials are timed correctly.
+ *
+ * @phpstan-import-type list_envelope from \Phalcon\DebugBar\DebugBarTypes
  */
 final class ViewCollector extends AbstractCollector implements Subscriber
 {
@@ -59,7 +61,7 @@ final class ViewCollector extends AbstractCollector implements Subscriber
     private array $rendered = [];
 
     /**
-     * @return array{panel: list<array{label: string, message: string}>, badge: scalar|null}
+     * @return list_envelope
      */
     public function collect(): array
     {

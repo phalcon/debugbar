@@ -23,6 +23,9 @@ use function round;
 /**
  * Reports the total request time plus any named `startMeasure`/`stopMeasure`
  * spans fed through the convenience API.
+ *
+ * @phpstan-import-type list_envelope from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type list_row from \Phalcon\DebugBar\DebugBarTypes
  */
 final class TimeCollector extends AbstractCollector implements TimeAware
 {
@@ -49,7 +52,7 @@ final class TimeCollector extends AbstractCollector implements TimeAware
     private array $measures = [];
 
     /**
-     * @return array{panel: list<array{label: string, message: string}>, badge: scalar|null}
+     * @return list_envelope
      */
     public function collect(): array
     {
@@ -108,7 +111,7 @@ final class TimeCollector extends AbstractCollector implements TimeAware
      * @param string $label
      * @param float  $milliseconds
      *
-     * @return array{label: string, message: string}
+     * @return list_row
      */
     private function row(string $label, float $milliseconds): array
     {

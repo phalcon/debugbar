@@ -19,6 +19,8 @@ use const PHP_VERSION;
 
 /**
  * Reports the running PHP and Phalcon versions.
+ *
+ * @phpstan-import-type grid_envelope from \Phalcon\DebugBar\DebugBarTypes
  */
 final class VersionCollector extends AbstractCollector
 {
@@ -40,7 +42,7 @@ final class VersionCollector extends AbstractCollector
     protected string $panel = 'grid';
 
     /**
-     * @return array{panel: array<string, string>, badge: scalar|null}
+     * @return grid_envelope
      */
     public function collect(): array
     {

@@ -19,6 +19,8 @@ use Phalcon\DebugBar\Contracts\Renderable;
  * Optional base for collectors. Supplies the `NAME` wiring and `getWidget()`
  * scaffolding from three protected members, so a subclass only sets its icon,
  * label, panel type, and `collect()`.
+ *
+ * @phpstan-import-type widget from \Phalcon\DebugBar\DebugBarTypes
  */
 abstract class AbstractCollector implements Renderable
 {
@@ -51,7 +53,7 @@ abstract class AbstractCollector implements Renderable
     }
 
     /**
-     * @return array{label: string, icon: string, panel: string}
+     * @return widget
      */
     public function getWidget(): array
     {

@@ -17,13 +17,15 @@ namespace Phalcon\DebugBar\Contracts;
  * A collector that also describes its tab/panel. The `panel` value selects the
  * client renderer ('grid' | 'list' | 'code' | 'html'); the tab count comes from
  * `collect()['badge']`, not from here.
+ *
+ * @phpstan-import-type widget from \Phalcon\DebugBar\DebugBarTypes
  */
 interface Renderable extends Collector
 {
     /**
      * Describes the tab and panel for this collector.
      *
-     * @return array{label: string, icon: string, panel: string}
+     * @return widget
      */
     public function getWidget(): array;
 }

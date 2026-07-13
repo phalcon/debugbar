@@ -24,6 +24,9 @@ use function substr;
  * Records throwables handed in through the `Debug` facade / DebugBar
  * `addException()`. Keeps a compact list (class + message + location) for the
  * bar; the full report remains the Debug page's job.
+ *
+ * @phpstan-import-type list_envelope from \Phalcon\DebugBar\DebugBarTypes
+ * @phpstan-import-type list_panel from \Phalcon\DebugBar\DebugBarTypes
  */
 final class ExceptionsCollector extends AbstractCollector implements ExceptionAware
 {
@@ -45,7 +48,7 @@ final class ExceptionsCollector extends AbstractCollector implements ExceptionAw
     protected string $panel = 'list';
 
     /**
-     * @var list<array{label: string, message: string}>
+     * @var list_panel
      */
     private array $exceptions = [];
 
@@ -64,7 +67,7 @@ final class ExceptionsCollector extends AbstractCollector implements ExceptionAw
     }
 
     /**
-     * @return array{panel: list<array{label: string, message: string}>, badge: scalar|null}
+     * @return list_envelope
      */
     public function collect(): array
     {

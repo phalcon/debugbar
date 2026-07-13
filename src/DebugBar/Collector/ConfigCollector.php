@@ -20,6 +20,8 @@ use Phalcon\DebugBar\Security\Redactor;
  * Snapshots the application config into a redacted grid. The config object is
  * resolved once by the provider and injected here, so the collector never
  * touches the container; it reads `toArray()` at collect time.
+ *
+ * @phpstan-import-type grid_envelope from \Phalcon\DebugBar\DebugBarTypes
  */
 final class ConfigCollector extends AbstractCollector
 {
@@ -53,7 +55,7 @@ final class ConfigCollector extends AbstractCollector
     }
 
     /**
-     * @return array{panel: array<string, scalar>, badge: scalar|null}
+     * @return grid_envelope
      */
     public function collect(): array
     {

@@ -28,6 +28,8 @@ use function round;
  * Records SQL queries by subscribing to `db:beforeQuery`/`db:afterQuery`. The
  * connection is the event's source, so the statement, bindings, and timing are
  * read straight off it — no `db` service is resolved.
+ *
+ * @phpstan-import-type list_envelope from \Phalcon\DebugBar\DebugBarTypes
  */
 final class DatabaseCollector extends AbstractCollector implements Subscriber
 {
@@ -59,7 +61,7 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
     private int|float $started = 0;
 
     /**
-     * @return array{panel: list<array{label: string, message: string}>, badge: scalar|null}
+     * @return list_envelope
      */
     public function collect(): array
     {

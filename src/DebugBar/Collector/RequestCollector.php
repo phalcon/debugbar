@@ -23,6 +23,8 @@ use function is_array;
  * redacting sensitive keys and flattening the nested arrays into a single grid.
  * The request object is resolved once by the provider and injected here, so the
  * collector reads it directly rather than the superglobals.
+ *
+ * @phpstan-import-type grid_envelope from \Phalcon\DebugBar\DebugBarTypes
  */
 final class RequestCollector extends AbstractCollector
 {
@@ -56,7 +58,7 @@ final class RequestCollector extends AbstractCollector
     }
 
     /**
-     * @return array{panel: array<string, scalar>, badge: scalar|null}
+     * @return grid_envelope
      */
     public function collect(): array
     {

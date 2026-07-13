@@ -26,6 +26,8 @@ use function json_encode;
  * so it is captured there and read at `collect()` — by response time it has been
  * fully resolved (module/controller/action/params), which is not yet true when
  * the event fires. Nothing is resolved from the container.
+ *
+ * @phpstan-import-type grid_envelope from \Phalcon\DebugBar\DebugBarTypes
  */
 final class RouteCollector extends AbstractCollector implements Subscriber
 {
@@ -52,7 +54,7 @@ final class RouteCollector extends AbstractCollector implements Subscriber
     private ?RouterInterface $router = null;
 
     /**
-     * @return array{panel: array<string, scalar>, badge: scalar|null}
+     * @return grid_envelope
      */
     public function collect(): array
     {

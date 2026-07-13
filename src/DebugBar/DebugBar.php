@@ -30,6 +30,8 @@ use function count;
  * The convenience methods (`message()`, `startMeasure()`, `addException()`, …)
  * delegate to the `messages`/`time`/`exceptions` collectors when present and
  * no-op otherwise, so disabling a collector can never break calling code.
+ *
+ * @phpstan-import-type payload from \Phalcon\DebugBar\DebugBarTypes
  */
 class DebugBar
 {
@@ -39,10 +41,7 @@ class DebugBar
     protected array $collectors = [];
 
     /**
-     * @var array{
-     *     data: array<string, array{panel: mixed, badge: scalar|null}>,
-     *     meta: array<string, mixed>
-     * }
+     * @var payload
      */
     protected array $data = [
         'data' => [],
@@ -81,10 +80,7 @@ class DebugBar
     /**
      * Runs every collector and caches the aggregated payload.
      *
-     * @return array{
-     *     data: array<string, array{panel: mixed, badge: scalar|null}>,
-     *     meta: array<string, mixed>
-     * }
+     * @return payload
      */
     public function collect(): array
     {
@@ -157,10 +153,7 @@ class DebugBar
     /**
      * Returns the last aggregated payload (empty until collect() has run).
      *
-     * @return array{
-     *     data: array<string, array{panel: mixed, badge: scalar|null}>,
-     *     meta: array<string, mixed>
-     * }
+     * @return payload
      */
     public function getData(): array
     {

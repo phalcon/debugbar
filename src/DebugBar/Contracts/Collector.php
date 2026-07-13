@@ -17,13 +17,15 @@ namespace Phalcon\DebugBar\Contracts;
  * The data contract every collector implements. `collect()` returns an
  * envelope: `panel` holds the data shaped for the declared panel renderer,
  * `badge` is the optional scalar tab count.
+ *
+ * @phpstan-import-type envelope from \Phalcon\DebugBar\DebugBarTypes
  */
 interface Collector
 {
     /**
      * Runs the collector and returns its envelope.
      *
-     * @return array{panel: mixed, badge: scalar|null}
+     * @return envelope
      */
     public function collect(): array;
 
