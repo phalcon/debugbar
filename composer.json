@@ -25,7 +25,7 @@
         "pds/composer-script-names": "^1",
         "pds/skeleton": "^1",
         "phalcon/phalcon": "6.0.x-dev",
-        "phalcon/talon": "^0.6",
+        "phalcon/talon": "^0.6 || ^0.7",
         "phalcon/traits": "^4.0",
         "phpstan/phpstan": "^2",
         "phpunit/phpunit": "^10.5",
