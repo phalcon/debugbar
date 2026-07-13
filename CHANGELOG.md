@@ -4,6 +4,8 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 
 ## [0.1.0](https://github.com/phalcon/debugbar/releases/tag/v0.1.0) (2026-07-12)
 
+### Changed
+
 ### Added
 
 - `Security\Redactor` with two tiers - masking the values of sensitive keys and dropping configured "never shown" keys entirely - applied to the request, config, and session collectors, plus `Security\AccessGate` (IP allowlist and optional callback) restricting who receives the bar.
@@ -17,5 +19,10 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - The bar's front-end (`debugbar.js` / `debugbar.css`): a tabbed bottom bar with a panel per collector, badges, and a collapse toggle that shrinks it to a corner handle so it never covers the host page's own controls.
 - The web debug bar core: a `Provider` that boots the bar against an MVC `Application` purely through its EventsManager - no DI service and no container-specific wiring - and refuses to boot in blocked/production environments. It attaches a `ResponseListener` on `application:beforeSendResponse` that aggregates the collectors and injects the bar into HTML responses, backed by the `DebugBar` aggregator and the `Renderer` / `Injector` / `BarOptions` output pipeline.
 
-[keep_a_changelog]: https://keepachangelog.com/en/1.0.0/
+### Fixed
+
+### Removed
+
+
+[keep_a_changelog]: https://keepachangelog.com/en/1.1.0/
 [semantic_versioning]: https://semver.org/spec/v2.0.0.html
