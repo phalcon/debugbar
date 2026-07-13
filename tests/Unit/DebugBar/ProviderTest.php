@@ -45,18 +45,12 @@ final class ProviderTest extends AbstractUnitTestCase
         parent::tearDown();
     }
 
-    public function testBlockedEnvironmentThrows(): void
+    public function testBlockedEnvironmentIsSilentByDefault(): void
     {
         $_ENV[self::ENV_VAR] = 'production';
-        $thrown              = false;
 
-        try {
-            $this->provider($this->application(new Manager()))->boot();
-        } catch (CannotUseInProduction) {
-            $thrown = true;
-        }
+        $this->provider($this->application(new Manager()))->boot();
 
-        $this->assertTrue($thrown);
         $this->assertNull(Debug::getBar());
     }
 
@@ -123,6 +117,26 @@ final class ProviderTest extends AbstractUnitTestCase
         $em->fire('application:beforeSendResponse', $app, $response);
 
         $this->assertStringNotContainsString('phalcon-debugbar-data', $response->getContent());
+    }
+
+    public function testStrictBlockedEnvironmentThrows(): void
+    {
+        $_ENV[self::ENV_VAR] = 'production';
+        $thrown              = false;
+
+        $provider = new Provider(
+            $this->application(new Manager()),
+            ['env' => ['var' => self::ENV_VAR, 'strict' => true]]
+        );
+
+        try {
+            $provider->boot();
+        } catch (CannotUseInProduction) {
+            $thrown = true;
+        }
+
+        $this->assertTrue($thrown);
+        $this->assertNull(Debug::getBar());
     }
 
     private function application(Manager $em): Application

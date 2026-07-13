@@ -94,9 +94,14 @@ class Provider
     private Redactor $redactor;
 
     /**
+     * @var bool
+     */
+    private bool $strict;
+
+    /**
      * @param Application $app
      * @param array{
-     *     env?: array{var?: string, blocked?: list<string>},
+     *     env?: array{var?: string, blocked?: list<string>, strict?: bool},
      *     enabled?: bool,
      *     assets?: array{nonce?: string|null},
      *     access?: array{allow_ips?: list<string>, callback?: (Closure(): bool)|null},
@@ -114,6 +119,7 @@ class Provider
 
         $this->envVar           = $env['var'] ?? 'APP_ENV';
         $this->blocked          = $env['blocked'] ?? ['production', 'prod'];
+        $this->strict           = $env['strict'] ?? false;
         $this->enabled          = $config['enabled'] ?? true;
         $this->nonce            = $assets['nonce'] ?? null;
         $this->allowedIps       = $access['allow_ips'] ?? [];
@@ -132,15 +138,19 @@ class Provider
      * collectors and attaches the response listener.
      *
      * @return void
-     * @throws CannotUseInProduction
+     * @throws CannotUseInProduction When `env.strict` is set and the environment is blocked or undefined.
      */
     public function boot(): void
     {
         if (true !== $this->isAllowed()) {
-            throw new CannotUseInProduction(
-                'The debug bar cannot boot: the "' . $this->envVar
-                . '" environment is undefined or blocked.'
-            );
+            if (true === $this->strict) {
+                throw new CannotUseInProduction(
+                    'The debug bar cannot boot: the "' . $this->envVar
+                    . '" environment is undefined or blocked.'
+                );
+            }
+
+            return;
         }
 
         if (true !== $this->enabled) {
