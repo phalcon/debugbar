@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar\Collector;
 
 use Phalcon\DebugBar\Collector\ExceptionsCollector;
+use Phalcon\Events\Manager;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
 use RuntimeException;
@@ -21,6 +22,20 @@ use RuntimeException;
 final class ExceptionsCollectorTest extends AbstractUnitTestCase
 {
     use PanelContractTrait;
+
+    public function testDispatchExceptionsAreAutoRecorded(): void
+    {
+        $collector     = new ExceptionsCollector();
+        $eventsManager = new Manager();
+        $collector->subscribe($eventsManager);
+
+        $eventsManager->fire('dispatch:beforeException', $this, new RuntimeException('dispatched'));
+
+        $envelope = $collector->collect();
+
+        $this->assertSame(1, $envelope['badge']);
+        $this->assertStringContainsString('dispatched', $envelope['panel'][0]['message']);
+    }
 
     public function testNameAndPanelContract(): void
     {
@@ -41,5 +56,6 @@ final class ExceptionsCollectorTest extends AbstractUnitTestCase
         $this->assertSame(1, $envelope['badge']);
         $this->assertSame('RuntimeException', $envelope['panel'][0]['label']);
         $this->assertStringContainsString('boom', $envelope['panel'][0]['message']);
+        $this->assertArrayHasKey('trace', $envelope['panel'][0]);
     }
 }

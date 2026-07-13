@@ -156,3 +156,30 @@
     color: #6b6b8c;
     font-style: italic;
 }
+
+#phalcon-debugbar .phalcon-debugbar-exception {
+    padding: 3px 0;
+    border-bottom: 1px solid #23233440;
+}
+
+#phalcon-debugbar .phalcon-debugbar-exception-summary {
+    padding: 4px 0;
+    cursor: pointer;
+}
+
+#phalcon-debugbar .phalcon-debugbar-exception-label {
+    margin-right: 8px;
+    color: #ff6b81;
+    font-weight: 600;
+}
+
+#phalcon-debugbar .phalcon-debugbar-exception-trace {
+    margin: 6px 0 10px 16px;
+    padding: 8px 10px;
+    background: #0f0f17;
+    border-radius: 4px;
+    color: #b9b9d4;
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}

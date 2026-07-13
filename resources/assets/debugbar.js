@@ -49,6 +49,9 @@
             return 'html';
         }
         if (Array.isArray(panel)) {
+            if (panel.length && panel[0] && typeof panel[0] === 'object' && 'trace' in panel[0]) {
+                return 'exceptions';
+            }
             return 'list';
         }
         if (panel && typeof panel === 'object') {
@@ -105,6 +108,24 @@
         return node;
     }
 
+    function renderExceptions(panel) {
+        if (!Array.isArray(panel) || !panel.length) {
+            return el('div', 'phalcon-debugbar-empty', 'No data');
+        }
+        var wrap = el('div', 'phalcon-debugbar-exceptions');
+        panel.forEach(function (row) {
+            row = row || {};
+            var details = el('details', 'phalcon-debugbar-exception');
+            var summary = el('summary', 'phalcon-debugbar-exception-summary');
+            summary.appendChild(el('span', 'phalcon-debugbar-exception-label', scalar(row.label)));
+            summary.appendChild(el('span', 'phalcon-debugbar-exception-message', scalar(row.message)));
+            details.appendChild(summary);
+            details.appendChild(el('pre', 'phalcon-debugbar-exception-trace', scalar(row.trace)));
+            wrap.appendChild(details);
+        });
+        return wrap;
+    }
+
     function renderPanel(type, panel) {
         switch (type) {
             case 'list':
@@ -113,6 +134,8 @@
                 return renderCode(panel);
             case 'html':
                 return renderHtml(panel);
+            case 'exceptions':
+                return renderExceptions(panel);
             case 'grid':
             default:
                 return renderGrid(panel);
