@@ -32,9 +32,8 @@ use const JSON_UNESCAPED_UNICODE;
 /**
  * Produces the bar's HTML: the collected data as a `<script type="application/
  * json">` block (never executable JS) and the CSS/JS injected inline (minified),
- * so the bar has no external asset dependency. When an output path is given the
- * compiled files are also written there. Templates are overridable and every
- * tag accepts a CSP nonce.
+ * so the bar has no external asset dependency. Templates are overridable and
+ * every tag accepts a CSP nonce.
  */
 class Renderer
 {
@@ -42,13 +41,6 @@ class Renderer
      * @var array<string, string>
      */
     protected array $templates = [];
-
-    /**
-     * @param string|null $outputPath
-     */
-    public function __construct(private readonly ?string $outputPath = null)
-    {
-    }
 
     /**
      * @param string $name
@@ -146,8 +138,7 @@ class Renderer
     }
 
     /**
-     * Returns the minified asset ('css' or 'js'). When an output path is set the
-     * compiled file is written there as well.
+     * Returns the minified asset ('css' or 'js').
      *
      * @param string $type
      *
@@ -158,11 +149,7 @@ class Renderer
         $source   = $this->assetsPath() . 'debugbar.' . $type;
         $minifier = ('css' === $type) ? new CssMinifier($source) : new JsMinifier($source);
 
-        if (null === $this->outputPath) {
-            return $minifier->minify();
-        }
-
-        return $minifier->minify($this->outputPath . '/debugbar.min.' . $type);
+        return $minifier->minify();
     }
 
     /**

@@ -89,11 +89,6 @@ class Provider
     private ?string $nonce;
 
     /**
-     * @var string|null
-     */
-    private ?string $outputPath;
-
-    /**
      * @var Redactor
      */
     private Redactor $redactor;
@@ -103,7 +98,7 @@ class Provider
      * @param array{
      *     env?: array{var?: string, blocked?: list<string>},
      *     enabled?: bool,
-     *     assets?: array{output_path?: string|null, nonce?: string|null},
+     *     assets?: array{nonce?: string|null},
      *     access?: array{allow_ips?: list<string>, callback?: (Closure(): bool)|null},
      *     collectors?: array<string, bool>,
      *     headers?: bool,
@@ -120,7 +115,6 @@ class Provider
         $this->envVar           = $env['var'] ?? 'APP_ENV';
         $this->blocked          = $env['blocked'] ?? ['production', 'prod'];
         $this->enabled          = $config['enabled'] ?? true;
-        $this->outputPath       = $assets['output_path'] ?? null;
         $this->nonce            = $assets['nonce'] ?? null;
         $this->allowedIps       = $access['allow_ips'] ?? [];
         $this->accessCallback   = $access['callback'] ?? null;
@@ -178,7 +172,7 @@ class Provider
             'application:beforeSendResponse',
             new ResponseListener(
                 $bar,
-                new Renderer($this->outputPath),
+                new Renderer(),
                 new Injector(),
                 new AccessGate($this->allowedIps, $this->accessCallback),
                 $request,

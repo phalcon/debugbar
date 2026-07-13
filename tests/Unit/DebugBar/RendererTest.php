@@ -16,8 +16,6 @@ namespace Phalcon\Tests\Unit\DebugBar;
 use Phalcon\DebugBar\Renderer;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
-use function dirname;
-
 final class RendererTest extends AbstractUnitTestCase
 {
     public function testCapturedScriptTagCannotBreakTheDataBlock(): void
@@ -53,20 +51,6 @@ final class RendererTest extends AbstractUnitTestCase
         $this->assertStringContainsString('#phalcon-debugbar', $html);
         $this->assertStringContainsString('<script', $html);
         $this->assertStringContainsString('phalcon-debugbar-data', $html);
-    }
-
-    public function testRenderHeadWritesCompiledFilesWhenOutputPathIsGiven(): void
-    {
-        $dir = dirname(__DIR__, 2) . '/_output';
-
-        $html = (new Renderer($dir))->renderHead();
-
-        $this->assertFileExists($dir . '/debugbar.min.css');
-        $this->assertFileExists($dir . '/debugbar.min.js');
-        $this->assertStringContainsString('#phalcon-debugbar', $html);
-
-        $this->safeDeleteFile($dir . '/debugbar.min.css');
-        $this->safeDeleteFile($dir . '/debugbar.min.js');
     }
 
     public function testTemplatesAreOverridable(): void
