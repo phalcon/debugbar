@@ -84,4 +84,13 @@ final class AdapterTest extends AbstractUnitTestCase
         $this->assertSame('boom', $row['message']);
         $this->assertSame(['request_id' => 'abc'], json_decode($row['context'], true));
     }
+
+    public function testProcessNoOpsWhenBarIsNull(): void
+    {
+        $adapter = new Adapter(null);
+
+        $adapter->process(new Item('boom', 'error', 3, new DateTimeImmutable()));
+
+        $this->assertTrue($adapter->close());
+    }
 }

@@ -26,16 +26,18 @@ use Phalcon\Logger\Item;
  * $logger->addAdapter('debugbar', new Adapter(Debug::getBar()));
  * ```
  *
- * Forwarding goes through `DebugBar::addLog()`, so it safely no-ops when the
- * logger collector is disabled. Only `process()` is overridden; the inherited
- * `commit()` replays queued items through it, covering transactional logging.
+ * The bar is nullable because `Debug::getBar()` returns `null` until the bar
+ * boots, so the adapter can be attached unconditionally. Forwarding goes
+ * through `DebugBar::addLog()`, so it also no-ops when the logger collector is
+ * disabled. Only `process()` is overridden; the inherited `commit()` replays
+ * queued items through it, covering transactional logging.
  */
 final class Adapter extends AbstractAdapter
 {
     /**
-     * @param DebugBar $bar
+     * @param DebugBar|null $bar
      */
-    public function __construct(private readonly DebugBar $bar)
+    public function __construct(private readonly ?DebugBar $bar = null)
     {
     }
 
@@ -54,6 +56,6 @@ final class Adapter extends AbstractAdapter
      */
     public function process(Item $item): void
     {
-        $this->bar->addLog($item->getMessage(), $item->getLevelName(), $item->getContext());
+        $this->bar?->addLog($item->getMessage(), $item->getLevelName(), $item->getContext());
     }
 }
