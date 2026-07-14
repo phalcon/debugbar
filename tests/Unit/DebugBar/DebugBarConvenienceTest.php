@@ -13,12 +13,15 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Unit\DebugBar;
 
+use Phalcon\DebugBar\Collector\LoggerCollector;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\Fixtures\RecordingExceptionsCollector;
 use Phalcon\Tests\Support\DebugBar\Fixtures\RecordingMessagesCollector;
 use Phalcon\Tests\Support\DebugBar\Fixtures\RecordingTimeCollector;
 use RuntimeException;
+
+use function json_decode;
 
 final class DebugBarConvenienceTest extends AbstractUnitTestCase
 {
@@ -33,6 +36,23 @@ final class DebugBarConvenienceTest extends AbstractUnitTestCase
         $this->assertCount(1, $exceptions->getThrowables());
     }
 
+    public function testAddLogDelegatesToLoggerCollector(): void
+    {
+        $logger = new LoggerCollector();
+        $bar    = new DebugBar();
+        $bar->addCollector($logger);
+
+        $bar->addLog('hello', 'info')
+            ->addLog('boom', 'error', ['code' => 42]);
+
+        $panel = $logger->collect()['panel'];
+
+        $this->assertCount(2, $panel);
+        $this->assertSame(['label' => 'info', 'message' => 'hello', 'context' => ''], $panel[0]);
+        $this->assertSame('error', $panel[1]['label']);
+        $this->assertSame(['code' => 42], json_decode($panel[1]['context'], true));
+    }
+
     public function testConvenienceMethodsNoOpWhenCollectorsAbsent(): void
     {
         $bar = new DebugBar();
@@ -45,6 +65,7 @@ final class DebugBarConvenienceTest extends AbstractUnitTestCase
                 ->notice('d')
                 ->warning('e')
                 ->error('f')
+                ->addLog('g', 'info')
                 ->startMeasure('boot')
                 ->stopMeasure('boot')
                 ->addException(new RuntimeException('boom'))

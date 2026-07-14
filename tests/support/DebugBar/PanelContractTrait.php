@@ -53,6 +53,15 @@ trait PanelContractTrait
                 }
 
                 break;
+            case 'logs':
+                Assert::assertIsArray($data);
+                foreach ($data as $row) {
+                    Assert::assertIsArray($row);
+                    Assert::assertArrayHasKey('message', $row);
+                    Assert::assertArrayHasKey('context', $row);
+                }
+
+                break;
             case 'code':
                 Assert::assertIsArray($data);
                 Assert::assertArrayHasKey('source', $data);
