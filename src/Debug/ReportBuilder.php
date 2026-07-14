@@ -14,7 +14,10 @@ declare(strict_types=1);
 namespace Phalcon\Debug;
 
 use Phalcon\Debug\Report\BacktraceItem;
+use Phalcon\Debug\Report\CodeFragment;
 use Phalcon\Debug\Report\ExceptionReport;
+use Phalcon\Debug\Report\ReportOptions;
+use Phalcon\Debug\Report\Superglobals;
 use Phalcon\Traits\Php\InfoTrait;
 use Phalcon\Traits\Support\Helper\Arr\GetTrait;
 use ReflectionClass;
@@ -44,33 +47,27 @@ class ReportBuilder
     use InfoTrait;
 
     /**
-     * @param Throwable               $exception
-     * @param array<array-key, mixed> $blacklist
-     * @param bool                    $showBackTrace
-     * @param bool                    $showFiles
-     * @param bool                    $showFileFragment
-     * @param string                  $uri
-     * @param array<array-key, mixed> $data
+     * @param Throwable     $exception
+     * @param ReportOptions $options
+     * @param Superglobals  $superglobals
      *
      * @return ExceptionReport
      * @throws ReflectionException
      */
     public function build(
         Throwable $exception,
-        array $blacklist,
-        bool $showBackTrace,
-        bool $showFiles,
-        bool $showFileFragment,
-        string $uri,
-        array $data
+        ReportOptions $options,
+        Superglobals $superglobals
     ): ExceptionReport {
+        $showBackTrace = $options->getShowBackTrace();
+
         $report = new ExceptionReport(
             get_class($exception),
             $exception->getMessage(),
             $exception->getFile(),
             $exception->getLine(),
             $showBackTrace,
-            $uri
+            $options->getUri()
         );
 
         if (true !== $showBackTrace) {
@@ -79,17 +76,31 @@ class ReportBuilder
 
         $items = [];
         foreach ($exception->getTrace() as $trace) {
-            $items[] = $this->buildItem($trace, $showFiles, $showFileFragment);
+            $items[] = $this->buildItem(
+                $trace,
+                $options->getShowFiles(),
+                $options->getShowFileFragment()
+            );
         }
+
+        $blacklist = $options->getBlacklist();
+        $request   = $this->filter(
+            $superglobals->getRequest(),
+            (array) $this->getArrVal($blacklist, 'request', [])
+        );
+        $server    = $this->filter(
+            $superglobals->getServer(),
+            (array) $this->getArrVal($blacklist, 'server', [])
+        );
 
         $report
             ->setBacktrace($items)
-            ->setRequest($this->filter($_REQUEST, (array) $this->getArrVal($blacklist, 'request', [])))
-            ->setServer($this->filter($_SERVER, (array) $this->getArrVal($blacklist, 'server', [])))
+            ->setRequest($request)
+            ->setServer($server)
             ->setIncludedFiles(get_included_files())
             ->setMemoryUsage(memory_get_usage(true))
             ->setPeakMemoryUsage(memory_get_peak_usage(true))
-            ->setVariables($data);
+            ->setVariables($options->getData());
 
         return $report;
     }
@@ -99,9 +110,9 @@ class ReportBuilder
      * @param int    $line
      * @param bool   $showFileFragment
      *
-     * @return array{mode: string, firstLine: int, line: int, lastLine: int, lines: array<int, string>}
+     * @return CodeFragment
      */
-    private function buildFragment(string $file, int $line, bool $showFileFragment): array
+    private function buildFragment(string $file, int $line, bool $showFileFragment): CodeFragment
     {
         $lines = file($file);
         if (false === $lines) {
@@ -122,13 +133,7 @@ class ReportBuilder
             $mode      = 'full';
         }
 
-        return [
-            'mode'      => $mode,
-            'firstLine' => $firstLine,
-            'line'      => $line,
-            'lastLine'  => $lastLine,
-            'lines'     => $lines,
-        ];
+        return new CodeFragment($mode, $firstLine, $line, $lastLine, $lines);
     }
 
     /**

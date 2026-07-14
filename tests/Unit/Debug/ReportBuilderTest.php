@@ -14,28 +14,32 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\Debug;
 
 use Phalcon\Debug\Report\BacktraceItem;
+use Phalcon\Debug\Report\CodeFragment;
+use Phalcon\Debug\Report\ReportOptions;
+use Phalcon\Debug\Report\Superglobals;
 use Phalcon\Debug\ReportBuilder;
 use Phalcon\Support\Exception;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Talon\Talon;
-use PHPUnit\Framework\Attributes\BackupGlobals;
 
-#[BackupGlobals(true)]
 final class ReportBuilderTest extends AbstractUnitTestCase
 {
     public function testBuildCastsRequestAndServerBlacklistToArray(): void
     {
-        $_REQUEST['REQ_KEEP'] = 'reqvalue';
-        $_SERVER['SRV_KEEP']  = 'srvvalue';
-
         $report = (new ReportBuilder())->build(
             new Exception('boom', 7),
-            ['request' => 'not-an-array', 'server' => 'not-an-array'],
-            true,
-            false,
-            false,
-            'https://cdn/',
-            []
+            new ReportOptions(
+                ['request' => 'not-an-array', 'server' => 'not-an-array'],
+                true,
+                false,
+                false,
+                'https://cdn/',
+                []
+            ),
+            new Superglobals(
+                ['REQ_KEEP' => 'reqvalue'],
+                ['SRV_KEEP' => 'srvvalue']
+            )
         );
 
         $this->assertArrayHasKey('REQ_KEEP', $report->getRequest());
@@ -48,10 +52,10 @@ final class ReportBuilderTest extends AbstractUnitTestCase
 
         $method = new \ReflectionMethod(ReportBuilder::class, 'buildFragment');
 
-        /** @var array{lines: array<int, string>} $fragment */
+        /** @var CodeFragment $fragment */
         $fragment = @$method->invoke($builder, '/phalcon/no/such/file.php', 5, false);
 
-        $this->assertSame([], $fragment['lines']);
+        $this->assertSame([], $fragment->getLines());
     }
 
     public function testBuildItemPreservesArgs(): void
@@ -109,11 +113,11 @@ final class ReportBuilderTest extends AbstractUnitTestCase
 
         $method = new \ReflectionMethod(ReportBuilder::class, 'buildFragment');
 
-        /** @var array{firstLine: int, line: int} $fragment */
+        /** @var CodeFragment $fragment */
         $fragment = $method->invoke($builder, $file, 3, true);
 
-        $this->assertSame(1, $fragment['firstLine']);
-        $this->assertSame(3, $fragment['line']);
+        $this->assertSame(1, $fragment->getFirstLine());
+        $this->assertSame(3, $fragment->getLine());
     }
 
     public function testFragmentModeFragment(): void
@@ -123,23 +127,14 @@ final class ReportBuilderTest extends AbstractUnitTestCase
 
         $method = new \ReflectionMethod(ReportBuilder::class, 'buildFragment');
 
-        /**
-         * @var array{
-         *     mode: string,
-         *     firstLine: int,
-         *     line: int,
-         *     lastLine: int,
-         *     lines: array<int, string>
-         * } $fragment
-         */
+        /** @var CodeFragment $fragment */
         $fragment = $method->invoke($builder, $file, 20, true);
 
-        $this->assertArrayHasKey('mode', $fragment);
-        $this->assertSame('fragment', $fragment['mode']);
-        $this->assertSame(13, $fragment['firstLine']);
-        $this->assertSame(20, $fragment['line']);
-        $this->assertSame(25, $fragment['lastLine']);
-        $this->assertCount(30, $fragment['lines']);
+        $this->assertSame('fragment', $fragment->getMode());
+        $this->assertSame(13, $fragment->getFirstLine());
+        $this->assertSame(20, $fragment->getLine());
+        $this->assertSame(25, $fragment->getLastLine());
+        $this->assertCount(30, $fragment->getLines());
     }
 
     public function testFragmentModeFull(): void
@@ -149,20 +144,13 @@ final class ReportBuilderTest extends AbstractUnitTestCase
 
         $method = new \ReflectionMethod(ReportBuilder::class, 'buildFragment');
 
-        /**
-         * @var array{
-         *     mode: string,
-         *     firstLine: int,
-         *     line: int,
-         *     lastLine: int
-         * } $fragment
-         */
+        /** @var CodeFragment $fragment */
         $fragment = $method->invoke($builder, $file, 20, false);
 
-        $this->assertSame('full', $fragment['mode']);
-        $this->assertSame(1, $fragment['firstLine']);
-        $this->assertSame(20, $fragment['line']);
-        $this->assertSame(30, $fragment['lastLine']);
+        $this->assertSame('full', $fragment->getMode());
+        $this->assertSame(1, $fragment->getFirstLine());
+        $this->assertSame(20, $fragment->getLine());
+        $this->assertSame(30, $fragment->getLastLine());
     }
 
     public function testInternalFunctionLinkIsResolved(): void
@@ -182,12 +170,8 @@ final class ReportBuilderTest extends AbstractUnitTestCase
 
         $report = (new ReportBuilder())->build(
             $exception,
-            ['request' => [], 'server' => []],
-            true,
-            false,
-            false,
-            'https://cdn/',
-            []
+            new ReportOptions(['request' => [], 'server' => []], true, false, false, 'https://cdn/', []),
+            new Superglobals([], [])
         );
 
         $found = false;
@@ -243,12 +227,8 @@ final class ReportBuilderTest extends AbstractUnitTestCase
         $exception = new Exception('boom', 7);
         $report    = (new ReportBuilder())->build(
             $exception,
-            ['request' => [], 'server' => []],
-            false,
-            true,
-            false,
-            'https://cdn/',
-            []
+            new ReportOptions(['request' => [], 'server' => []], false, true, false, 'https://cdn/', []),
+            new Superglobals([], [])
         );
 
         $this->assertSame(Exception::class, $report->getClassName());
@@ -259,17 +239,20 @@ final class ReportBuilderTest extends AbstractUnitTestCase
 
     public function testRequestBlacklistIsApplied(): void
     {
-        $_REQUEST['DATA_REQUEST_TEST'] = 'secret';
-        $_SERVER['DATA_SERVER_TEST']   = 'keepme';
-
         $report = (new ReportBuilder())->build(
             new Exception('boom', 7),
-            ['request' => ['data_request_test' => 1], 'server' => []],
-            true,
-            true,
-            false,
-            'https://cdn/',
-            []
+            new ReportOptions(
+                ['request' => ['data_request_test' => 1], 'server' => []],
+                true,
+                true,
+                false,
+                'https://cdn/',
+                []
+            ),
+            new Superglobals(
+                ['DATA_REQUEST_TEST' => 'secret'],
+                ['DATA_SERVER_TEST' => 'keepme']
+            )
         );
 
         $this->assertArrayNotHasKey('DATA_REQUEST_TEST', $report->getRequest());

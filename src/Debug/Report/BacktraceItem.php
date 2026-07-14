@@ -28,7 +28,7 @@ final class BacktraceItem
      * @param array<array-key, mixed> $args
      * @param string|null $file
      * @param int|null    $line
-     * @param array{mode: string, firstLine: int, line: int, lastLine: int, lines: array<int, string>}|null $fragment
+     * @param CodeFragment|null $fragment
      */
     public function __construct(
         private readonly string $functionName,
@@ -40,7 +40,7 @@ final class BacktraceItem
         private readonly array $args = [],
         private readonly ?string $file = null,
         private readonly ?int $line = null,
-        private readonly ?array $fragment = null,
+        private readonly ?CodeFragment $fragment = null,
     ) {
     }
 
@@ -77,9 +77,9 @@ final class BacktraceItem
     }
 
     /**
-     * @return array{mode: string, firstLine: int, line: int, lastLine: int, lines: array<int, string>}|null
+     * @return CodeFragment|null
      */
-    public function getFragment(): ?array
+    public function getFragment(): ?CodeFragment
     {
         return $this->fragment;
     }

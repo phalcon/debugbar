@@ -17,7 +17,8 @@ use InvalidArgumentException;
 use JsonException;
 use Phalcon\Container\Container;
 use Phalcon\Debug\Contracts\TemplateAware;
-use Phalcon\Debug\Traits\TemplateAwareTrait;
+use Phalcon\Debug\Template\DumpTemplateCatalog;
+use Phalcon\Debug\Template\TemplateStore;
 use Phalcon\Di\DiInterface;
 use Phalcon\Support\Helper\Json\Encode;
 use Phalcon\Traits\Support\Helper\Str\InterpolateTrait;
@@ -28,15 +29,12 @@ use ReflectionProperty;
 use stdClass;
 
 use function array_merge;
-use function call_user_func_array;
-use function func_get_args;
 use function get_class;
 use function get_class_methods;
 use function get_object_vars;
 use function get_parent_class;
 use function htmlentities;
 use function implode;
-use function in_array;
 use function is_array;
 use function is_bool;
 use function is_float;
@@ -72,24 +70,17 @@ use const PHP_EOL;
  * echo (new \Phalcon\Debug\Dump())->variables($foo, $bar, $baz);
  * ```
  *
- * @property bool                     $detailed
- * @property array<int, class-string> $methods
- * @property array<string, string>    $styles
+ * @property bool                  $detailed
+ * @property array<string, string> $styles
  */
 class Dump implements TemplateAware
 {
     use InterpolateTrait;
-    use TemplateAwareTrait;
 
     /**
      * @var bool
      */
     protected bool $detailed = false;
-
-    /**
-     * @var array<int, class-string>
-     */
-    protected array $methods = [];
 
     /**
      * @var array<string, string>
@@ -102,6 +93,11 @@ class Dump implements TemplateAware
     private Encode $encode;
 
     /**
+     * @var TemplateStore
+     */
+    private TemplateStore $templates;
+
+    /**
      * Dump constructor.
      *
      * @param array<string, string> $styles
@@ -109,7 +105,8 @@ class Dump implements TemplateAware
      */
     public function __construct(array $styles = [], bool $detailed = false)
     {
-        $this->encode = new Encode();
+        $this->encode    = new Encode();
+        $this->templates = new TemplateStore(new DumpTemplateCatalog());
 
         $this->setStyles($styles);
 
@@ -119,20 +116,14 @@ class Dump implements TemplateAware
     /**
      * Alias of variables() method
      *
+     * @param mixed ...$vars
+     *
      * @return string
+     * @throws ReflectionException
      */
-    public function all(): string
+    public function all(mixed ...$vars): string
     {
-        /** @var string $result */
-        $result = call_user_func_array(
-            [
-                $this,
-                'variables',
-            ],
-            func_get_args()
-        );
-
-        return $result;
+        return $this->variables(...$vars);
     }
 
     /**
@@ -141,6 +132,16 @@ class Dump implements TemplateAware
     public function getDetailed(): bool
     {
         return $this->detailed;
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return string
+     */
+    public function getTemplate(string $name): string
+    {
+        return $this->templates->get($name);
     }
 
     /**
@@ -196,6 +197,21 @@ class Dump implements TemplateAware
     }
 
     /**
+     * Overrides the template for the given name.
+     *
+     * @param string $name
+     * @param string $template
+     *
+     * @return static
+     */
+    public function setTemplate(string $name, string $template): static
+    {
+        $this->templates->set($name, $template);
+
+        return $this;
+    }
+
+    /**
      * Returns an JSON string of information about a single variable.
      *
      * ```php
@@ -240,13 +256,9 @@ class Dump implements TemplateAware
      */
     public function variable(mixed $variable, string | null $name = null): string
     {
-        $message = $this->getTemplate('pre');
-        $context = [
-            'style'  => $this->getStyle('pre'),
-            'output' => $this->output($variable, $name),
-        ];
+        $seen = [];
 
-        return $this->toInterpolate($message, $context);
+        return $this->renderPreBlock($variable, $name, $seen);
     }
 
     /**
@@ -261,49 +273,52 @@ class Dump implements TemplateAware
      * echo (new \Phalcon\Debug\Dump())->variables($foo, $bar, $baz);
      * ```
      *
+     * @param mixed ...$vars
+     *
      * @return string
      * @throws ReflectionException
      */
-    public function variables(): string
+    public function variables(mixed ...$vars): string
     {
+        $seen   = [];
         $output = "";
-        $args   = func_get_args();
 
-        foreach ($args as $key => $value) {
-            $output .= $this->one($value, 'var ' . $key);
+        foreach ($vars as $key => $value) {
+            $output .= $this->renderPreBlock($value, 'var ' . $key, $seen);
         }
 
         return $output;
     }
 
     /**
-     * Returns the embedded default template for the given name.
+     * Prepare an HTML string of information about a single variable.
      *
-     * @param string $name
+     * @param mixed                    $variable
+     * @param string|null              $name
+     * @param int                      $tab
+     * @param array<class-string, bool> $seen
      *
      * @return string
+     * @throws ReflectionException
      */
-    protected function defaultTemplate(string $name): string
-    {
-        return match ($name) {
-            'pre'                     => '<pre style="%style%">%output%</pre>',
-            'bold'                    => '<b style="%style%">%text%</b>',
-            'varParens'               => '(<span style="%style%">%var%</span>)',
-            'lengthValue'             => '(<span style="%style%">%length%</span>) '
-                . '"<span style="%style%">%var%</span>"',
-            'arrayHeader'             => '<b style="%style%">Array</b> '
-                . '(<span style="%style%">%count%</span>) (',
-            'arrayKey'                => '[<span style="%style%">%key%</span>] => ',
-            'objectHeader'            => '<b style="%style%">Object</b> %class%',
-            'objectExtends'           => ' <b style="%style%">extends</b> %parent%',
-            'objectProperty'          => '-><span style="%style%">%key%</span> '
-                . '(<span style="%style%">%type%</span>) = ',
-            'objectMethods'           => "%class% <b style=\"%style%\">methods</b>: "
-                . "(<span style=\"%style%\">%count%</span>) (\n",
-            'objectMethod'            => "-><span style=\"%style%\">%method%</span>();\n",
-            'objectMethodConstructor' => "-><span style=\"%style%\">%method%</span>(); "
-                . "[<b style=\"%style%\">constructor</b>]\n",
-            default                   => '',
+    protected function formatValue(
+        mixed $variable,
+        string | null $name = null,
+        int $tab = 1,
+        array &$seen = []
+    ): string {
+        $output = (!empty($name)) ? $name . ' ' : '';
+
+        return $output . match (true) {
+            is_array($variable)   => $this->formatArray($variable, $name, $tab, $seen),
+            is_object($variable)  => $this->formatObject($variable, $tab, $seen),
+            is_int($variable)     => $this->formatInteger($variable),
+            is_float($variable)   => $this->formatFloat($variable),
+            is_numeric($variable) => $this->formatNumericString($variable),
+            is_string($variable)  => $this->formatString($variable),
+            is_bool($variable)    => $this->formatBoolean($variable),
+            null === $variable    => $this->formatNull(),
+            default               => $this->formatResource($variable),
         };
     }
 
@@ -324,226 +339,313 @@ class Dump implements TemplateAware
     }
 
     /**
-     * Prepare an HTML string of information about a single variable.
-     *
-     * @param mixed       $variable
-     * @param string|null $name
-     * @param int         $tab
+     * @param array<array-key, mixed>   $variable
+     * @param string|null               $name
+     * @param int                       $tab
+     * @param array<class-string, bool> $seen
      *
      * @return string
      * @throws ReflectionException
      */
-    protected function output(
-        mixed $variable,
-        string | null $name = null,
-        int $tab = 1
-    ): string {
-        $space  = '  ';
-        $output = '';
+    private function formatArray(array $variable, string | null $name, int $tab, array &$seen): string
+    {
+        $space   = '  ';
+        $message = $this->getTemplate('arrayHeader') . PHP_EOL;
+        $context = [
+            'style' => $this->getStyle('arr'),
+            'count' => (string) count($variable),
+        ];
 
-        if (!empty($name)) {
-            $output .= $name . ' ';
-        }
+        $output = $this->toInterpolate($message, $context);
+        foreach ($variable as $key => $value) {
+            $output .= str_repeat($space, $tab);
 
-        if (is_array($variable)) {
-            $message = $this->getTemplate('arrayHeader') . PHP_EOL;
+            $message = $this->getTemplate('arrayKey');
             $context = [
                 'style' => $this->getStyle('arr'),
-                'count' => (string) count($variable),
-            ];
-
-            $output .= $this->toInterpolate($message, $context);
-            foreach ($variable as $key => $value) {
-                $output .= str_repeat($space, $tab);
-
-                $message = $this->getTemplate('arrayKey');
-                $context = [
-                    'style' => $this->getStyle('arr'),
-                    'key'   => $key,
-                ];
-                $output  .= $this->toInterpolate($message, $context);
-
-                if (
-                    1 === $tab &&
-                    !empty($name) &&
-                    true !== is_int($key) &&
-                    $name === $key
-                ) {
-                    continue;
-                }
-
-                $output .= $this->output($value, '', $tab + 1) . "\n";
-            }
-
-            return $output . str_repeat($space, $tab - 1) . ')';
-        }
-
-        if (is_object($variable)) {
-            $message = $this->getTemplate('objectHeader');
-            $context = [
-                'style' => $this->getStyle('obj'),
-                'class' => get_class($variable),
+                'key'   => $key,
             ];
             $output  .= $this->toInterpolate($message, $context);
 
-            if (false !== get_parent_class($variable)) {
-                $message = $this->getTemplate('objectExtends');
-                $context = [
-                    'style'  => $this->getStyle('obj'),
-                    'parent' => get_parent_class($variable),
-                ];
-                $output  .= $this->toInterpolate($message, $context);
+            if (
+                1 === $tab &&
+                !empty($name) &&
+                true !== is_int($key) &&
+                $name === $key
+            ) {
+                continue;
             }
 
-            $output .= " (\n";
+            $output .= $this->formatValue($value, '', $tab + 1, $seen) . "\n";
+        }
 
-            if ($variable instanceof DiInterface || $variable instanceof Container) {
-                // Skip debugging di and container
-                $output .= str_repeat($space, $tab) . "[skipped]\n";
-            } elseif (true !== $this->detailed || $variable instanceof stdClass) {
-                // Debug only public properties
-                $vars = get_object_vars($variable);
-                foreach ($vars as $key => $value) {
-                    $message = $this->getTemplate('objectProperty');
-                    $context = [
-                        'style' => $this->getStyle('obj'),
-                        'key'   => $key,
-                        'type'  => 'public',
-                    ];
+        return $output . str_repeat($space, $tab - 1) . ')';
+    }
 
-                    $output .= str_repeat($space, $tab)
-                        . $this->toInterpolate($message, $context)
-                        . $this->output($value, '', $tab + 1)
-                        . "\n";
-                }
-            } else {
-                // Debug all properties
-                $reflect = new ReflectionClass($variable);
-                $props   = $reflect->getProperties(
-                    ReflectionProperty::IS_PUBLIC |
-                    ReflectionProperty::IS_PROTECTED |
-                    ReflectionProperty::IS_PRIVATE
-                );
+    /**
+     * @param bool $variable
+     *
+     * @return string
+     */
+    private function formatBoolean(bool $variable): string
+    {
+        return $this->formatLabeledValue('Boolean', 'bool', ($variable) ? 'TRUE' : 'FALSE');
+    }
 
-                foreach ($props as $property) {
-                    $key  = $property->getName();
-                    $type = implode(
-                        ' ',
-                        Reflection::getModifierNames($property->getModifiers())
-                    );
+    /**
+     * @param float $variable
+     *
+     * @return string
+     */
+    private function formatFloat(float $variable): string
+    {
+        return $this->formatLabeledValue('Float', 'float', (string) $variable);
+    }
 
-                    $message = $this->getTemplate('objectProperty');
-                    $context = [
-                        'style' => $this->getStyle('obj'),
-                        'key'   => $key,
-                        'type'  => $type,
-                    ];
+    /**
+     * @param int $variable
+     *
+     * @return string
+     */
+    private function formatInteger(int $variable): string
+    {
+        return $this->formatLabeledValue('Integer', 'int', (string) $variable);
+    }
 
-                    $output .= str_repeat($space, $tab)
-                        . $this->toInterpolate($message, $context)
-                        . $this->output($property->getValue($variable), '', $tab + 1)
-                        . "\n";
-                }
+    /**
+     * Formats the near-identical int/float/bool leaves that share the
+     * bold-label plus parenthesized-value shape.
+     *
+     * @param string $label
+     * @param string $styleType
+     * @param string $value
+     *
+     * @return string
+     */
+    private function formatLabeledValue(string $label, string $styleType, string $value): string
+    {
+        $message = $this->renderBoldLabel($label) . ' ' . $this->getTemplate('varParens');
+        $context = [
+            'style' => $this->getStyle($styleType),
+            'var'   => $value,
+        ];
+
+        return $this->toInterpolate($message, $context);
+    }
+
+    /**
+     * @return string
+     */
+    private function formatNull(): string
+    {
+        return $this->toInterpolate(
+            $this->renderBoldLabel('NULL'),
+            ['style' => $this->getStyle('null')]
+        );
+    }
+
+    /**
+     * @param string $variable
+     *
+     * @return string
+     */
+    private function formatNumericString(string $variable): string
+    {
+        $message = $this->renderBoldLabel('Numeric String') . ' ' . $this->getTemplate('lengthValue');
+        $context = [
+            'style'  => $this->getStyle('num'),
+            'length' => (string) mb_strlen($variable),
+            'var'    => $variable,
+        ];
+
+        return $this->toInterpolate($message, $context);
+    }
+
+    /**
+     * @param object                    $variable
+     * @param int                       $tab
+     * @param array<class-string, bool> $seen
+     *
+     * @return string
+     * @throws ReflectionException
+     */
+    private function formatObject(object $variable, int $tab, array &$seen): string
+    {
+        $space   = '  ';
+        $message = $this->getTemplate('objectHeader');
+        $context = [
+            'style' => $this->getStyle('obj'),
+            'class' => get_class($variable),
+        ];
+        $output  = $this->toInterpolate($message, $context);
+
+        if (false !== get_parent_class($variable)) {
+            $message = $this->getTemplate('objectExtends');
+            $context = [
+                'style'  => $this->getStyle('obj'),
+                'parent' => get_parent_class($variable),
+            ];
+            $output  .= $this->toInterpolate($message, $context);
+        }
+
+        $output .= " (\n";
+        $output .= $this->formatObjectProperties($variable, $tab, $seen);
+        $output .= $this->formatObjectMethods($variable, $tab, $seen);
+
+        return $output . str_repeat($space, $tab - 1) . ")";
+    }
+
+    /**
+     * @param object                    $variable
+     * @param int                       $tab
+     * @param array<class-string, bool> $seen
+     *
+     * @return string
+     */
+    private function formatObjectMethods(object $variable, int $tab, array &$seen): string
+    {
+        $space     = '  ';
+        $className = get_class($variable);
+        $attr      = get_class_methods($variable);
+
+        $message = $this->getTemplate('objectMethods');
+        $context = [
+            'style' => $this->getStyle('obj'),
+            'class' => $className,
+            'count' => (string) count($attr),
+        ];
+
+        $output = str_repeat($space, $tab)
+            . $this->toInterpolate($message, $context);
+
+        if (isset($seen[$className])) {
+            return $output . str_repeat($space, $tab) . "[already listed]\n";
+        }
+
+        $seen[$className] = true;
+        foreach ($attr as $value) {
+            $message = $this->getTemplate('objectMethod');
+            if ('__construct' === $value) {
+                $message = $this->getTemplate('objectMethodConstructor');
             }
+            $context = [
+                'style'  => $this->getStyle('obj'),
+                'method' => $value,
+            ];
 
-            $attr    = get_class_methods($variable);
-            $message = $this->getTemplate('objectMethods');
+            $output .= str_repeat($space, $tab + 1)
+                . $this->toInterpolate($message, $context);
+        }
+
+        return $output . str_repeat($space, $tab) . ")\n";
+    }
+
+    /**
+     * @param object                    $variable
+     * @param int                       $tab
+     * @param array<class-string, bool> $seen
+     *
+     * @return string
+     * @throws ReflectionException
+     */
+    private function formatObjectProperties(object $variable, int $tab, array &$seen): string
+    {
+        $space = '  ';
+
+        if ($variable instanceof DiInterface || $variable instanceof Container) {
+            // Skip debugging di and container
+            return str_repeat($space, $tab) . "[skipped]\n";
+        }
+
+        if (true !== $this->detailed || $variable instanceof stdClass) {
+            // Debug only public properties
+            return $this->formatPublicProperties($variable, $tab, $seen);
+        }
+
+        // Debug all properties
+        return $this->formatReflectedProperties($variable, $tab, $seen);
+    }
+
+    /**
+     * @param object                    $variable
+     * @param int                       $tab
+     * @param array<class-string, bool> $seen
+     *
+     * @return string
+     * @throws ReflectionException
+     */
+    private function formatPublicProperties(object $variable, int $tab, array &$seen): string
+    {
+        $space  = '  ';
+        $output = '';
+        $vars   = get_object_vars($variable);
+
+        foreach ($vars as $key => $value) {
+            $message = $this->getTemplate('objectProperty');
             $context = [
                 'style' => $this->getStyle('obj'),
-                'class' => get_class($variable),
-                'count' => (string) count($attr),
+                'key'   => $key,
+                'type'  => 'public',
             ];
 
             $output .= str_repeat($space, $tab)
-                . $this->toInterpolate($message, $context);
-
-
-            if (true === in_array(get_class($variable), $this->methods)) {
-                $output .= str_repeat($space, $tab) . "[already listed]\n";
-            } else {
-                foreach ($attr as $value) {
-                    $this->methods[] = get_class($variable);
-
-                    $message = $this->getTemplate('objectMethod');
-                    if ('__construct' === $value) {
-                        $message = $this->getTemplate('objectMethodConstructor');
-                    }
-                    $context = [
-                        'style'  => $this->getStyle('obj'),
-                        'method' => $value,
-                    ];
-
-                    $output .= str_repeat($space, $tab + 1)
-                        . $this->toInterpolate($message, $context);
-                }
-
-                $output .= str_repeat($space, $tab) . ")\n";
-            }
-
-            return $output . str_repeat($space, $tab - 1) . ")";
+                . $this->toInterpolate($message, $context)
+                . $this->formatValue($value, '', $tab + 1, $seen)
+                . "\n";
         }
 
-        if (is_int($variable)) {
-            $message = $this->getOutputBold('Integer') . ' ' . $this->getTemplate('varParens');
+        return $output;
+    }
+
+    /**
+     * @param object                    $variable
+     * @param int                       $tab
+     * @param array<class-string, bool> $seen
+     *
+     * @return string
+     * @throws ReflectionException
+     */
+    private function formatReflectedProperties(object $variable, int $tab, array &$seen): string
+    {
+        $space   = '  ';
+        $output  = '';
+        $reflect = new ReflectionClass($variable);
+        $props   = $reflect->getProperties(
+            ReflectionProperty::IS_PUBLIC |
+            ReflectionProperty::IS_PROTECTED |
+            ReflectionProperty::IS_PRIVATE
+        );
+
+        foreach ($props as $property) {
+            $key  = $property->getName();
+            $type = implode(
+                ' ',
+                Reflection::getModifierNames($property->getModifiers())
+            );
+
+            $message = $this->getTemplate('objectProperty');
             $context = [
-                'style' => $this->getStyle('int'),
-                'var'   => (string) $variable,
+                'style' => $this->getStyle('obj'),
+                'key'   => $key,
+                'type'  => $type,
             ];
 
-            return $output . $this->toInterpolate($message, $context);
+            $output .= str_repeat($space, $tab)
+                . $this->toInterpolate($message, $context)
+                . $this->formatValue($property->getValue($variable), '', $tab + 1, $seen)
+                . "\n";
         }
 
-        if (is_float($variable)) {
-            $message = $this->getOutputBold('Float') . ' ' . $this->getTemplate('varParens');
-            $context = [
-                'style' => $this->getStyle('float'),
-                'var'   => (string) $variable,
-            ];
+        return $output;
+    }
 
-            return $output . $this->toInterpolate($message, $context);
-        }
-
-        if (is_numeric($variable)) {
-            $message = $this->getOutputBold('Numeric String') . ' ' . $this->getTemplate('lengthValue');
-            $context = [
-                'style'  => $this->getStyle('num'),
-                'length' => (string) mb_strlen((string) $variable),
-                'var'    => (string) $variable,
-            ];
-
-            return $output . $this->toInterpolate($message, $context);
-        }
-
-        if (is_string($variable)) {
-            $message = $this->getOutputBold('String') . ' ' . $this->getTemplate('lengthValue');
-            $context = [
-                'style'  => $this->getStyle('str'),
-                'length' => (string) mb_strlen($variable),
-                'var'    => nl2br(htmlentities($variable, ENT_IGNORE, 'utf-8')),
-            ];
-
-            return $output . $this->toInterpolate($message, $context);
-        }
-
-        if (is_bool($variable)) {
-            $message = $this->getOutputBold('Boolean') . ' ' . $this->getTemplate('varParens');
-            $context = [
-                'style' => $this->getStyle('bool'),
-                'var'   => ($variable) ? 'TRUE' : 'FALSE',
-            ];
-
-            return $output . $this->toInterpolate($message, $context);
-        }
-
-        if (null === $variable) {
-            $message = $this->getOutputBold('NULL');
-            $context = [
-                'style' => $this->getStyle('null'),
-            ];
-
-            return $output . $this->toInterpolate($message, $context);
-        }
-
+    /**
+     * @param mixed $variable
+     *
+     * @return string
+     */
+    private function formatResource(mixed $variable): string
+    {
         /** @var resource $variable */
         $message = $this->getTemplate('varParens');
         $context = [
@@ -551,7 +653,24 @@ class Dump implements TemplateAware
             'var'   => (string) $variable,
         ];
 
-        return $output . $this->toInterpolate($message, $context);
+        return $this->toInterpolate($message, $context);
+    }
+
+    /**
+     * @param string $variable
+     *
+     * @return string
+     */
+    private function formatString(string $variable): string
+    {
+        $message = $this->renderBoldLabel('String') . ' ' . $this->getTemplate('lengthValue');
+        $context = [
+            'style'  => $this->getStyle('str'),
+            'length' => (string) mb_strlen($variable),
+            'var'    => nl2br(htmlentities($variable, ENT_IGNORE, 'utf-8')),
+        ];
+
+        return $this->toInterpolate($message, $context);
     }
 
     /**
@@ -559,11 +678,34 @@ class Dump implements TemplateAware
      *
      * @return string
      */
-    private function getOutputBold(string $text): string
+    private function renderBoldLabel(string $text): string
     {
         return $this->toInterpolate(
             $this->getTemplate('bold'),
             ['text' => $text]
+        );
+    }
+
+    /**
+     * Wraps a single variable's formatted output in a "pre" block, sharing the
+     * $seen guard so classes already listed earlier in the same top-level dump
+     * are collapsed to "[already listed]".
+     *
+     * @param mixed                     $variable
+     * @param string|null               $name
+     * @param array<class-string, bool> $seen
+     *
+     * @return string
+     * @throws ReflectionException
+     */
+    private function renderPreBlock(mixed $variable, string | null $name, array &$seen): string
+    {
+        return $this->toInterpolate(
+            $this->getTemplate('pre'),
+            [
+                'style'  => $this->getStyle('pre'),
+                'output' => $this->formatValue($variable, $name, 1, $seen),
+            ]
         );
     }
 }

@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\Debug\Report;
 
 use Phalcon\Debug\Report\BacktraceItem;
+use Phalcon\Debug\Report\CodeFragment;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
 final class BacktraceItemTest extends AbstractUnitTestCase
@@ -30,13 +31,7 @@ final class BacktraceItemTest extends AbstractUnitTestCase
     }
     public function testGettersReturnConstructorValues(): void
     {
-        $fragment = [
-            'mode'      => 'full',
-            'firstLine' => 1,
-            'line'      => 4,
-            'lastLine'  => 9,
-            'lines'     => ["<?php\n", "echo 1;\n"],
-        ];
+        $fragment = new CodeFragment('full', 1, 4, 9, ["<?php\n", "echo 1;\n"]);
 
         $item = new BacktraceItem(
             'myFunction',

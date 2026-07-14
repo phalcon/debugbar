@@ -15,21 +15,16 @@ namespace Phalcon\Debug\Renderer;
 
 use Phalcon\Debug\Contracts\Renderer;
 use Phalcon\Debug\Report\BacktraceItem;
+use Phalcon\Debug\Report\CodeFragment;
 use Phalcon\Debug\Report\ExceptionReport;
-use Phalcon\Debug\Traits\TemplateAwareTrait;
+use Phalcon\Debug\Template\HtmlTemplateCatalog;
+use Phalcon\Debug\Template\TemplateStore;
 use Phalcon\Support\Version;
 use Phalcon\Traits\Support\Helper\Str\InterpolateTrait;
 
 use function count;
-use function get_class;
-use function gettype;
 use function htmlentities;
 use function implode;
-use function is_array;
-use function is_object;
-use function is_scalar;
-use function is_string;
-use function method_exists;
 use function number_format;
 use function rtrim;
 use function str_replace;
@@ -40,14 +35,31 @@ use const PHP_VERSION;
 
 /**
  * Renders an ExceptionReport as the HTML debug page using embedded, overridable
- * template strings filled by the interpolator. All styling and interactivity
- * (theme, tabs, syntax highlighting, copy/editor links) are provided by the
- * external debug.css / debug.js assets.
+ * template strings filled by the interpolator. Assembly only: the template
+ * strings live in HtmlTemplateCatalog (via TemplateStore) and value formatting
+ * in ValueDumper. All styling and interactivity (theme, tabs, syntax
+ * highlighting, copy/editor links) are provided by the external
+ * debug.css / debug.js assets.
  */
 class HtmlRenderer implements Renderer
 {
     use InterpolateTrait;
-    use TemplateAwareTrait;
+
+    /**
+     * @var TemplateStore
+     */
+    private TemplateStore $templates;
+
+    /**
+     * @var ValueDumper
+     */
+    private ValueDumper $values;
+
+    public function __construct()
+    {
+        $this->templates = new TemplateStore(new HtmlTemplateCatalog());
+        $this->values    = new ValueDumper();
+    }
 
     /**
      * @param string $uri
@@ -73,6 +85,16 @@ class HtmlRenderer implements Renderer
             $this->getTemplate('jsLink'),
             ['uri' => $uri, 'path' => 'debug.js']
         );
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return string
+     */
+    public function getTemplate(string $name): string
+    {
+        return $this->templates->get($name);
     }
 
     /**
@@ -104,7 +126,7 @@ class HtmlRenderer implements Renderer
     public function render(ExceptionReport $report): string
     {
         $className      = $report->getClassName();
-        $escapedMessage = $this->escapeString($report->getMessage());
+        $escapedMessage = $this->values->escape($report->getMessage());
 
         $html = $this->toInterpolate(
             $this->getTemplate('document'),
@@ -148,209 +170,16 @@ class HtmlRenderer implements Renderer
     }
 
     /**
-     * Returns the embedded default template for the given name.
-     *
      * @param string $name
+     * @param string $template
      *
-     * @return string
+     * @return static
      */
-    protected function defaultTemplate(string $name): string
+    public function setTemplate(string $name, string $template): static
     {
-        return match ($name) {
-            'cssLink'        => "
-    <link href='%uri%%path%'
-          rel='stylesheet'
-          type='text/css' />",
-            'jsLink'         => "
-    <script src='%uri%%path%'></script>",
-            'version'        => "<a class='version-badge' href='%link%' target='_new'><b>v%version%</b></a>",
-            'document'       => "<!DOCTYPE html>
-<html lang='en' data-theme='light'>
-<head>
-    <meta charset='utf-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <title>%className%:%escapedMessage%</title>%cssSources%
-</head>
-<body>
-<div class='wrap'>",
-            'masthead'       => "
-    <div class='masthead'>
-        <div class='brand'><img class='logo'"
-                . " src='https://assets.phalcon.io/phalcon/images/svg/logo--tablet.svg'"
-                . " alt='Phalcon' /><span>Phalcon Debug</span></div>
-        <div class='actions-top'>
-            <button class='btn' data-action='copy-trace'>Copy trace</button>
-            <button class='btn' data-action='toggle-theme' title='Toggle theme'>Theme</button>
-            %version%
-        </div>
-    </div>",
-            'errorMain'      => "
-    <div class='error-card'>
-        <span class='error-type'>%className%</span>
-        <h1 class='error-message'>%escapedMessage%</h1>
-        <div class='meta'>
-            <span class='item'><code>%file%</code> : <code>%line%</code></span>
-            <span class='sep'>|</span><span class='item'>PHP <code>%phpVersion%</code></span>
-        </div>
-    </div>",
-            'tabs'           => "
-    <div class='tabs' role='tablist'>
-        <button class='tab is-active' data-tab='backtrace'>Backtrace "
-                . "<span class='count'>%backtraceCount%</span></button>
-        <button class='tab' data-tab='request'>Request <span class='count'>%requestCount%</span></button>
-        <button class='tab' data-tab='server'>Server <span class='count'>%serverCount%</span></button>
-        <button class='tab' data-tab='files'>Included Files <span class='count'>%filesCount%</span></button>
-        <button class='tab' data-tab='memory'>Memory</button>%variablesTab%
-    </div>",
-            'variablesTab'   => "
-        <button class='tab' data-tab='variables'>Variables <span class='count'>%variablesCount%</span></button>",
-            'backtracePanel' => "
-    <div class='panel is-active' id='backtrace'>
-        <div class='bt-tools'>
-            <button class='btn' data-action='expand-all'>Expand all</button>
-            <button class='btn' data-action='collapse-all'>Collapse all</button>
-        </div>",
-            'panelOpen'      => "
-    <div class='panel' id='%id%'>",
-            'panelClose'     => "
-    </div>",
-            'wrapClose'      => "
-</div>",
-            'documentClose'  => "
-</body>
-</html>",
-            'frameOpen'      => "
-        <details class='frame %appClass%'%open%>
-            <summary><div class='frame-head'>
-                <span class='frame-num'>#%num%</span>
-                <span class='frame-call'>%signature%</span>%appTag%
-                <span class='chev'>&#9656;</span>
-            </div></summary>",
-            'appTag'         => "<span class='tag-app'>app</span>",
-            'frameFile'      => "
-            <div class='frame-file' data-file='%file%' data-line='%line%'>
-                <span class='path'><b>%file%</b> : %line%</span>
-            </div>",
-            'frameClose'     => "
-        </details>",
-            'codeOpen'       => "
-            <div class='code'><table>",
-            'codeRow'        => "<tr%hlClass%><td class='ln'>%num%</td><td class='src'>%src%</td></tr>",
-            'codeClose'      => "</table></div>",
-            'link'           => "<a href='%url%' target='_new'>%name%</a>",
-            'tableOpen'      => "<table class='grid'><thead><tr><th>%headerOne%</th><th>%headerTwo%</th></tr>"
-                . "</thead><tbody>",
-            'gridRow'        => "<tr><td class='k'>%key%</td><td class='v'>%value%</td></tr>",
-            'tableClose'     => "</tbody></table>",
-            'memory'         => "
-        <div class='stats'>
-            <div class='stat'><div class='label'>Memory usage (real)</div>"
-                . "<div class='value'>%memory% <small>MB</small></div></div>
-            <div class='stat'><div class='label'>Peak usage</div>"
-                . "<div class='value'>%peak% <small>MB</small></div></div>
-        </div>",
-            default          => '',
-        };
-    }
+        $this->templates->set($name, $template);
 
-    /**
-     * @param string $value
-     *
-     * @return string
-     */
-    protected function escapeString(string $value): string
-    {
-        return htmlentities(
-            str_replace("\n", "\\n", $value),
-            ENT_COMPAT,
-            'utf-8'
-        );
-    }
-
-    /**
-     * @param array<array-key, mixed> $arguments
-     * @param int                     $number
-     *
-     * @return string|null
-     */
-    protected function getArrayDump(array $arguments, int $number = 0): string | null
-    {
-        if ($number >= 3 || empty($arguments)) {
-            return null;
-        }
-
-        if (count($arguments) >= 10) {
-            return (string)count($arguments);
-        }
-
-        $dump = [];
-        foreach ($arguments as $index => $argument) {
-            if ('' === $argument) {
-                $varDump = '(empty string)';
-            } elseif (is_scalar($argument)) {
-                $varDump = $this->escapeString((string)$argument);
-            } elseif (is_array($argument)) {
-                $varDump = 'Array(' . $this->getArrayDump($argument, $number + 1) . ')';
-            } elseif (is_object($argument)) {
-                $varDump = 'Object(' . get_class($argument) . ')';
-            } elseif (null === $argument) {
-                $varDump = 'null';
-            } elseif (is_resource($argument)) {
-                $varDump = (string)$argument;
-            } else {
-                $varDump = gettype($argument);
-            }
-
-            $dump[] = '[' . $index . '] =&gt; ' . $varDump;
-        }
-
-        return implode(', ', $dump);
-    }
-
-    /**
-     * @param mixed $variable
-     *
-     * @return string
-     */
-    protected function getVarDump(mixed $variable): string
-    {
-        if (true === $variable) {
-            return 'true';
-        }
-
-        if (false === $variable) {
-            return 'false';
-        }
-
-        if (is_string($variable)) {
-            return $this->escapeString($variable);
-        }
-
-        if (is_scalar($variable)) {
-            return (string)$variable;
-        }
-
-        if (is_object($variable)) {
-            $className = get_class($variable);
-
-            if (true === method_exists($variable, 'dump')) {
-                $dumpedObject = $variable->dump();
-
-                return 'Object(' . $className . ': ' . $this->getArrayDump((array)$dumpedObject) . ')';
-            }
-
-            return 'Object(' . $className . ')';
-        }
-
-        if (is_array($variable)) {
-            return 'Array(' . $this->getArrayDump($variable) . ')';
-        }
-
-        if (null === $variable) {
-            return 'null';
-        }
-
-        return gettype($variable);
+        return $this;
     }
 
     /**
@@ -391,16 +220,16 @@ class HtmlRenderer implements Renderer
     }
 
     /**
-     * @param array{mode: string, firstLine: int, line: int, lastLine: int, lines: array<int, string>} $fragment
+     * @param CodeFragment $fragment
      *
      * @return string
      */
-    private function renderFragment(array $fragment): string
+    private function renderFragment(CodeFragment $fragment): string
     {
-        $firstLine = $fragment['firstLine'];
-        $lastLine  = $fragment['lastLine'];
-        $line      = $fragment['line'];
-        $lines     = $fragment['lines'];
+        $firstLine = $fragment->getFirstLine();
+        $lastLine  = $fragment->getLastLine();
+        $line      = $fragment->getLine();
+        $lines     = $fragment->getLines();
 
         $html    = $this->getTemplate('codeOpen');
         $counter = $firstLine;
@@ -444,7 +273,7 @@ class HtmlRenderer implements Renderer
                 $this->getTemplate('gridRow'),
                 [
                     'key'   => (string)$key,
-                    'value' => $this->escapeString((string)$value),
+                    'value' => $this->values->escape((string)$value),
                 ]
             );
         }
@@ -480,7 +309,7 @@ class HtmlRenderer implements Renderer
         $html = '';
 
         if (null !== $item->getClassName()) {
-            $name = $this->escapeString($item->getClassName());
+            $name = $this->values->escape($item->getClassName());
             $link = $item->getClassLink();
             $classHtml = (null !== $link)
                 ? $this->toInterpolate($this->getTemplate('link'), ['url' => $link, 'name' => $name])
@@ -490,7 +319,7 @@ class HtmlRenderer implements Renderer
             $html .= "<span class='op'>" . (string)$item->getType() . "</span>";
         }
 
-        $fnName = $this->escapeString($item->getFunctionName());
+        $fnName = $this->values->escape($item->getFunctionName());
         $fnLink = $item->getFunctionLink();
         $functionHtml = (null !== $fnLink)
             ? $this->toInterpolate($this->getTemplate('link'), ['url' => $fnLink, 'name' => $fnName])
@@ -501,7 +330,7 @@ class HtmlRenderer implements Renderer
         if (true === $item->hasArgs()) {
             $arguments = [];
             foreach ($item->getArgs() as $argument) {
-                $arguments[] = $this->getVarDump($argument);
+                $arguments[] = $this->values->dump($argument);
             }
 
             $html .= "<span class='op'>(</span>" . implode(', ', $arguments) . "<span class='op'>)</span>";
@@ -528,8 +357,8 @@ class HtmlRenderer implements Renderer
             $html .= $this->toInterpolate(
                 $this->getTemplate('gridRow'),
                 [
-                    'key'   => $this->escapeString((string)$key),
-                    'value' => $this->getVarDump($value),
+                    'key'   => $this->values->escape((string)$key),
+                    'value' => $this->values->dump($value),
                 ]
             );
         }
@@ -626,8 +455,8 @@ class HtmlRenderer implements Renderer
             $html .= $this->toInterpolate(
                 $this->getTemplate('gridRow'),
                 [
-                    'key'   => $this->escapeString((string)$key),
-                    'value' => $this->getVarDump($valueArray[0]),
+                    'key'   => $this->values->escape((string)$key),
+                    'value' => $this->values->dump($valueArray[0]),
                 ]
             );
         }

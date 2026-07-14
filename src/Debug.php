@@ -17,6 +17,8 @@ use Phalcon\Debug\Contracts\Renderer;
 use Phalcon\Debug\Exceptions\RequestHalted;
 use Phalcon\Debug\Exceptions\RuntimeWarning;
 use Phalcon\Debug\Renderer\HtmlRenderer;
+use Phalcon\Debug\Report\ReportOptions;
+use Phalcon\Debug\Report\Superglobals;
 use Phalcon\Debug\ReportBuilder;
 use Phalcon\Traits\Support\Helper\Arr\GetTrait;
 use ReflectionException;
@@ -30,13 +32,13 @@ use function mb_strtolower;
  *
  * @property array<array-key, mixed> $blacklist
  * @property array<array-key, mixed> $data
- * @property bool                    $hideDocumentRoot
  * @property bool                    $isActive
  * @property Renderer                $renderer
  * @property ReportBuilder           $reportBuilder
  * @property bool                    $showBackTrace
  * @property bool                    $showFileFragment
  * @property bool                    $showFiles
+ * @property Superglobals|null       $superglobals
  * @property string                  $uri
  */
 class Debug
@@ -56,11 +58,6 @@ class Debug
      * @var array<array-key, mixed>
      */
     protected array $data = [];
-
-    /**
-     * @var bool
-     */
-    protected bool $hideDocumentRoot = false;
 
     /**
      * @var Renderer
@@ -91,6 +88,11 @@ class Debug
      * @var string
      */
     protected string $uri = "https://assets.phalcon.io/debug/6.0.x/";
+
+    /**
+     * @var Superglobals|null
+     */
+    private ?Superglobals $superglobals = null;
 
     public function __construct()
     {
@@ -306,16 +308,19 @@ class Debug
      */
     public function renderHtml(Throwable $exception): string
     {
+        $options = new ReportOptions(
+            $this->blacklist,
+            $this->showBackTrace,
+            $this->showFiles,
+            $this->showFileFragment,
+            $this->uri,
+            $this->data
+        );
+
+        $superglobals = $this->superglobals ?? Superglobals::fromGlobals();
+
         return $this->renderer->render(
-            $this->reportBuilder->build(
-                $exception,
-                $this->blacklist,
-                $this->showBackTrace,
-                $this->showFiles,
-                $this->showFileFragment,
-                $this->uri,
-                $this->data
-            )
+            $this->reportBuilder->build($exception, $options, $superglobals)
         );
     }
 
@@ -328,27 +333,15 @@ class Debug
      */
     public function setBlacklist(array $blacklist): static
     {
-        /** @var array<int, string> $area */
-        $area     = $this->getArrVal($blacklist, 'request', []);
-        $subArray = [];
-        $result   = [];
+        /** @var array<int, string> $request */
+        $request = $this->getArrVal($blacklist, 'request', []);
+        /** @var array<int, string> $server */
+        $server = $this->getArrVal($blacklist, 'server', []);
 
-        foreach ($area as $value) {
-            $subArray[mb_strtolower($value)] = 1;
-        }
-
-        $result['request'] = $subArray;
-
-        /** @var array<int, string> $area */
-        $area     = $this->getArrVal($blacklist, 'server', []);
-        $subArray = [];
-
-        foreach ($area as $value) {
-            $subArray[mb_strtolower($value)] = 1;
-        }
-
-        $result['server'] = $subArray;
-        $this->blacklist  = $result;
+        $this->blacklist = [
+            'request' => $this->normalizeBlacklistArea($request),
+            'server'  => $this->normalizeBlacklistArea($server),
+        ];
 
         return $this;
     }
@@ -411,6 +404,21 @@ class Debug
     }
 
     /**
+     * Injects a fixed superglobals snapshot, bypassing the lazy read from
+     * $_REQUEST/$_SERVER performed at render time.
+     *
+     * @param Superglobals $superglobals
+     *
+     * @return $this
+     */
+    public function setSuperglobals(Superglobals $superglobals): static
+    {
+        $this->superglobals = $superglobals;
+
+        return $this;
+    }
+
+    /**
      * Change the base URI for static resources
      *
      * @param string $uri
@@ -422,5 +430,22 @@ class Debug
         $this->uri = $uri;
 
         return $this;
+    }
+
+    /**
+     * Normalizes a single blacklist area into a lowercased lookup map.
+     *
+     * @param array<int, string> $area
+     *
+     * @return array<string, int>
+     */
+    private function normalizeBlacklistArea(array $area): array
+    {
+        $result = [];
+        foreach ($area as $value) {
+            $result[mb_strtolower($value)] = 1;
+        }
+
+        return $result;
     }
 }

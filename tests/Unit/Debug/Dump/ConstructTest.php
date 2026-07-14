@@ -31,7 +31,7 @@ final class ConstructTest extends AbstractUnitTestCase
         $dump = new Dump([], true);
 
         /** @var string $actual */
-        $actual = $this->callProtectedMethod($dump, 'output', $patient);
+        $actual = $this->callProtectedMethod($dump, 'formatValue', $patient);
 
         /** @var string $expected */
         $expected = file_get_contents(
