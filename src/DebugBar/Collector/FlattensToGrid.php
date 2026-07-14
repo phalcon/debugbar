@@ -50,7 +50,7 @@ trait FlattensToGrid
                 continue;
             }
 
-            $result[$name] = $this->stringify($value);
+            $result[$name] = $this->scalarToString($value);
         }
 
         return $result;
@@ -61,7 +61,7 @@ trait FlattensToGrid
      *
      * @return string
      */
-    private function stringify(mixed $value): string
+    private function scalarToString(mixed $value): string
     {
         if (is_string($value)) {
             return $value;

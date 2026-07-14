@@ -22,7 +22,6 @@ use function array_pop;
 use function count;
 use function hrtime;
 use function is_string;
-use function round;
 
 /**
  * Records rendered views by subscribing to `view:beforeRenderView`/
@@ -34,6 +33,8 @@ use function round;
  */
 final class ViewCollector extends AbstractCollector implements Subscriber
 {
+    use FormatsDuration;
+
     public const NAME = 'view';
 
     /**
@@ -69,7 +70,7 @@ final class ViewCollector extends AbstractCollector implements Subscriber
         $rows = [];
         foreach ($this->rendered as $view) {
             $rows[] = [
-                'label'   => round($view['time'] / 1e6, 2) . 'ms',
+                'label'   => $this->nanosToMs($view['time']),
                 'message' => $view['path'],
             ];
         }

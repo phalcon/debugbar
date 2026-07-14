@@ -19,7 +19,6 @@ use Phalcon\DebugBar\DebugBarTypes;
 use function hrtime;
 use function is_float;
 use function microtime;
-use function round;
 
 /**
  * Reports the total request time plus any named `startMeasure`/`stopMeasure`
@@ -30,6 +29,8 @@ use function round;
  */
 final class TimeCollector extends AbstractCollector implements TimeAware
 {
+    use FormatsDuration;
+
     public const NAME = 'time';
 
     /**
@@ -57,17 +58,17 @@ final class TimeCollector extends AbstractCollector implements TimeAware
      */
     public function collect(): array
     {
-        $requestMs = (microtime(true) - $this->requestStart()) * 1000;
+        $requestNs = (microtime(true) - $this->requestStart()) * 1e9;
         $hrNow     = hrtime(true);
 
-        $rows = [$this->row('Request', $requestMs)];
+        $rows = [$this->row('Request', $requestNs)];
         foreach ($this->measures as $measure) {
-            $rows[] = $this->row($measure['label'], (($measure['end'] ?? $hrNow) - $measure['start']) / 1e6);
+            $rows[] = $this->row($measure['label'], ($measure['end'] ?? $hrNow) - $measure['start']);
         }
 
         return [
             'panel' => $rows,
-            'badge' => round($requestMs, 2) . 'ms',
+            'badge' => $this->nanosToMs($requestNs),
         ];
     }
 
@@ -109,16 +110,16 @@ final class TimeCollector extends AbstractCollector implements TimeAware
     }
 
     /**
-     * @param string $label
-     * @param float  $milliseconds
+     * @param string    $label
+     * @param int|float $nanoseconds
      *
      * @return list_row
      */
-    private function row(string $label, float $milliseconds): array
+    private function row(string $label, int|float $nanoseconds): array
     {
         return [
             'label'   => $label,
-            'message' => round($milliseconds, 2) . 'ms',
+            'message' => $this->nanosToMs($nanoseconds),
         ];
     }
 }

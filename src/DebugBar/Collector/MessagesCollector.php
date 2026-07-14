@@ -19,7 +19,6 @@ use Phalcon\DebugBar\DebugBarTypes;
 use function count;
 use function is_scalar;
 use function is_string;
-use function json_encode;
 
 /**
  * Accumulates the messages fed through the `Debug` facade (`info`, `debug`,
@@ -31,6 +30,8 @@ use function json_encode;
  */
 final class MessagesCollector extends AbstractCollector implements MessageAware
 {
+    use EncodesJson;
+
     public const NAME = 'messages';
 
     /**
@@ -63,7 +64,7 @@ final class MessagesCollector extends AbstractCollector implements MessageAware
     {
         $this->messages[] = [
             'label'   => $label,
-            'message' => $this->stringify($message),
+            'message' => $this->valueToString($message),
         ];
     }
 
@@ -83,7 +84,7 @@ final class MessagesCollector extends AbstractCollector implements MessageAware
      *
      * @return string
      */
-    private function stringify(mixed $value): string
+    private function valueToString(mixed $value): string
     {
         if (is_string($value)) {
             return $value;
@@ -93,8 +94,6 @@ final class MessagesCollector extends AbstractCollector implements MessageAware
             return (string) $value;
         }
 
-        $json = json_encode($value);
-
-        return is_string($json) ? $json : '';
+        return $this->jsonOrEmpty($value);
     }
 }

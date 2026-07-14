@@ -21,9 +21,6 @@ use Phalcon\Events\ManagerInterface;
 
 use function count;
 use function hrtime;
-use function is_string;
-use function json_encode;
-use function round;
 
 /**
  * Records SQL queries by subscribing to `db:beforeQuery`/`db:afterQuery`. The
@@ -34,6 +31,9 @@ use function round;
  */
 final class DatabaseCollector extends AbstractCollector implements Subscriber
 {
+    use EncodesJson;
+    use FormatsDuration;
+
     public const NAME = 'database';
 
     /**
@@ -69,7 +69,7 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
         $rows = [];
         foreach ($this->queries as $query) {
             $rows[] = [
-                'label'   => round($query['time'] / 1e6, 2) . 'ms',
+                'label'   => $this->nanosToMs($query['time']),
                 'message' => $this->formatQuery($query['sql'], $query['bindings']),
             ];
         }
@@ -123,8 +123,6 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
             return $sql;
         }
 
-        $encoded = json_encode($bindings);
-
-        return $sql . '  ' . (is_string($encoded) ? $encoded : '');
+        return $sql . '  ' . $this->jsonOrEmpty($bindings);
     }
 }

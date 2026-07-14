@@ -19,9 +19,6 @@ use Phalcon\Events\EventInterface;
 use Phalcon\Events\ManagerInterface;
 use Phalcon\Mvc\RouterInterface;
 
-use function is_string;
-use function json_encode;
-
 /**
  * Reports the matched route. The router is the source of `router:matchedRoute`,
  * so it is captured there and read at `collect()` — by response time it has been
@@ -32,6 +29,8 @@ use function json_encode;
  */
 final class RouteCollector extends AbstractCollector implements Subscriber
 {
+    use EncodesJson;
+
     public const NAME = 'route';
 
     /**
@@ -66,15 +65,13 @@ final class RouteCollector extends AbstractCollector implements Subscriber
             ];
         }
 
-        $params = json_encode($this->router->getParams());
-
         return [
             'panel' => [
                 'Module'     => $this->router->getModuleName(),
                 'Namespace'  => $this->router->getNamespaceName(),
                 'Controller' => $this->router->getControllerName(),
                 'Action'     => $this->router->getActionName(),
-                'Params'     => is_string($params) ? $params : '',
+                'Params'     => $this->jsonOrEmpty($this->router->getParams()),
             ],
             'badge' => null,
         ];
