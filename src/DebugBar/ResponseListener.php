@@ -25,6 +25,8 @@ use function is_string;
  * The `application:beforeSendResponse` listener. On the event it runs the access
  * gate, aggregates the bar, sets the diagnostic headers, and — for an injectable
  * HTML response — renders and splices the bar in.
+ *
+ * @phpstan-import-type request_context from DebugBarTypes
  */
 final class ResponseListener
 {
@@ -80,7 +82,7 @@ final class ResponseListener
     }
 
     /**
-     * @return array{0: string|null, 1: bool}
+     * @return request_context
      */
     private function requestContext(): array
     {

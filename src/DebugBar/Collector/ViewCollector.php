@@ -30,6 +30,8 @@ use function is_string;
  * matching "after", so nested partials are timed correctly.
  *
  * @phpstan-import-type list_envelope from DebugBarTypes
+ * @phpstan-import-type view_pending from DebugBarTypes
+ * @phpstan-import-type view_render from DebugBarTypes
  */
 final class ViewCollector extends AbstractCollector implements Subscriber
 {
@@ -53,12 +55,12 @@ final class ViewCollector extends AbstractCollector implements Subscriber
     protected string $panel = 'list';
 
     /**
-     * @var list<array{path: string, start: int|float}>
+     * @var list<view_pending>
      */
     private array $pending = [];
 
     /**
-     * @var list<array{path: string, time: int|float}>
+     * @var list<view_render>
      */
     private array $rendered = [];
 

@@ -27,6 +27,7 @@ use function hrtime;
  * connection is the event's source, so the statement, bindings, and timing are
  * read straight off it — no `db` service is resolved.
  *
+ * @phpstan-import-type db_query from DebugBarTypes
  * @phpstan-import-type list_envelope from DebugBarTypes
  */
 final class DatabaseCollector extends AbstractCollector implements Subscriber
@@ -52,7 +53,7 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
     protected string $panel = 'list';
 
     /**
-     * @var list<array{sql: string, bindings: array<array-key, mixed>, time: int|float}>
+     * @var list<db_query>
      */
     private array $queries = [];
 

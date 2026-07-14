@@ -31,6 +31,20 @@ namespace Phalcon\DebugBar;
  * @phpstan-type exception_envelope array{panel: exception_panel, badge: scalar|null}
  * @phpstan-type log_envelope array{panel: log_panel, badge: scalar|null}
  * @phpstan-type payload array{data: array<string, envelope>, meta: array<string, mixed>}
+ * @phpstan-type db_query array{sql: string, bindings: array<array-key, mixed>, time: int|float}
+ * @phpstan-type time_measure array{label: string, start: int|float, end: int|float|null}
+ * @phpstan-type view_pending array{path: string, start: int|float}
+ * @phpstan-type view_render array{path: string, time: int|float}
+ * @phpstan-type request_context array{0: string|null, 1: bool}
+ * @phpstan-type provider_config array{
+ *     env?: array{var?: string, blocked?: list<string>, strict?: bool},
+ *     enabled?: bool,
+ *     assets?: array{nonce?: string|null},
+ *     access?: array{allow_ips?: list<string>, callback?: (\Closure(): bool)|null},
+ *     collectors?: array<string, bool>,
+ *     headers?: bool,
+ *     redact?: array{mask?: list<string>, hidden?: list<string>}
+ * }
  */
 final class DebugBarTypes
 {

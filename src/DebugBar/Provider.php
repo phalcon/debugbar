@@ -46,6 +46,8 @@ use function mb_strtolower;
  * is: hold the `Application`, reach its EventsManager, and attach listeners.
  * There is no DI service to register and no container-specific wiring — the
  * app hands over its container and event bus.
+ *
+ * @phpstan-import-type provider_config from DebugBarTypes
  */
 class Provider
 {
@@ -100,16 +102,8 @@ class Provider
     private bool $strict;
 
     /**
-     * @param Application $app
-     * @param array{
-     *     env?: array{var?: string, blocked?: list<string>, strict?: bool},
-     *     enabled?: bool,
-     *     assets?: array{nonce?: string|null},
-     *     access?: array{allow_ips?: list<string>, callback?: (Closure(): bool)|null},
-     *     collectors?: array<string, bool>,
-     *     headers?: bool,
-     *     redact?: array{mask?: list<string>, hidden?: list<string>}
-     * } $config
+     * @param Application     $app
+     * @param provider_config $config
      */
     public function __construct(private readonly Application $app, array $config = [])
     {

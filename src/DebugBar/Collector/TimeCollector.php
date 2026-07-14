@@ -26,6 +26,7 @@ use function microtime;
  *
  * @phpstan-import-type list_envelope from DebugBarTypes
  * @phpstan-import-type list_row from DebugBarTypes
+ * @phpstan-import-type time_measure from DebugBarTypes
  */
 final class TimeCollector extends AbstractCollector implements TimeAware
 {
@@ -49,7 +50,7 @@ final class TimeCollector extends AbstractCollector implements TimeAware
     protected string $panel = 'list';
 
     /**
-     * @var array<string, array{label: string, start: int|float, end: int|float|null}>
+     * @var array<string, time_measure>
      */
     private array $measures = [];
 
