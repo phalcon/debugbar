@@ -15,7 +15,7 @@
 
 A web debug bar and debugger for the [Phalcon Framework](https://phalcon.io) -
 a status bar injected into your application's HTML that surfaces per-request
-diagnostics (messages, timing, database queries, request, route, and more),
+diagnostics (messages, logs, timing, database queries, request, route, and more),
 plus the migrated Phalcon debug/exception page.
 
 > **Status:** under active development. Fork of
