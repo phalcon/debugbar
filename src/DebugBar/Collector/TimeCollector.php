@@ -58,17 +58,18 @@ final class TimeCollector extends AbstractCollector implements TimeAware
      */
     public function collect(): array
     {
-        $requestNs = (microtime(true) - $this->requestStart()) * 1e9;
+        $requestMs = (microtime(true) - $this->requestStart()) * 1000;
         $hrNow     = hrtime(true);
 
-        $rows = [$this->row('Request', $requestNs)];
+        $rows = [$this->row('Request', $this->msLabel($requestMs))];
         foreach ($this->measures as $measure) {
-            $rows[] = $this->row($measure['label'], ($measure['end'] ?? $hrNow) - $measure['start']);
+            $elapsed = ($measure['end'] ?? $hrNow) - $measure['start'];
+            $rows[]  = $this->row($measure['label'], $this->nanosToMs($elapsed));
         }
 
         return [
             'panel' => $rows,
-            'badge' => $this->nanosToMs($requestNs),
+            'badge' => $this->msLabel($requestMs),
         ];
     }
 
@@ -110,16 +111,16 @@ final class TimeCollector extends AbstractCollector implements TimeAware
     }
 
     /**
-     * @param string    $label
-     * @param int|float $nanoseconds
+     * @param string $label
+     * @param string $message
      *
      * @return list_row
      */
-    private function row(string $label, int|float $nanoseconds): array
+    private function row(string $label, string $message): array
     {
         return [
             'label'   => $label,
-            'message' => $this->nanosToMs($nanoseconds),
+            'message' => $message,
         ];
     }
 }

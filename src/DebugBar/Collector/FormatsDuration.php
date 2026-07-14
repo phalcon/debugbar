@@ -16,11 +16,22 @@ namespace Phalcon\DebugBar\Collector;
 use function round;
 
 /**
- * Formats an `hrtime()` nanosecond delta as a rounded millisecond label (e.g.
- * `12.34ms`). Shared by the collectors that time their own work.
+ * Formats a duration as a rounded millisecond label (e.g. `12.34ms`). Shared by
+ * the collectors that time their own work: `msLabel()` for a millisecond source
+ * (wall clock), `nanosToMs()` for an `hrtime()` nanosecond delta.
  */
 trait FormatsDuration
 {
+    /**
+     * @param int|float $milliseconds
+     *
+     * @return string
+     */
+    private function msLabel(int|float $milliseconds): string
+    {
+        return round($milliseconds, 2) . 'ms';
+    }
+
     /**
      * @param int|float $nanoseconds
      *
@@ -28,6 +39,6 @@ trait FormatsDuration
      */
     private function nanosToMs(int|float $nanoseconds): string
     {
-        return round($nanoseconds / 1e6, 2) . 'ms';
+        return $this->msLabel($nanoseconds / 1e6);
     }
 }
