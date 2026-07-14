@@ -2,6 +2,18 @@
 
 All notable changes to `phalcon/debugbar` are documented here. The format is based on [Keep a Changelog][keep_a_changelog] and this project adheres to [Semantic Versioning][semantic_versioning].
 
+## [0.3.0](https://github.com/phalcon/debugbar/releases/tag/v0.3.0) (2026-07-14)
+
+### Changed
+
+### Added
+
+- A `logger` collector and `Phalcon\DebugBar\Logger\Adapter`. Attach the adapter to the application logger and every item logged through `Phalcon\Logger` is captured in the bar's "Logs" tab, separate from the manual `messages` collector. Each entry keeps the log level, message, and PSR-3 context; the context renders as a collapsible, pretty-printed JSON detail. Forwarding runs through the new `DebugBar::addLog()` and no-ops when the collector is disabled.
+
+### Fixed
+
+### Removed
+
 ## [0.2.0](https://github.com/phalcon/debugbar/releases/tag/v0.2.0) (2026-07-13)
 
 ### Changed

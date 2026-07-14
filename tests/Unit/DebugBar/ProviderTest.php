@@ -161,6 +161,7 @@ final class ProviderTest extends AbstractUnitTestCase
             [
                 'version',
                 'messages',
+                'logger',
                 'exceptions',
                 'time',
                 'database',

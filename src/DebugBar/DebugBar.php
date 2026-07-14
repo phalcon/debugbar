@@ -15,6 +15,7 @@ namespace Phalcon\DebugBar;
 
 use Phalcon\DebugBar\Contracts\Collector;
 use Phalcon\DebugBar\Contracts\ExceptionAware;
+use Phalcon\DebugBar\Contracts\LoggerAware;
 use Phalcon\DebugBar\Contracts\MessageAware;
 use Phalcon\DebugBar\Contracts\TimeAware;
 use Phalcon\DebugBar\Exceptions\Exception;
@@ -72,6 +73,23 @@ class DebugBar
         $collector = $this->collectors['exceptions'] ?? null;
         if ($collector instanceof ExceptionAware) {
             $collector->addThrowable($throwable);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param string                  $message
+     * @param string                  $level
+     * @param array<array-key, mixed> $context
+     *
+     * @return static
+     */
+    public function addLog(string $message, string $level, array $context = []): static
+    {
+        $collector = $this->collectors['logger'] ?? null;
+        if ($collector instanceof LoggerAware) {
+            $collector->addLog($message, $level, $context);
         }
 
         return $this;

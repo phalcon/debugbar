@@ -49,8 +49,13 @@
             return 'html';
         }
         if (Array.isArray(panel)) {
-            if (panel.length && panel[0] && typeof panel[0] === 'object' && 'trace' in panel[0]) {
-                return 'exceptions';
+            if (panel.length && panel[0] && typeof panel[0] === 'object') {
+                if ('trace' in panel[0]) {
+                    return 'exceptions';
+                }
+                if ('context' in panel[0]) {
+                    return 'logs';
+                }
             }
             return 'list';
         }
@@ -126,6 +131,32 @@
         return wrap;
     }
 
+    function renderLogs(panel) {
+        if (!Array.isArray(panel) || !panel.length) {
+            return el('div', 'phalcon-debugbar-empty', 'No data');
+        }
+        var wrap = el('div', 'phalcon-debugbar-logs');
+        panel.forEach(function (row) {
+            row = row || {};
+            var context = scalar(row.context);
+            if (context === '') {
+                var line = el('div', 'phalcon-debugbar-log');
+                line.appendChild(el('span', 'phalcon-debugbar-log-label', scalar(row.label)));
+                line.appendChild(el('span', 'phalcon-debugbar-log-message', scalar(row.message)));
+                wrap.appendChild(line);
+                return;
+            }
+            var details = el('details', 'phalcon-debugbar-log');
+            var summary = el('summary', 'phalcon-debugbar-log-summary');
+            summary.appendChild(el('span', 'phalcon-debugbar-log-label', scalar(row.label)));
+            summary.appendChild(el('span', 'phalcon-debugbar-log-message', scalar(row.message)));
+            details.appendChild(summary);
+            details.appendChild(el('pre', 'phalcon-debugbar-log-context', context));
+            wrap.appendChild(details);
+        });
+        return wrap;
+    }
+
     function renderPanel(type, panel) {
         switch (type) {
             case 'list':
@@ -136,6 +167,8 @@
                 return renderHtml(panel);
             case 'exceptions':
                 return renderExceptions(panel);
+            case 'logs':
+                return renderLogs(panel);
             case 'grid':
             default:
                 return renderGrid(panel);

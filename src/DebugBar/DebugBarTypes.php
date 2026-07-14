@@ -22,11 +22,14 @@ namespace Phalcon\DebugBar;
  * @phpstan-type grid_panel array<string, scalar>
  * @phpstan-type exception_row array{label: string, message: string, trace: string}
  * @phpstan-type exception_panel list<exception_row>
+ * @phpstan-type log_row array{label: string, message: string, context: string}
+ * @phpstan-type log_panel list<log_row>
  * @phpstan-type widget array{label: string, icon: string, panel: string}
  * @phpstan-type envelope array{panel: mixed, badge: scalar|null}
  * @phpstan-type list_envelope array{panel: list_panel, badge: scalar|null}
  * @phpstan-type grid_envelope array{panel: grid_panel, badge: scalar|null}
  * @phpstan-type exception_envelope array{panel: exception_panel, badge: scalar|null}
+ * @phpstan-type log_envelope array{panel: log_panel, badge: scalar|null}
  * @phpstan-type payload array{data: array<string, envelope>, meta: array<string, mixed>}
  */
 final class DebugBarTypes
