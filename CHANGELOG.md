@@ -2,13 +2,33 @@
 
 All notable changes to `phalcon/debugbar` are documented here. The format is based on [Keep a Changelog][keep_a_changelog] and this project adheres to [Semantic Versioning][semantic_versioning].
 
+## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
+
+### Changed
+
+- Decomposed the `Debug\Dump` and `Debug\Renderer\HtmlRenderer` god-methods: `Dump::output()` is now a `formatValue()` dispatcher over per-type formatters, and `HtmlRenderer` is assembly-only, delegating value formatting to `Renderer\ValueDumper` and templates to `Template\TemplateStore`. [#4](https://github.com/phalcon/debugbar/issues/4)
+- `ReportBuilder::build()` now takes `(Throwable, ReportOptions, Superglobals)` and no longer reads superglobals directly; `BacktraceItem`'s fragment is now a `CodeFragment`. [#4](https://github.com/phalcon/debugbar/issues/4)
+
+### Added
+
+- `Report\Superglobals` (its `fromGlobals()` is the single `$_REQUEST` / `$_SERVER` boundary), `Report\CodeFragment`, and `Report\ReportOptions` value objects.
+- `Template\TemplateStore` with `Contracts\TemplateCatalog` (`HtmlTemplateCatalog`, `DumpTemplateCatalog`), `Renderer\ValueDumper`, and `Debug::setSuperglobals()`. [#4](https://github.com/phalcon/debugbar/issues/4)
+
+### Fixed
+
+- `Dump`'s "[already listed]" method guard no longer leaks across separate top-level dumps; it is now a per-dump set threaded through the recursion instead of instance state. [#4](https://github.com/phalcon/debugbar/issues/4)
+
+### Removed
+
+- `Debug\Traits\TemplateAwareTrait` (replaced by `Template\TemplateStore` composition) and the unused `Debug::$hideDocumentRoot` property. [#4](https://github.com/phalcon/debugbar/issues/4)
+
 ## [0.3.0](https://github.com/phalcon/debugbar/releases/tag/v0.3.0) (2026-07-14)
 
 ### Changed
 
 ### Added
 
-- A `logger` collector and `Phalcon\DebugBar\Logger\Adapter`. Attach the adapter to the application logger and every item logged through `Phalcon\Logger` is captured in the bar's "Logs" tab, separate from the manual `messages` collector. Each entry keeps the log level, message, and PSR-3 context; the context renders as a collapsible, pretty-printed JSON detail. Forwarding runs through the new `DebugBar::addLog()` and no-ops when the collector is disabled.
+- A `logger` collector and `Phalcon\DebugBar\Logger\Adapter`. Attach the adapter to the application logger and every item logged through `Phalcon\Logger` is captured in the bar's "Logs" tab, separate from the manual `messages` collector. Each entry keeps the log level, message, and PSR-3 context; the context renders as a collapsible, pretty-printed JSON detail. Forwarding runs through the new `DebugBar::addLog()` and no-ops when the collector is disabled. [#6](https://github.com/phalcon/debugbar/issues/6)
 
 ### Fixed
 
