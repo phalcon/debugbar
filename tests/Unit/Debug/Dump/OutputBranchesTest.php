@@ -26,17 +26,16 @@ final class OutputBranchesTest extends AbstractUnitTestCase
     {
         $dump = new Dump();
 
-        // First pass registers the class so a later dump is "[already listed]".
-        $this->callProtectedMethod($dump, 'output', new SampleMethods());
-
+        // Within a single dump the second occurrence of the class is
+        // "[already listed]"; nested at tab 2 the marker carries a four-space
+        // indentation.
         /** @var string $actual */
         $actual = $this->callProtectedMethod(
             $dump,
-            'output',
-            ['z' => new SampleMethods()],
+            'formatValue',
+            ['a' => new SampleMethods(), 'z' => new SampleMethods()],
         );
 
-        // Nested at tab 2 the marker carries a four-space indentation.
         $this->assertStringContainsString("\n    [already listed]\n", $actual);
     }
 
@@ -57,7 +56,7 @@ final class OutputBranchesTest extends AbstractUnitTestCase
         /** @var string $actual */
         $actual = $this->callProtectedMethod(
             $dump,
-            'output',
+            'formatValue',
             ['' => 'keepme'],
             '',
         );
@@ -73,7 +72,7 @@ final class OutputBranchesTest extends AbstractUnitTestCase
         /** @var string $actual */
         $actual = $this->callProtectedMethod(
             $dump,
-            'output',
+            'formatValue',
             ['self' => 'skipme', 'other' => 'keepme'],
             'self',
         );
@@ -108,7 +107,7 @@ final class OutputBranchesTest extends AbstractUnitTestCase
         /** @var string $actual */
         $actual = $this->callProtectedMethod(
             $dump,
-            'output',
+            'formatValue',
             new Container(),
         );
 
@@ -173,7 +172,7 @@ final class OutputBranchesTest extends AbstractUnitTestCase
         $dump = new Dump();
 
         /** @var string $actual */
-        $actual = $this->callProtectedMethod($dump, 'output', $resource, 'lbl');
+        $actual = $this->callProtectedMethod($dump, 'formatValue', $resource, 'lbl');
         fclose($resource);
 
         // Name prefix kept, style placeholder resolved.
@@ -187,7 +186,7 @@ final class OutputBranchesTest extends AbstractUnitTestCase
         $dump = new Dump();
 
         /** @var string $actual */
-        $actual = $this->callProtectedMethod($dump, 'output', [new Di()]);
+        $actual = $this->callProtectedMethod($dump, 'formatValue', [new Di()]);
 
         // Nested at tab 2 the marker carries a four-space indentation.
         $this->assertStringContainsString("\n    [skipped]\n", $actual);

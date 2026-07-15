@@ -28,11 +28,14 @@ final class OutputExactTest extends AbstractUnitTestCase
     {
         $dump = new Dump();
 
-        // First pass registers the class so the second is "[already listed]".
-        $this->callProtectedMethod($dump, 'output', new SampleMethods());
-
+        // Within a single dump, the second occurrence of the class collapses to
+        // "[already listed]".
         /** @var string $actual */
-        $actual = $this->callProtectedMethod($dump, 'output', new SampleMethods());
+        $actual = $this->callProtectedMethod(
+            $dump,
+            'formatValue',
+            ['a' => new SampleMethods(), 'b' => new SampleMethods()],
+        );
 
         $this->assertSame($this->expected('dump_already_listed.txt'), $actual);
     }
@@ -44,7 +47,7 @@ final class OutputExactTest extends AbstractUnitTestCase
         /** @var string $actual */
         $actual = $this->callProtectedMethod(
             $dump,
-            'output',
+            'formatValue',
             ['x' => new NestedProperties()],
         );
 
@@ -58,7 +61,7 @@ final class OutputExactTest extends AbstractUnitTestCase
         /** @var string $actual */
         $actual = $this->callProtectedMethod(
             $dump,
-            'output',
+            'formatValue',
             ['a' => ['b' => 'c']],
         );
 
@@ -72,7 +75,7 @@ final class OutputExactTest extends AbstractUnitTestCase
         /** @var string $actual */
         $actual = $this->callProtectedMethod(
             $dump,
-            'output',
+            'formatValue',
             ['w' => new SampleMethods()],
         );
 
@@ -84,7 +87,7 @@ final class OutputExactTest extends AbstractUnitTestCase
         $dump = new Dump();
 
         /** @var string $actual */
-        $actual = $this->callProtectedMethod($dump, 'output', true, 'lbl');
+        $actual = $this->callProtectedMethod($dump, 'formatValue', true, 'lbl');
 
         $this->assertSame(
             'lbl <b style="color:green">Boolean</b> '
@@ -98,7 +101,7 @@ final class OutputExactTest extends AbstractUnitTestCase
         $dump = new Dump();
 
         /** @var string $actual */
-        $actual = $this->callProtectedMethod($dump, 'output', 3.14, 'lbl');
+        $actual = $this->callProtectedMethod($dump, 'formatValue', 3.14, 'lbl');
 
         $this->assertSame(
             'lbl <b style="color:fuchsia">Float</b> '
@@ -112,7 +115,7 @@ final class OutputExactTest extends AbstractUnitTestCase
         $dump = new Dump();
 
         /** @var string $actual */
-        $actual = $this->callProtectedMethod($dump, 'output', 123, 'lbl');
+        $actual = $this->callProtectedMethod($dump, 'formatValue', 123, 'lbl');
 
         $this->assertSame(
             'lbl <b style="color:blue">Integer</b> '
@@ -126,7 +129,7 @@ final class OutputExactTest extends AbstractUnitTestCase
         $dump = new Dump();
 
         /** @var string $actual */
-        $actual = $this->callProtectedMethod($dump, 'output', null, 'lbl');
+        $actual = $this->callProtectedMethod($dump, 'formatValue', null, 'lbl');
 
         $this->assertSame('lbl <b style="color:black">NULL</b>', $actual);
     }
@@ -136,7 +139,7 @@ final class OutputExactTest extends AbstractUnitTestCase
         $dump = new Dump();
 
         /** @var string $actual */
-        $actual = $this->callProtectedMethod($dump, 'output', '12345', 'lbl');
+        $actual = $this->callProtectedMethod($dump, 'formatValue', '12345', 'lbl');
 
         $this->assertSame(
             'lbl <b style="color:navy">Numeric String</b> '
@@ -151,7 +154,7 @@ final class OutputExactTest extends AbstractUnitTestCase
         $dump = new Dump();
 
         /** @var string $actual */
-        $actual = $this->callProtectedMethod($dump, 'output', 'héllo', 'lbl');
+        $actual = $this->callProtectedMethod($dump, 'formatValue', 'héllo', 'lbl');
 
         // mb_strlen === 5, strlen === 6: the length must be reported as 5.
         $this->assertSame(
@@ -170,7 +173,7 @@ final class OutputExactTest extends AbstractUnitTestCase
         $dump = new Dump();
 
         /** @var string $actual */
-        $actual = $this->callProtectedMethod($dump, 'output', $variable);
+        $actual = $this->callProtectedMethod($dump, 'formatValue', $variable);
 
         $this->assertSame($this->expected('dump_stdclass_array.txt'), $actual);
     }
@@ -183,7 +186,7 @@ final class OutputExactTest extends AbstractUnitTestCase
         $dump = new Dump([], true);
 
         /** @var string $actual */
-        $actual = $this->callProtectedMethod($dump, 'output', $variable);
+        $actual = $this->callProtectedMethod($dump, 'formatValue', $variable);
 
         $this->assertSame($this->expected('dump_stdclass_detailed.txt'), $actual);
     }

@@ -15,12 +15,14 @@ namespace Phalcon\Tests\Unit\Debug\Renderer;
 
 use Phalcon\Debug\Renderer\HtmlRenderer;
 use Phalcon\Debug\Report\BacktraceItem;
+use Phalcon\Debug\Report\CodeFragment;
 use Phalcon\Debug\Report\ExceptionReport;
+use Phalcon\Debug\Report\ReportOptions;
+use Phalcon\Debug\Report\Superglobals;
 use Phalcon\Debug\ReportBuilder;
 use Phalcon\Support\Exception;
 use Phalcon\Support\Version;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
-use Phalcon\Tests\Support\DebugBar\Fixtures\DumpableFixture;
 
 final class HtmlRendererTest extends AbstractUnitTestCase
 {
@@ -175,12 +177,8 @@ final class HtmlRendererTest extends AbstractUnitTestCase
         $exception = new Exception('exception message', 1234);
         $report    = (new ReportBuilder())->build(
             $exception,
-            ['request' => [], 'server' => []],
-            false,
-            true,
-            false,
-            self::URI,
-            []
+            new ReportOptions(['request' => [], 'server' => []], false, true, false, self::URI, []),
+            new Superglobals([], [])
         );
 
         $version = new Version();
@@ -258,12 +256,8 @@ final class HtmlRendererTest extends AbstractUnitTestCase
         $exception = new Exception('exception message', 1234);
         $report    = (new ReportBuilder())->build(
             $exception,
-            ['request' => [], 'server' => []],
-            true,
-            false,
-            false,
-            self::URI,
-            []
+            new ReportOptions(['request' => [], 'server' => []], true, false, false, self::URI, []),
+            new Superglobals([], [])
         );
 
         $actual = (new HtmlRenderer())->render($report);
@@ -288,95 +282,21 @@ final class HtmlRendererTest extends AbstractUnitTestCase
         $this->assertSame('', (new HtmlRenderer())->getTemplate('does-not-exist'));
     }
 
-    public function testVarDumpAndArrayDumpBranches(): void
-    {
-        $renderer = new class () extends HtmlRenderer {
-            public function dumpVar(mixed $value): string
-            {
-                return $this->getVarDump($value);
-            }
-
-            /**
-             * @param array<array-key, mixed> $arguments
-             * @param int                     $number
-             *
-             * @return string|null
-             */
-            public function dumpArr(array $arguments, int $number = 0): string | null
-            {
-                return $this->getArrayDump($arguments, $number);
-            }
-        };
-
-        $object = new class () {
-            /**
-             * @return array<array-key, mixed>
-             */
-            public function dump(): array
-            {
-                return ['k' => 'v'];
-            }
-        };
-
-        $resource = fopen('php://memory', 'r');
-        if (false === $resource) {
-            self::fail('Unable to open the in-memory resource.');
-        }
-
-        $this->assertSame('true', $renderer->dumpVar(true));
-        $this->assertSame('false', $renderer->dumpVar(false));
-        $this->assertSame('42', $renderer->dumpVar(42));
-        $this->assertSame('null', $renderer->dumpVar(null));
-        $this->assertSame('resource', $renderer->dumpVar($resource));
-        $this->assertSame('Object(stdClass)', $renderer->dumpVar(new \stdClass()));
-        $this->assertStringContainsString('a&lt;b', $renderer->dumpVar('a<b'));
-        $this->assertSame("a\\nb", $renderer->dumpVar("a\nb"));
-        $this->assertStringContainsString('Array(', $renderer->dumpVar([1, 2]));
-        $this->assertStringContainsString('=&gt;', $renderer->dumpVar($object));
-
-        $this->assertSame('Array([0] =&gt; 1, [1] =&gt; 2)', $renderer->dumpVar([1, 2]));
-        $this->assertSame(
-            'Array([0] =&gt; Array([0] =&gt; Array([0] =&gt; Array())))',
-            $renderer->dumpVar([[[['deep']]]])
-        );
-        $this->assertSame(
-            'Object(' . DumpableFixture::class . ': [alpha] =&gt; beta)',
-            $renderer->dumpVar(new DumpableFixture())
-        );
-
-        $this->assertNull($renderer->dumpArr([]));
-        $this->assertSame('10', $renderer->dumpArr(range(1, 10)));
-        $this->assertSame('12', $renderer->dumpArr(range(1, 12)));
-
-        $dump = $renderer->dumpArr(['', 5, [1], new \stdClass(), null, $resource]);
-
-        /** @var string $dump */
-        $this->assertStringContainsString('[0] =&gt; (empty string)', $dump);
-        $this->assertStringContainsString('[1] =&gt; 5', $dump);
-        $this->assertStringContainsString('[2] =&gt; Array([0] =&gt; 1)', $dump);
-        $this->assertStringContainsString('[3] =&gt; Object(stdClass)', $dump);
-        $this->assertStringContainsString('[4] =&gt; null', $dump);
-
-        fclose($resource);
-
-        $this->assertStringContainsString('resource (closed)', (string)$renderer->dumpArr([$resource]));
-    }
-
     private function buildReport(): ExceptionReport
     {
-        $fragment = [
-            'mode'      => 'fragment',
-            'firstLine' => 3,
-            'line'      => 4,
-            'lastLine'  => 5,
-            'lines'     => [
+        $fragment = new CodeFragment(
+            'fragment',
+            3,
+            4,
+            5,
+            [
                 "line one\r\n",
                 "line two\r\n",
                 "AAA\ttabbed\r\n",
                 "line<four>\r\n",
                 "line five\r\n",
-            ],
-        ];
+            ]
+        );
 
         $frame = new BacktraceItem(
             'methodA',
