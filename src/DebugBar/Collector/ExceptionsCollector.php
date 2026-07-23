@@ -25,7 +25,7 @@ use function strrpos;
 use function substr;
 
 /**
- * Records throwables — automatically via `dispatch:beforeException` (the
+ * Records throwables - automatically via `dispatch:beforeException` (the
  * throwable is only recorded, never swallowed) and manually through the `Debug`
  * facade / DebugBar `addException()`. Each entry keeps a compact summary plus the
  * stack trace; the full report remains the Debug page's job.
@@ -85,7 +85,7 @@ final class ExceptionsCollector extends AbstractCollector implements ExceptionAw
 
     /**
      * Auto-captures dispatch exceptions. The throwable is recorded and left to
-     * bubble — the bar never handles or swallows it.
+     * bubble - the bar never handles or swallows it.
      *
      * @param ManagerInterface $eventsManager
      *

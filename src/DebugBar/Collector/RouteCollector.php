@@ -21,7 +21,7 @@ use Phalcon\Mvc\RouterInterface;
 
 /**
  * Reports the matched route. The router is the source of `router:matchedRoute`,
- * so it is captured there and read at `collect()` — by response time it has been
+ * so it is captured there and read at `collect()` - by response time it has been
  * fully resolved (module/controller/action/params), which is not yet true when
  * the event fires. Nothing is resolved from the container.
  *

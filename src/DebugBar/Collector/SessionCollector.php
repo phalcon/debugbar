@@ -26,7 +26,7 @@ use const PHP_SESSION_ACTIVE;
 /**
  * Snapshots the session into a redacted grid. The session manager drives
  * `$_SESSION` for every adapter, so the data and identity are read straight from
- * PHP's session state — nothing is resolved from the container. Reports nothing
+ * PHP's session state - nothing is resolved from the container. Reports nothing
  * when no session is active.
  *
  * @phpstan-import-type grid_envelope from DebugBarTypes
@@ -87,7 +87,7 @@ final class SessionCollector extends AbstractCollector
 
     /**
      * Session data with Phalcon's internal keys (such as the CSRF token) removed
-     * — those are framework internals, not application state, and must never be
+     * - those are framework internals, not application state, and must never be
      * shown. The raw session id is likewise omitted (session-hijacking risk).
      *
      * @return array<array-key, mixed>

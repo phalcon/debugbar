@@ -20,7 +20,7 @@ use function mb_strtolower;
 /**
  * Guards data before it leaves PHP, matching keys case-insensitively through
  * nested arrays. Sensitive keys are masked (key shown, value replaced); "hidden"
- * keys are dropped entirely — mirroring the blacklist `Debug` already applies.
+ * keys are dropped entirely - mirroring the blacklist `Debug` already applies.
  * Applied by the Request/Session/Config collectors.
  */
 final class Redactor

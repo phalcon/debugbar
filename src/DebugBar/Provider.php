@@ -44,7 +44,7 @@ use function mb_strtolower;
 /**
  * Boots the debug bar against an MVC application. Its whole coupling to the app
  * is: hold the `Application`, reach its EventsManager, and attach listeners.
- * There is no DI service to register and no container-specific wiring — the
+ * There is no DI service to register and no container-specific wiring - the
  * app hands over its container and event bus.
  *
  * @phpstan-import-type provider_config from DebugBarTypes
@@ -129,7 +129,7 @@ class Provider
 
     /**
      * Creates the bar with its enabled collectors, points the `Debug` facade at
-     * it, and — when the app has an EventsManager — subscribes the streamed
+     * it, and - when the app has an EventsManager - subscribes the streamed
      * collectors and attaches the response listener.
      *
      * @return void

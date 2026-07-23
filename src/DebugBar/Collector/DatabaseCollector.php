@@ -25,7 +25,7 @@ use function hrtime;
 /**
  * Records SQL queries by subscribing to `db:beforeQuery`/`db:afterQuery`. The
  * connection is the event's source, so the statement, bindings, and timing are
- * read straight off it — no `db` service is resolved.
+ * read straight off it - no `db` service is resolved.
  *
  * @phpstan-import-type db_query from DebugBarTypes
  * @phpstan-import-type list_envelope from DebugBarTypes

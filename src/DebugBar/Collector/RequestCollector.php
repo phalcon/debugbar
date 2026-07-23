@@ -20,7 +20,7 @@ use Phalcon\Http\RequestInterface;
 use function is_array;
 
 /**
- * Snapshots the incoming request — method, URI, query, post, and headers —
+ * Snapshots the incoming request - method, URI, query, post, and headers -
  * redacting sensitive keys and flattening the nested arrays into a single grid.
  * The request object is resolved once by the provider and injected here, so the
  * collector reads it directly rather than the superglobals.

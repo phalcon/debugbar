@@ -23,7 +23,7 @@ use function is_string;
 
 /**
  * Records cache operations by subscribing to the `cache:after*` events. The key
- * is the event data, so it is read straight off the event — the `cache` service
+ * is the event data, so it is read straight off the event - the `cache` service
  * is never resolved.
  *
  * @phpstan-import-type list_envelope from DebugBarTypes

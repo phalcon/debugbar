@@ -191,7 +191,7 @@
         try {
             window.localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0');
         } catch (error) {
-            /* storage unavailable — collapse still works for the session */
+            /* storage unavailable - collapse still works for the session */
         }
     }
 
