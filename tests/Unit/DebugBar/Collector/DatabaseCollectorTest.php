@@ -62,7 +62,7 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
         $property = new ReflectionProperty(DatabaseCollector::class, 'queries');
         $property->setAccessible(true);
 
-        /** @var array<int, array{time: int|float}> $queries */
+        /** @var array<int, array{time: float|int}> $queries */
         $queries = $property->getValue($collector);
         $time    = $queries[0]['time'];
 

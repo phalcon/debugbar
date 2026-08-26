@@ -23,6 +23,22 @@ final class ConfigCollectorTest extends AbstractUnitTestCase
 {
     use PanelContractTrait;
 
+    public function testConfigIsFlattenedAndRedacted(): void
+    {
+        $config = new Config([
+            'app'      => ['name' => 'Phalcon'],
+            'database' => ['host' => 'localhost', 'password' => 'hunter2'],
+        ]);
+
+        $collector = new ConfigCollector($config, new Redactor());
+
+        $panel = $collector->collect()['panel'];
+
+        $this->assertSame('Phalcon', $panel['app.name']);
+        $this->assertSame('localhost', $panel['database.host']);
+        $this->assertSame('***', $panel['database.password']);
+    }
+
     public function testEmptyPanelWhenConfigAbsent(): void
     {
         $collector = new ConfigCollector(null, new Redactor());
@@ -45,21 +61,5 @@ final class ConfigCollectorTest extends AbstractUnitTestCase
         $this->assertSame('true', $panel['debug']);
         $this->assertSame('4', $panel['workers']);
         $this->assertSame('1.5', $panel['ratio']);
-    }
-
-    public function testConfigIsFlattenedAndRedacted(): void
-    {
-        $config = new Config([
-            'app'      => ['name' => 'Phalcon'],
-            'database' => ['host' => 'localhost', 'password' => 'hunter2'],
-        ]);
-
-        $collector = new ConfigCollector($config, new Redactor());
-
-        $panel = $collector->collect()['panel'];
-
-        $this->assertSame('Phalcon', $panel['app.name']);
-        $this->assertSame('localhost', $panel['database.host']);
-        $this->assertSame('***', $panel['database.password']);
     }
 }

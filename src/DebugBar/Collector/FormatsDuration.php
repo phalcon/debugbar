@@ -23,21 +23,21 @@ use function round;
 trait FormatsDuration
 {
     /**
-     * @param int|float $milliseconds
+     * @param float|int $milliseconds
      *
      * @return string
      */
-    private function msLabel(int|float $milliseconds): string
+    private function msLabel(float | int $milliseconds): string
     {
         return round($milliseconds, 2) . 'ms';
     }
 
     /**
-     * @param int|float $nanoseconds
+     * @param float|int $nanoseconds
      *
      * @return string
      */
-    private function nanosToMs(int|float $nanoseconds): string
+    private function nanosToMs(float | int $nanoseconds): string
     {
         return $this->msLabel($nanoseconds / 1e6);
     }

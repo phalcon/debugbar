@@ -291,22 +291,6 @@ class Provider
     }
 
     /**
-     * @param DiInterface|null $container
-     *
-     * @return RequestInterface|null
-     */
-    private function resolveRequest(?DiInterface $container): ?RequestInterface
-    {
-        if (null === $container || !$container->has('request')) {
-            return null;
-        }
-
-        $request = $container->get('request');
-
-        return $request instanceof RequestInterface ? $request : null;
-    }
-
-    /**
      * @return string
      */
     private function resolveEnv(): string
@@ -324,5 +308,21 @@ class Provider
         }
 
         return '';
+    }
+
+    /**
+     * @param DiInterface|null $container
+     *
+     * @return RequestInterface|null
+     */
+    private function resolveRequest(?DiInterface $container): ?RequestInterface
+    {
+        if (null === $container || !$container->has('request')) {
+            return null;
+        }
+
+        $request = $container->get('request');
+
+        return $request instanceof RequestInterface ? $request : null;
     }
 }

@@ -136,11 +136,11 @@ class ValueDumper
     }
 
     /**
-     * @param int|float $variable
+     * @param float|int $variable
      *
      * @return string
      */
-    private function dumpNumber(int | float $variable): string
+    private function dumpNumber(float | int $variable): string
     {
         return (string) $variable;
     }

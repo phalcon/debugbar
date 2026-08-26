@@ -53,17 +53,6 @@ final class ViewCollectorTest extends AbstractUnitTestCase
         $this->assertPanelContract($collector);
     }
 
-    public function testUnmatchedAfterRenderIsIgnored(): void
-    {
-        $collector     = new ViewCollector();
-        $eventsManager = new Manager();
-        $collector->subscribe($eventsManager);
-
-        $eventsManager->fire('view:afterRenderView', $this);
-
-        $this->assertSame(0, $collector->collect()['badge']);
-    }
-
     public function testRenderedViewsAreRecordedFromEvents(): void
     {
         $collector     = new ViewCollector();
@@ -91,7 +80,7 @@ final class ViewCollectorTest extends AbstractUnitTestCase
         $property = new ReflectionProperty(ViewCollector::class, 'rendered');
         $property->setAccessible(true);
 
-        /** @var array<int, array{time: int|float}> $rendered */
+        /** @var array<int, array{time: float|int}> $rendered */
         $rendered = $property->getValue($collector);
         $time     = $rendered[0]['time'];
 
@@ -102,5 +91,16 @@ final class ViewCollectorTest extends AbstractUnitTestCase
          */
         $this->assertGreaterThanOrEqual(0, $time);
         $this->assertLessThan(1000000000, $time);
+    }
+
+    public function testUnmatchedAfterRenderIsIgnored(): void
+    {
+        $collector     = new ViewCollector();
+        $eventsManager = new Manager();
+        $collector->subscribe($eventsManager);
+
+        $eventsManager->fire('view:afterRenderView', $this);
+
+        $this->assertSame(0, $collector->collect()['badge']);
     }
 }

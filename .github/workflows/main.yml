@@ -26,10 +26,10 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: "Setup PHP"
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: '8.3'
           extensions: ${{ env.EXTENSIONS }}
@@ -40,8 +40,8 @@ jobs:
       - name: "Validate composer"
         run: composer validate --no-check-all --no-check-publish
 
-      - name: "Install dependencies"
-        uses: ramsey/composer-install@v4
+      - name: Install development dependencies with Composer
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
         with:
           composer-options: "--prefer-dist"
 
@@ -70,10 +70,10 @@ jobs:
           - 'v5'
           - 'v6'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: "Setup PHP"
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ matrix.php }}
           extensions: ${{ env.EXTENSIONS }}
@@ -88,8 +88,8 @@ jobs:
           sudo "$(which php)" pie.phar install --no-interaction "phalcon/cphalcon:${{ env.PHALCON_CONSTRAINT }}"
           php -m | grep -i phalcon
 
-      - name: "Install dependencies"
-        uses: ramsey/composer-install@v4
+      - name: Install development dependencies with Composer
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
         with:
           composer-options: "--prefer-dist"
 
@@ -106,22 +106,23 @@ jobs:
     needs:
       - quality
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # octocov uses full history for the base-branch diff.
           fetch-depth: 0
 
       # Coverage runs on the v6 composer package (no extension needed) with pcov.
       - name: "Setup PHP"
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: '8.3'
           extensions: ${{ env.EXTENSIONS }}
           coverage: pcov
           tools: composer:v2
 
-      - name: "Install dependencies"
-        uses: ramsey/composer-install@v4
+      - name: "Install development dependencies with Composer"
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
         with:
           composer-options: "--prefer-dist"
 
@@ -144,6 +145,6 @@ jobs:
             -Dsonar.php.coverage.reportPaths=tests/_output/coverage.xml
 
       - name: "octocov"
-        uses: k1LoW/octocov-action@v1
+        uses: k1LoW/octocov-action@a167dc0dee441b7ffc45e1b862ab55ec0d87f278 # v1.5.2
         with:
           config: ${{ github.event_name == 'pull_request' && 'resources/octocov.pr.yml' || 'resources/octocov.yml' }}

@@ -27,6 +27,17 @@ use Phalcon\Tests\Support\DebugBar\Fixtures\ListCollector;
 
 final class ResponseListenerTest extends AbstractUnitTestCase
 {
+    public function testDeniedByAccessGateIsNotInjected(): void
+    {
+        $listener = $this->listener(true, ['10.0.0.1']);
+
+        $response = new Response();
+        $response->setContent('<html><body>hi</body></html>');
+
+        $listener($this->event(), null, $response);
+
+        $this->assertStringNotContainsString('phalcon-debugbar-data', $response->getContent());
+    }
     public function testIgnoresNonResponsePayloads(): void
     {
         $listener = $this->listener(true);
@@ -48,18 +59,6 @@ final class ResponseListenerTest extends AbstractUnitTestCase
         $content = $response->getContent();
         $this->assertStringContainsString('phalcon-debugbar-data', $content);
         $this->assertFalse($response->getHeaders()->get('X-Debug-Bar'));
-    }
-
-    public function testDeniedByAccessGateIsNotInjected(): void
-    {
-        $listener = $this->listener(true, ['10.0.0.1']);
-
-        $response = new Response();
-        $response->setContent('<html><body>hi</body></html>');
-
-        $listener($this->event(), null, $response);
-
-        $this->assertStringNotContainsString('phalcon-debugbar-data', $response->getContent());
     }
 
     public function testSetsDiagnosticHeaderWhenEnabled(): void

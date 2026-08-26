@@ -11,21 +11,88 @@
 
 declare(strict_types=1);
 
-$finder = PhpCsFixer\Finder::create()
-    ->in([dirname(__DIR__) . '/src', dirname(__DIR__) . '/tests']);
+/**
+ * Ordering rules:
+ * - use statements: alphabetical
+ * - class members: by visibility (public -> protected -> private), then
+ *   alphabetical within each group
+ *
+ * Run from the project root:
+ *   composer cs-fixer       (dry-run, shows diff)
+ *   composer cs-fixer-fix   (applies the changes)
+ */
 
-return (new PhpCsFixer\Config())
+use PhpCsFixer\Config;
+use PhpCsFixer\Finder;
+use PhpCsFixer\Runner\Parallel\ParallelConfigFactory;
+
+$root = dirname(__DIR__);
+
+$finder = Finder::create()
+    ->in(
+        [
+            $root . '/src',
+            $root . '/tests',
+        ]
+    );
+
+return (new Config())
+    ->setParallelConfig(ParallelConfigFactory::detect())
+    // declare_strict_types is a risky rule.
     ->setRiskyAllowed(true)
-    ->setRules([
-        '@PSR12'                           => true,
-        'declare_strict_types'             => true,
-        'blank_line_between_import_groups' => true,
-        'ordered_imports'                  => [
-            'sort_algorithm' => 'alpha',
-            'imports_order'  => ['class', 'function', 'const'],
-        ],
-        'no_unused_imports'                => true,
-        'array_syntax'                     => ['syntax' => 'short'],
-    ])
-    ->setFinder($finder)
-    ->setCacheFile(dirname(__DIR__) . '/tests/_output/.php-cs-fixer.cache');
+    ->setUsingCache(true)
+    ->setCacheFile($root . '/tests/_output/.php-cs-fixer.cache')
+    ->setRules(
+        [
+            'declare_strict_types'   => true,
+            'no_unused_imports'      => true,
+            'ordered_imports'        => [
+                'sort_algorithm' => 'alpha',
+                'imports_order'  => ['class', 'function', 'const'],
+            ],
+            'ordered_class_elements' => [
+                'sort_algorithm' => 'alpha',
+                'order'          => [
+                    'use_trait',
+                    'case',
+                    'constant_public',
+                    'constant_protected',
+                    'constant_private',
+                    'property_public_static',
+                    'property_protected_static',
+                    'property_private_static',
+                    'property_public',
+                    'property_protected',
+                    'property_private',
+                    'construct',
+                    'destruct',
+                    'magic',
+                    'phpunit',
+                    'method_public_static',
+                    'method_protected_static',
+                    'method_private_static',
+                    'method_public',
+                    'method_protected',
+                    'method_private',
+                ],
+            ],
+            /**
+             * Both sorters default `null_adjustment` to 'always_first', which
+             * would rewrite every `string|null` to `null|string`. Phalcon puts
+             * null last, and so does the model quill builds from both this and
+             * the Zephir source, so last it stays.
+             */
+            'ordered_types'          => [
+                'sort_algorithm'  => 'alpha',
+                'null_adjustment' => 'always_last',
+            ],
+            'phpdoc_types_order'     => [
+                'sort_algorithm'  => 'alpha',
+                'null_adjustment' => 'always_last',
+            ],
+            'types_spaces'           => [
+                'space' => 'single',
+            ],
+        ]
+    )
+    ->setFinder($finder);

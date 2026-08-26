@@ -58,9 +58,9 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
     private array $queries = [];
 
     /**
-     * @var int|float
+     * @var float|int
      */
-    private int|float $started = 0;
+    private float | int $started = 0;
 
     /**
      * @return list_envelope
