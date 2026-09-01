@@ -19,6 +19,7 @@ use Phalcon\DebugBar\Collector\CacheCollector;
 use Phalcon\DebugBar\Collector\ConfigCollector;
 use Phalcon\DebugBar\Collector\DatabaseCollector;
 use Phalcon\DebugBar\Collector\ExceptionsCollector;
+use Phalcon\DebugBar\Collector\HistoryCollector;
 use Phalcon\DebugBar\Collector\LoggerCollector;
 use Phalcon\DebugBar\Collector\MessagesCollector;
 use Phalcon\DebugBar\Collector\RequestCollector;
@@ -30,11 +31,14 @@ use Phalcon\DebugBar\Collector\ViewCollector;
 use Phalcon\DebugBar\Contracts\Collector;
 use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
+use Phalcon\DebugBar\History\FilesystemHistory;
+use Phalcon\DebugBar\History\HistoryOptions;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Di\DiInterface;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Mvc\Application;
+use Phalcon\Mvc\RouterInterface;
 
 use function getenv;
 use function in_array;
@@ -44,13 +48,16 @@ use function mb_strtolower;
 /**
  * Boots the debug bar against an MVC application. Its whole coupling to the app
  * is: hold the `Application`, reach its EventsManager, and attach listeners.
- * There is no DI service to register and no container-specific wiring - the
- * app hands over its container and event bus.
+ * When request history is enabled it additionally registers an internal route
+ * and two private DI services used by its controller.
  *
  * @phpstan-import-type provider_config from DebugBarTypes
  */
 class Provider
 {
+    public const ACCESS_GATE_SERVICE = 'debugbar.accessGate';
+    public const HISTORY_SERVICE     = 'debugbar.history';
+
     /**
      * @var (Closure(): bool)|null
      */
@@ -87,6 +94,11 @@ class Provider
     private bool $headers;
 
     /**
+     * @var HistoryOptions
+     */
+    private HistoryOptions $historyOptions;
+
+    /**
      * @var string|null
      */
     private ?string $nonce;
@@ -111,6 +123,7 @@ class Provider
         $assets = $config['assets'] ?? [];
         $access = $config['access'] ?? [];
         $redact = $config['redact'] ?? [];
+        $history = $config['history'] ?? [];
 
         $this->envVar           = $env['var'] ?? 'APP_ENV';
         $this->blocked          = $env['blocked'] ?? ['production', 'prod'];
@@ -121,6 +134,13 @@ class Provider
         $this->accessCallback   = $access['callback'] ?? null;
         $this->collectorsConfig = $config['collectors'] ?? [];
         $this->headers          = $config['headers'] ?? true;
+        $this->historyOptions   = new HistoryOptions(
+            $history['enabled'] ?? false,
+            $history['url'] ?? '/_debugbar/open',
+            $history['path'] ?? '',
+            $history['max_requests'] ?? 100,
+            $history['ttl_seconds'] ?? 86400
+        );
         $this->redactor         = new Redactor(
             [...Redactor::DEFAULT_KEYS, ...($redact['mask'] ?? [])],
             $redact['hidden'] ?? []
@@ -152,12 +172,17 @@ class Provider
             return;
         }
 
-        $container = $this->app->getDI();
-        $request   = $this->resolveRequest($container);
+        $container  = $this->app->getDI();
+        $request    = $this->resolveRequest($container);
+        $accessGate = new AccessGate($this->allowedIps, $this->accessCallback);
+        $history    = $this->registerHistory($container, $accessGate);
 
         $bar = new DebugBar();
         foreach ($this->buildCollectors($container, $request) as $collector) {
             $bar->addCollector($collector);
+        }
+        if (null !== $history) {
+            $bar->addCollector(new HistoryCollector($this->historyOptions->url));
         }
 
         Debug::setBar($bar);
@@ -179,9 +204,11 @@ class Provider
                 $bar,
                 new Renderer(),
                 new Injector(),
-                new AccessGate($this->allowedIps, $this->accessCallback),
+                $accessGate,
                 $request,
-                new BarOptions($this->headers, $this->nonce)
+                new BarOptions($this->headers, $this->nonce),
+                $history,
+                null !== $history ? $this->historyOptions : null
             )
         );
     }
@@ -272,6 +299,46 @@ class Provider
     private function isCollectorEnabled(string $name): bool
     {
         return $this->collectorsConfig[$name] ?? true;
+    }
+
+    /**
+     * Registers the internal history module and its MVC route. History stays
+     * disabled when the app has no compatible container/router.
+     *
+     * @param DiInterface|null $container
+     * @param AccessGate       $accessGate
+     *
+     * @return FilesystemHistory|null
+     */
+    private function registerHistory(?DiInterface $container, AccessGate $accessGate): ?FilesystemHistory
+    {
+        if (
+            !$this->historyOptions->enabled
+            || null === $container
+            || !$container->has('router')
+        ) {
+            return null;
+        }
+
+        $router = $container->getShared('router');
+        if (!$router instanceof RouterInterface) {
+            return null;
+        }
+
+        $history = new FilesystemHistory($this->historyOptions);
+        $container->setShared(self::HISTORY_SERVICE, $history);
+        $container->setShared(self::ACCESS_GATE_SERVICE, $accessGate);
+
+        $router->addGet(
+            $this->historyOptions->url,
+            [
+                'namespace'  => 'Phalcon\\DebugBar\\Controllers',
+                'controller' => 'openHandler',
+                'action'     => 'index',
+            ]
+        )->setName('debugbar.openhandler');
+
+        return $history;
     }
 
     /**
