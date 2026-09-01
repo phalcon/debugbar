@@ -7,6 +7,9 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 ### Added
 
 - Optional, extensible collector summaries rendered as headline metrics above a panel. The database collector uses them to report total queries, duplicate runs (executions after the first), and accumulated SQL time, and marks repeated statements with their execution count.
+- Optional, session-isolated request history with filesystem retention, an
+  internal `GET /_debugbar/open` controller, and an inline request browser that
+  swaps the bar payload without leaving the current page.
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
