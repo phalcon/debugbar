@@ -33,6 +33,29 @@ use function unlink;
 final class FilesystemHistoryTest extends AbstractUnitTestCase
 {
     #[RunInSeparateProcess]
+    public function testClearRemovesTheCurrentSessionsRequests(): void
+    {
+        [$path, $sessionId] = $this->startSession();
+
+        try {
+            $history = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path, 10, 60));
+            for ($index = 0; $index < 2; $index++) {
+                $history->save(
+                    ['data' => [], 'meta' => ['index' => $index]],
+                    new RequestMetadata('GET', '/' . $index, 200, false)
+                );
+            }
+
+            $this->assertSame(2, $history->clear());
+            $this->assertSame([], $history->find());
+            $this->assertSame(0, $history->clear());
+        } finally {
+            session_write_close();
+            $this->removeHistory($path, $sessionId);
+        }
+    }
+
+    #[RunInSeparateProcess]
     public function testMaximumRequestCountIsPruned(): void
     {
         [$path, $sessionId] = $this->startSession();
@@ -64,6 +87,7 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             new RequestMetadata('GET', '/', 200, false)
         ));
         $this->assertSame([], $history->find());
+        $this->assertSame(0, $history->clear());
     }
     #[RunInSeparateProcess]
     public function testSaveFindAndGetAreSessionScoped(): void

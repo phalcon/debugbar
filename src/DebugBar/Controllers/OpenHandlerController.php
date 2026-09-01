@@ -28,11 +28,49 @@ use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 
 /**
- * Internal MVC adapter for GET /_debugbar/open. Without an id it returns the
- * current session's request list; with an id it returns the stored entry.
+ * Internal MVC adapter for /_debugbar/open. GET returns the current session's
+ * request list or one stored entry; DELETE clears that session's history.
  */
 final class OpenHandlerController extends Controller
 {
+    /**
+     * @return ResponseInterface
+     */
+    public function clearAction(): ResponseInterface
+    {
+        $container = $this->getDI();
+        if (null === $container) {
+            throw new RuntimeException('The OpenHandler controller requires a DI container.');
+        }
+
+        $request  = $container->getShared('request');
+        $response = $container->getShared('response');
+        $history  = $container->getShared(Provider::HISTORY_SERVICE);
+        $access   = $container->getShared(Provider::ACCESS_GATE_SERVICE);
+
+        if (!$response instanceof ResponseInterface) {
+            throw new RuntimeException('The response service must implement ResponseInterface.');
+        }
+
+        if (
+            !$request instanceof RequestInterface
+            || !$history instanceof FilesystemHistory
+            || !$access instanceof AccessGate
+        ) {
+            return $this->json($response, ['error' => 'History is unavailable.'], 500);
+        }
+
+        $clientIp = $request->getClientAddress();
+        if (!$access->allows(is_string($clientIp) ? $clientIp : null)) {
+            return $this->json($response, ['error' => 'Not found.'], 404);
+        }
+
+        if ('DELETE' !== $request->getMethod()) {
+            return $this->json($response, ['error' => 'Method not allowed.'], 405);
+        }
+
+        return $this->json($response, ['cleared' => $history->clear()]);
+    }
     /**
      * @return ResponseInterface
      */

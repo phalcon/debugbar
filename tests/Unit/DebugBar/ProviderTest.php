@@ -283,6 +283,13 @@ final class ProviderTest extends AbstractUnitTestCase
         }
 
         $this->assertSame('/_debugbar/open', $route->getPattern());
+
+        $clearRoute = $router->getRouteByName('debugbar.clearhistory');
+        if (!$clearRoute instanceof RouteInterface) {
+            $this->fail('Expected the debugbar.clearhistory route.');
+        }
+
+        $this->assertSame('/_debugbar/open', $clearRoute->getPattern());
     }
 
     #[RunInSeparateProcess]

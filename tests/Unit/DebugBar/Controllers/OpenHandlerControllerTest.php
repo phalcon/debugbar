@@ -47,6 +47,7 @@ final class OpenHandlerControllerTest extends AbstractUnitTestCase
         session_start();
 
         try {
+            $_SERVER['REQUEST_METHOD'] = 'GET';
             $history = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path));
             $id      = $history->save(
                 ['data' => [], 'meta' => ['collectors' => 0]],
@@ -74,6 +75,15 @@ final class OpenHandlerControllerTest extends AbstractUnitTestCase
             $this->assertIsArray($meta);
             $this->assertSame($id, $meta['id']);
             $this->assertSame('no-store, private', $detail->getHeaders()->get('Cache-Control'));
+
+            $_SERVER['REQUEST_METHOD'] = 'DELETE';
+            $_GET = [];
+            $clear = $this->execute($history, 'clear');
+            $this->assertSame(200, $clear->getStatusCode());
+            $clearBody = json_decode($clear->getContent(), true);
+            $this->assertIsArray($clearBody);
+            $this->assertSame(1, $clearBody['cleared']);
+            $this->assertSame([], $history->find());
         } finally {
             session_write_close();
             $directory = $path . '/' . hash('sha256', $sessionId);
@@ -89,7 +99,7 @@ final class OpenHandlerControllerTest extends AbstractUnitTestCase
         }
     }
 
-    private function execute(FilesystemHistory $history): Response
+    private function execute(FilesystemHistory $history, string $action = 'index'): Response
     {
         $container = new Di();
         $response  = new Response();
@@ -100,7 +110,11 @@ final class OpenHandlerControllerTest extends AbstractUnitTestCase
 
         $controller = new OpenHandlerController();
         $controller->setDI($container);
-        $controller->indexAction();
+        if ('clear' === $action) {
+            $controller->clearAction();
+        } else {
+            $controller->indexAction();
+        }
 
         return $response;
     }
