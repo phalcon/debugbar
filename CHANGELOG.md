@@ -2,6 +2,12 @@
 
 All notable changes to `phalcon/debugbar` are documented here. The format is based on [Keep a Changelog][keep_a_changelog] and this project adheres to [Semantic Versioning][semantic_versioning].
 
+## Unreleased
+
+### Added
+
+- Optional collector summaries rendered as headline metrics above a panel. The database collector uses them to report total queries, duplicate executions, and accumulated SQL time, and marks statements belonging to a duplicate group.
+
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
 ### Changed

@@ -102,7 +102,7 @@ Each collector contributes one tab. A collector reads its data in one of four wa
 |--------------|----------------------------------------------------------|-------------------|
 | `cache`      | Cache operations and their keys                          | streamed          |
 | `config`     | The `config` service, flattened and redacted             | snapshot          |
-| `database`   | SQL statements, bound parameters, and timings            | streamed          |
+| `database`   | SQL statements, bindings, timings, and query summary     | streamed          |
 | `exceptions` | Throwables, with stack traces                            | manual + streamed |
 | `logger`     | Log entries captured from a `Phalcon\Logger` adapter     | adapter           |
 | `messages`   | Messages recorded through the facade                     | manual            |
@@ -241,6 +241,8 @@ use Phalcon\DebugBar\Provider;
 The bar's CSS and JavaScript are minified and injected inline; the bar has no external asset to host or serve. On CSP-restricted pages, set `assets.nonce` so the inline tags carry a nonce.
 
 The bar sits at the bottom of the page. Each collector is a tab; a tab shows a badge when the collector reports a count or a summary value. Clicking a tab opens its panel:
+
+Collectors may expose a summary above their panel. The database collector reports the total query count, duplicate executions, and accumulated SQL time. Duplicate detection groups the same SQL statement after whitespace normalization and deliberately ignores binding values, making repeated prepared statements visible.
 
 - **grid** panels (version, request, config, session, route) render a key and value table.
 - **list** panels (time, messages, database, view, cache) render labelled rows.

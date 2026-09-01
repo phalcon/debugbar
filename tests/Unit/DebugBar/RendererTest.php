@@ -104,6 +104,13 @@ final class RendererTest extends AbstractUnitTestCase
         $this->assertStringContainsString('>{}</script>', $html);
     }
 
+    public function testRenderHeadIncludesCollectorSummaryAssets(): void
+    {
+        $html = (new Renderer())->renderHead();
+        $this->assertStringContainsString('phalcon-debugbar-summary', $html);
+        $this->assertStringContainsString('entry.summary', $html);
+    }
+
     public function testRenderHeadInlinesMinifiedAssets(): void
     {
         $html = (new Renderer())->renderHead();
@@ -113,7 +120,6 @@ final class RendererTest extends AbstractUnitTestCase
         $this->assertStringContainsString('<script', $html);
         $this->assertStringContainsString('phalcon-debugbar-data', $html);
     }
-
     public function testRenderHeadUsesCssMinifierForStyles(): void
     {
         // The CSS minifier shortens #ffffff to #fff; running the JS minifier on

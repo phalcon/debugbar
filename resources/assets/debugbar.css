@@ -117,6 +117,34 @@
     border-bottom: 1px solid #2b2b40;
 }
 
+#phalcon-debugbar .phalcon-debugbar-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+#phalcon-debugbar .phalcon-debugbar-summary-metric {
+    display: flex;
+    min-width: 130px;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 7px 10px;
+    border: 1px solid #303047;
+    border-radius: 4px;
+    background: #20202e;
+}
+
+#phalcon-debugbar .phalcon-debugbar-summary-label {
+    color: #9a9ac8;
+}
+
+#phalcon-debugbar .phalcon-debugbar-summary-value {
+    color: #ffffff;
+    font-size: 13px;
+}
+
 #phalcon-debugbar table {
     width: 100%;
     border-collapse: collapse;

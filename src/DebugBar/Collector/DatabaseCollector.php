@@ -21,6 +21,9 @@ use Phalcon\Events\ManagerInterface;
 
 use function count;
 use function hrtime;
+use function is_string;
+use function preg_replace;
+use function trim;
 
 /**
  * Records SQL queries by subscribing to `db:beforeQuery`/`db:afterQuery`. The
@@ -28,7 +31,7 @@ use function hrtime;
  * read straight off it - no `db` service is resolved.
  *
  * @phpstan-import-type db_query from DebugBarTypes
- * @phpstan-import-type list_envelope from DebugBarTypes
+ * @phpstan-import-type database_envelope from DebugBarTypes
  */
 final class DatabaseCollector extends AbstractCollector implements Subscriber
 {
@@ -63,21 +66,44 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
     private float | int $started = 0;
 
     /**
-     * @return list_envelope
+     * @return database_envelope
      */
     public function collect(): array
     {
-        $rows = [];
+        $rows              = [];
+        $occurrences       = [];
+        $totalNanoseconds  = 0;
         foreach ($this->queries as $query) {
+            $key               = $this->queryKey($query['sql']);
+            $occurrences[$key] = ($occurrences[$key] ?? 0) + 1;
+            $totalNanoseconds += $query['time'];
+        }
+
+        $duplicates = 0;
+        foreach ($occurrences as $occurrenceCount) {
+            $duplicates += $occurrenceCount - 1;
+        }
+
+        foreach ($this->queries as $query) {
+            $occurrenceCount = $occurrences[$this->queryKey($query['sql'])];
+            $label           = $this->nanosToMs($query['time']);
+            if ($occurrenceCount > 1) {
+                $label .= ' - duplicate x' . $occurrenceCount;
+            }
+
             $rows[] = [
-                'label'   => $this->nanosToMs($query['time']),
+                'label'   => $label,
                 'message' => $this->formatQuery($query['sql'], $query['bindings']),
             ];
         }
-
         return [
-            'panel' => $rows,
-            'badge' => count($this->queries),
+            'panel'   => $rows,
+            'badge'   => count($this->queries),
+            'summary' => [
+                'Queries'     => count($this->queries),
+                'Duplicates' => $duplicates,
+                'Total time'  => $this->nanosToMs($totalNanoseconds),
+            ],
         ];
     }
 
@@ -125,5 +151,15 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
         }
 
         return $sql . '  ' . $this->jsonOrEmpty($bindings);
+    }
+
+    /**
+     * Binding values are deliberately excluded: repeated executions of one
+     * prepared statement are the duplication pattern this metric exposes.
+     */
+    private function queryKey(string $sql): string
+    {
+        $normalized = preg_replace('/\s+/', ' ', trim($sql));
+        return is_string($normalized) ? $normalized : trim($sql);
     }
 }

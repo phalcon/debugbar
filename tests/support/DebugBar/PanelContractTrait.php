@@ -25,9 +25,16 @@ trait PanelContractTrait
 {
     protected function assertPanelContract(Renderable $collector): void
     {
-        $panel = $collector->getWidget()['panel'];
-        $data  = $collector->collect()['panel'];
-
+        $panel     = $collector->getWidget()['panel'];
+        $collected = $collector->collect();
+        $data      = $collected['panel'];
+        if (isset($collected['summary'])) {
+            Assert::assertIsArray($collected['summary']);
+            foreach ($collected['summary'] as $label => $value) {
+                Assert::assertIsString($label);
+                Assert::assertIsScalar($value);
+            }
+        }
         switch ($panel) {
             case 'grid':
                 Assert::assertIsArray($data);

@@ -175,6 +175,23 @@
         }
     }
 
+    function renderSummary(summary) {
+        var keys = summary && typeof summary === 'object' ? Object.keys(summary) : [];
+        if (!keys.length) {
+            return null;
+        }
+
+        var wrap = el('div', 'phalcon-debugbar-summary');
+        keys.forEach(function (label) {
+            var metric = el('div', 'phalcon-debugbar-summary-metric');
+            metric.appendChild(el('span', 'phalcon-debugbar-summary-label', label));
+            metric.appendChild(el('strong', 'phalcon-debugbar-summary-value', scalar(summary[label])));
+            wrap.appendChild(metric);
+        });
+
+        return wrap;
+    }
+
     function hasBadge(badge) {
         return badge !== null && badge !== undefined && badge !== '' && badge !== 0;
     }
@@ -267,6 +284,10 @@
                 closePanel();
                 tab.classList.add('is-active');
                 body.innerHTML = '';
+                var summary = renderSummary(entry.summary);
+                if (summary) {
+                    body.appendChild(summary);
+                }
                 body.appendChild(renderPanel(type, entry.panel));
                 body.style.display = 'block';
                 active = name;
