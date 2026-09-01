@@ -272,8 +272,16 @@
                         button.disabled = true;
                         loadJson(historyUrl(url, id)).then(function (detail) {
                             if (detail && detail.request && detail.request.payload) {
+                                Array.prototype.forEach.call(
+                                    list.querySelectorAll('.phalcon-debugbar-history-request'),
+                                    function (requestButton) {
+                                        requestButton.classList.remove('is-selected');
+                                    }
+                                );
+                                button.classList.add('is-selected');
                                 onSelect(detail.request.payload, id);
                             }
+                            button.disabled = false;
                         }).catch(function () {
                             button.disabled = false;
                         });
@@ -378,7 +386,7 @@
                 function (storedPayload, id) {
                     var activeBeforeSelection = active;
                     selectedHistoryId = id;
-                    renderData(storedPayload, activeBeforeSelection);
+                    renderData(storedPayload, activeBeforeSelection, true);
                 },
                 function () {
                     selectedHistoryId = '';
@@ -386,12 +394,17 @@
             );
         }
 
-        function setHistoryOpen(open) {
+        function setHistoryOpen(open, preserveBrowser) {
             historyOpen = Boolean(open && historyPanel);
             if (historyTab) {
                 historyTab.classList.toggle('is-active', historyOpen);
             }
-            renderOpenHistory();
+
+            if (!historyOpen) {
+                historyBrowser.style.display = 'none';
+            } else if (!preserveBrowser) {
+                renderOpenHistory();
+            }
         }
 
         function setCollapsed(collapsed) {
@@ -419,7 +432,7 @@
             active = name;
         }
 
-        function renderData(nextPayload, preferredActive) {
+        function renderData(nextPayload, preferredActive, preserveHistoryBrowser) {
             payload = nextPayload || {};
             data = payload.data || {};
             widgets = (payload.meta && payload.meta.widgets) || {};
@@ -484,7 +497,7 @@
                 activate(preferred[0], preferred[1], preferred[2], preferred[3]);
             }
 
-            setHistoryOpen(historyOpen);
+            setHistoryOpen(historyOpen, preserveHistoryBrowser);
         }
 
         row.appendChild(tabs);
