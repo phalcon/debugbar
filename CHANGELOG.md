@@ -7,8 +7,9 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 ### Added
 
 - Optional, session-isolated request history with filesystem retention, an
-  internal `GET /_debugbar/open` controller, and an inline request browser that
-  swaps the bar payload without leaving the current page.
+  internal `GET/DELETE /_debugbar/open` controller, and a collapsible request
+  browser with refresh and clear controls that swaps the bar payload without
+  leaving the current page.
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 

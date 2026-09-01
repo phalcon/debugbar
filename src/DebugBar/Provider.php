@@ -338,6 +338,15 @@ class Provider
             ]
         )->setName('debugbar.openhandler');
 
+        $router->addDelete(
+            $this->historyOptions->url,
+            [
+                'namespace'  => 'Phalcon\\DebugBar\\Controllers',
+                'controller' => 'openHandler',
+                'action'     => 'clear',
+            ]
+        )->setName('debugbar.clearhistory');
+
         return $history;
     }
 

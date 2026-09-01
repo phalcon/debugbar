@@ -187,11 +187,13 @@
         return url + (url.indexOf('?') === -1 ? '?' : '&') + 'id=' + encodeURIComponent(id);
     }
 
-    function loadJson(url) {
-        return window.fetch(url, {
-            credentials: 'same-origin',
-            headers: {'Accept': 'application/json'}
-        }).then(function (response) {
+    function requestJson(url, options) {
+        options = options || {};
+        options.credentials = 'same-origin';
+        options.headers = options.headers || {};
+        options.headers.Accept = 'application/json';
+
+        return window.fetch(url, options).then(function (response) {
             if (!response.ok) {
                 throw new Error('HTTP ' + response.status);
             }
@@ -200,7 +202,11 @@
         });
     }
 
-    function renderHistoryBrowser(mount, panel, selectedId, onSelect) {
+    function loadJson(url) {
+        return requestJson(url, {});
+    }
+
+    function renderHistoryBrowser(mount, panel, selectedId, onSelect, onClear) {
         mount.innerHTML = '';
 
         var url = panel && typeof panel.url === 'string' ? panel.url : '';
@@ -210,53 +216,96 @@
         }
 
         mount.style.display = 'block';
-        mount.appendChild(el('div', 'phalcon-debugbar-history-loading', 'Loading request history...'));
+        var toolbar = el('div', 'phalcon-debugbar-history-toolbar');
+        var title = el('strong', 'phalcon-debugbar-history-title', 'Request history');
+        var actions = el('div', 'phalcon-debugbar-history-actions');
+        var refreshButton = el('button', 'phalcon-debugbar-history-action', 'Refresh');
+        var clearButton = el('button', 'phalcon-debugbar-history-action is-danger', 'Clear');
+        var content = el('div', 'phalcon-debugbar-history-content');
+        refreshButton.type = 'button';
+        clearButton.type = 'button';
+        actions.appendChild(refreshButton);
+        actions.appendChild(clearButton);
+        toolbar.appendChild(title);
+        toolbar.appendChild(actions);
+        mount.appendChild(toolbar);
+        mount.appendChild(content);
 
-        loadJson(url).then(function (result) {
-            mount.innerHTML = '';
-            var requests = result && Array.isArray(result.requests) ? result.requests : [];
-            if (!requests.length) {
-                mount.appendChild(el('div', 'phalcon-debugbar-history-empty', 'No stored requests'));
+        function message(className, text) {
+            content.innerHTML = '';
+            content.appendChild(el('div', className, text));
+        }
+
+        function refresh() {
+            refreshButton.disabled = true;
+            message('phalcon-debugbar-history-loading', 'Loading request history...');
+
+            loadJson(url).then(function (result) {
+                content.innerHTML = '';
+                var requests = result && Array.isArray(result.requests) ? result.requests : [];
+                clearButton.disabled = !requests.length;
+                if (!requests.length) {
+                    content.appendChild(el('div', 'phalcon-debugbar-history-empty', 'No stored requests'));
+                    return;
+                }
+
+                var list = el('div', 'phalcon-debugbar-history-list');
+                requests.forEach(function (request) {
+                    request = request || {};
+                    var id = scalar(request.id);
+                    var button = el('button', 'phalcon-debugbar-history-request');
+                    button.type = 'button';
+                    if (id === selectedId) {
+                        button.classList.add('is-selected');
+                    }
+
+                    button.appendChild(el(
+                        'span',
+                        'phalcon-debugbar-history-method method-' + scalar(request.method).toLowerCase(),
+                        scalar(request.method)
+                    ));
+                    button.appendChild(el('span', 'phalcon-debugbar-history-uri', scalar(request.uri)));
+                    button.appendChild(el('span', 'phalcon-debugbar-history-status', scalar(request.status)));
+                    button.appendChild(el('time', 'phalcon-debugbar-history-time', scalar(request.requested_at)));
+
+                    button.addEventListener('click', function () {
+                        button.disabled = true;
+                        loadJson(historyUrl(url, id)).then(function (detail) {
+                            if (detail && detail.request && detail.request.payload) {
+                                onSelect(detail.request.payload, id);
+                            }
+                        }).catch(function () {
+                            button.disabled = false;
+                        });
+                    });
+
+                    list.appendChild(button);
+                });
+                content.appendChild(list);
+            }).catch(function () {
+                message('phalcon-debugbar-history-error', 'Unable to load request history');
+            }).then(function () {
+                refreshButton.disabled = false;
+            });
+        }
+
+        refreshButton.addEventListener('click', refresh);
+        clearButton.addEventListener('click', function () {
+            if (!window.confirm('Clear request history?')) {
                 return;
             }
 
-            var list = el('div', 'phalcon-debugbar-history-list');
-            requests.forEach(function (request) {
-                request = request || {};
-                var id = scalar(request.id);
-                var button = el('button', 'phalcon-debugbar-history-request');
-                button.type = 'button';
-                if (id === selectedId) {
-                    button.classList.add('is-selected');
-                }
-
-                button.appendChild(el(
-                    'span',
-                    'phalcon-debugbar-history-method method-' + scalar(request.method).toLowerCase(),
-                    scalar(request.method)
-                ));
-                button.appendChild(el('span', 'phalcon-debugbar-history-uri', scalar(request.uri)));
-                button.appendChild(el('span', 'phalcon-debugbar-history-status', scalar(request.status)));
-                button.appendChild(el('time', 'phalcon-debugbar-history-time', scalar(request.requested_at)));
-
-                button.addEventListener('click', function () {
-                    button.disabled = true;
-                    loadJson(historyUrl(url, id)).then(function (detail) {
-                        if (detail && detail.request && detail.request.payload) {
-                            onSelect(detail.request.payload, id);
-                        }
-                    }).catch(function () {
-                        button.disabled = false;
-                    });
-                });
-
-                list.appendChild(button);
+            clearButton.disabled = true;
+            requestJson(url, {method: 'DELETE'}).then(function () {
+                onClear();
+                refresh();
+            }).catch(function () {
+                clearButton.disabled = false;
+                message('phalcon-debugbar-history-error', 'Unable to clear request history');
             });
-            mount.appendChild(list);
-        }).catch(function () {
-            mount.innerHTML = '';
-            mount.appendChild(el('div', 'phalcon-debugbar-history-error', 'Unable to load request history'));
         });
+
+        refresh();
     }
 
     function readCollapsed() {
@@ -304,18 +353,51 @@
 
         var active = null;
         var selectedHistoryId = '';
+        var historyOpen = false;
+        var historyPanel = null;
+        var historyTab = null;
 
         function closePanel() {
             body.style.display = 'none';
             active = null;
-            Array.prototype.forEach.call(tabs.children, function (child) {
+            Array.prototype.forEach.call(tabs.querySelectorAll('[data-panel-tab]'), function (child) {
                 child.classList.remove('is-active');
             });
+        }
+
+        function renderOpenHistory() {
+            if (!historyOpen || !historyPanel) {
+                historyBrowser.style.display = 'none';
+                return;
+            }
+
+            renderHistoryBrowser(
+                historyBrowser,
+                historyPanel,
+                selectedHistoryId,
+                function (storedPayload, id) {
+                    var activeBeforeSelection = active;
+                    selectedHistoryId = id;
+                    renderData(storedPayload, activeBeforeSelection);
+                },
+                function () {
+                    selectedHistoryId = '';
+                }
+            );
+        }
+
+        function setHistoryOpen(open) {
+            historyOpen = Boolean(open && historyPanel);
+            if (historyTab) {
+                historyTab.classList.toggle('is-active', historyOpen);
+            }
+            renderOpenHistory();
         }
 
         function setCollapsed(collapsed) {
             if (collapsed) {
                 closePanel();
+                setHistoryOpen(false);
                 mount.classList.add('is-collapsed');
             } else {
                 mount.classList.remove('is-collapsed');
@@ -358,6 +440,7 @@
 
                 var tab = el('button', 'phalcon-debugbar-tab');
                 tab.type = 'button';
+                tab.setAttribute('data-panel-tab', name);
                 tab.appendChild(el('span', 'phalcon-debugbar-tab-label', label));
                 if (hasBadge(entry.badge)) {
                     tab.appendChild(el('span', 'phalcon-debugbar-badge', scalar(entry.badge)));
@@ -377,21 +460,31 @@
                 }
             });
 
+            var historyEntry = data.history || {};
+            historyPanel = historyEntry.panel || null;
+            historyTab = null;
+            if (historyPanel && typeof historyPanel.url === 'string') {
+                var historyWidget = widgets.history || {};
+                historyTab = el('button', 'phalcon-debugbar-tab');
+                historyTab.type = 'button';
+                historyTab.appendChild(el(
+                    'span',
+                    'phalcon-debugbar-tab-label',
+                    historyWidget.label || 'History'
+                ));
+                historyTab.addEventListener('click', function () {
+                    setHistoryOpen(!historyOpen);
+                });
+                tabs.appendChild(historyTab);
+            } else {
+                historyOpen = false;
+            }
+
             if (preferred) {
                 activate(preferred[0], preferred[1], preferred[2], preferred[3]);
             }
 
-            var historyEntry = data.history || {};
-            renderHistoryBrowser(
-                historyBrowser,
-                historyEntry.panel,
-                selectedHistoryId,
-                function (storedPayload, id) {
-                    var activeBeforeSelection = active;
-                    selectedHistoryId = id;
-                    renderData(storedPayload, activeBeforeSelection);
-                }
-            );
+            setHistoryOpen(historyOpen);
         }
 
         row.appendChild(tabs);

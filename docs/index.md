@@ -100,12 +100,14 @@ use Phalcon\DebugBar\Provider;
 ]))->boot();
 ```
 
-When history is enabled, the provider registers `GET /_debugbar/open` and its
-internal controller automatically. A request without an `id` returns the recent
-request metadata; `?id=<request-id>` returns a stored payload. The browser is
-rendered directly above the bar and selecting an item replaces the collectors
-shown below it. Storage is isolated by a SHA-256 hash of the active PHP session
-id. With no active session, no request is written or exposed.
+When history is enabled, the provider registers `GET /_debugbar/open`,
+`DELETE /_debugbar/open`, and their internal controller automatically. A GET
+without an `id` returns the recent request metadata; `?id=<request-id>` returns
+a stored payload. DELETE clears the active session's stored requests. The
+`History` item in the bottom bar opens the browser above it; its controls refresh
+or clear the list, and selecting an item replaces the collectors shown below.
+Storage is isolated by a SHA-256 hash of the active PHP session id. With no
+active session, no request is written or exposed.
 
 ## Collectors
 

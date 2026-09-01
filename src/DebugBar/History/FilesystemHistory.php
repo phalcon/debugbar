@@ -47,7 +47,7 @@ use const PHP_SESSION_ACTIVE;
 
 /**
  * Persists request payloads in a session-scoped directory. Callers only learn
- * save/find/get; atomic writes, pruning, path validation, and JSON failures stay
+ * save/find/get/clear; atomic writes, pruning, path validation, and JSON failures stay
  * inside the module.
  *
  * @phpstan-import-type payload from \Phalcon\DebugBar\DebugBarTypes
@@ -69,6 +69,28 @@ final class FilesystemHistory
      */
     public function __construct(private readonly HistoryOptions $options)
     {
+    }
+
+    /**
+     * Removes every stored request belonging to the active PHP session.
+     *
+     * @return int Number of files successfully removed.
+     */
+    public function clear(): int
+    {
+        $directory = $this->sessionDirectory(false);
+        if (null === $directory) {
+            return 0;
+        }
+
+        $removed = 0;
+        foreach ($this->files($directory) as $file) {
+            if (@unlink($file)) {
+                $removed++;
+            }
+        }
+
+        return $removed;
     }
 
     /**
