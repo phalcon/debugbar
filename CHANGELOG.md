@@ -2,6 +2,15 @@
 
 All notable changes to `phalcon/debugbar` are documented here. The format is based on [Keep a Changelog][keep_a_changelog] and this project adheres to [Semantic Versioning][semantic_versioning].
 
+## Unreleased
+
+### Added
+
+- Optional, session-isolated request history with filesystem retention, an
+  internal `GET/DELETE /_debugbar/open` controller, and a collapsible request
+  browser with refresh and clear controls that swaps the bar payload without
+  leaving the current page.
+
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
 ### Changed

@@ -43,6 +43,13 @@ namespace Phalcon\DebugBar;
  *     access?: array{allow_ips?: list<string>, callback?: (\Closure(): bool)|null},
  *     collectors?: array<string, bool>,
  *     headers?: bool,
+ *     history?: array{
+ *         enabled?: bool,
+ *         url?: string,
+ *         path?: string,
+ *         max_requests?: int,
+ *         ttl_seconds?: int
+ *     },
  *     redact?: array{mask?: list<string>, hidden?: list<string>}
  * }
  */

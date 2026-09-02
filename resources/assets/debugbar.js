@@ -179,6 +179,143 @@
         return badge !== null && badge !== undefined && badge !== '' && badge !== 0;
     }
 
+    function historyUrl(url, id) {
+        if (!id) {
+            return url;
+        }
+
+        return url + (url.indexOf('?') === -1 ? '?' : '&') + 'id=' + encodeURIComponent(id);
+    }
+
+    function requestJson(url, options) {
+        options = options || {};
+        options.credentials = 'same-origin';
+        options.headers = options.headers || {};
+        options.headers.Accept = 'application/json';
+
+        return window.fetch(url, options).then(function (response) {
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+
+            return response.json();
+        });
+    }
+
+    function loadJson(url) {
+        return requestJson(url, {});
+    }
+
+    function renderHistoryBrowser(mount, panel, selectedId, onSelect, onClear) {
+        mount.innerHTML = '';
+
+        var url = panel && typeof panel.url === 'string' ? panel.url : '';
+        if (!url || typeof window.fetch !== 'function') {
+            mount.style.display = 'none';
+            return;
+        }
+
+        mount.style.display = 'block';
+        var toolbar = el('div', 'phalcon-debugbar-history-toolbar');
+        var title = el('strong', 'phalcon-debugbar-history-title', 'Request history');
+        var actions = el('div', 'phalcon-debugbar-history-actions');
+        var refreshButton = el('button', 'phalcon-debugbar-history-action', 'Refresh');
+        var clearButton = el('button', 'phalcon-debugbar-history-action is-danger', 'Clear');
+        var content = el('div', 'phalcon-debugbar-history-content');
+        refreshButton.type = 'button';
+        clearButton.type = 'button';
+        actions.appendChild(refreshButton);
+        actions.appendChild(clearButton);
+        toolbar.appendChild(title);
+        toolbar.appendChild(actions);
+        mount.appendChild(toolbar);
+        mount.appendChild(content);
+
+        function message(className, text) {
+            content.innerHTML = '';
+            content.appendChild(el('div', className, text));
+        }
+
+        function refresh() {
+            refreshButton.disabled = true;
+            message('phalcon-debugbar-history-loading', 'Loading request history...');
+
+            loadJson(url).then(function (result) {
+                content.innerHTML = '';
+                var requests = result && Array.isArray(result.requests) ? result.requests : [];
+                clearButton.disabled = !requests.length;
+                if (!requests.length) {
+                    content.appendChild(el('div', 'phalcon-debugbar-history-empty', 'No stored requests'));
+                    return;
+                }
+
+                var list = el('div', 'phalcon-debugbar-history-list');
+                requests.forEach(function (request) {
+                    request = request || {};
+                    var id = scalar(request.id);
+                    var button = el('button', 'phalcon-debugbar-history-request');
+                    button.type = 'button';
+                    if (id === selectedId) {
+                        button.classList.add('is-selected');
+                    }
+
+                    button.appendChild(el(
+                        'span',
+                        'phalcon-debugbar-history-method method-' + scalar(request.method).toLowerCase(),
+                        scalar(request.method)
+                    ));
+                    button.appendChild(el('span', 'phalcon-debugbar-history-uri', scalar(request.uri)));
+                    button.appendChild(el('span', 'phalcon-debugbar-history-status', scalar(request.status)));
+                    button.appendChild(el('time', 'phalcon-debugbar-history-time', scalar(request.requested_at)));
+
+                    button.addEventListener('click', function () {
+                        button.disabled = true;
+                        loadJson(historyUrl(url, id)).then(function (detail) {
+                            if (detail && detail.request && detail.request.payload) {
+                                Array.prototype.forEach.call(
+                                    list.querySelectorAll('.phalcon-debugbar-history-request'),
+                                    function (requestButton) {
+                                        requestButton.classList.remove('is-selected');
+                                    }
+                                );
+                                button.classList.add('is-selected');
+                                onSelect(detail.request.payload, id);
+                            }
+                            button.disabled = false;
+                        }).catch(function () {
+                            button.disabled = false;
+                        });
+                    });
+
+                    list.appendChild(button);
+                });
+                content.appendChild(list);
+            }).catch(function () {
+                message('phalcon-debugbar-history-error', 'Unable to load request history');
+            }).then(function () {
+                refreshButton.disabled = false;
+            });
+        }
+
+        refreshButton.addEventListener('click', refresh);
+        clearButton.addEventListener('click', function () {
+            if (!window.confirm('Clear request history?')) {
+                return;
+            }
+
+            clearButton.disabled = true;
+            requestJson(url, {method: 'DELETE'}).then(function () {
+                onClear();
+                refresh();
+            }).catch(function () {
+                clearButton.disabled = false;
+                message('phalcon-debugbar-history-error', 'Unable to clear request history');
+            });
+        });
+
+        refresh();
+    }
+
     function readCollapsed() {
         try {
             return window.localStorage.getItem(STORAGE_KEY) === '1';
@@ -213,6 +350,7 @@
         var widgets = (payload.meta && payload.meta.widgets) || {};
 
         var bar = el('div', 'phalcon-debugbar-bar');
+        var historyBrowser = el('div', 'phalcon-debugbar-history-browser');
         var body = el('div', 'phalcon-debugbar-body');
         var row = el('div', 'phalcon-debugbar-row');
         var tabs = el('div', 'phalcon-debugbar-tabs');
@@ -222,18 +360,57 @@
         body.style.display = 'none';
 
         var active = null;
+        var selectedHistoryId = '';
+        var historyOpen = false;
+        var historyPanel = null;
+        var historyTab = null;
 
         function closePanel() {
             body.style.display = 'none';
             active = null;
-            Array.prototype.forEach.call(tabs.children, function (child) {
+            Array.prototype.forEach.call(tabs.querySelectorAll('[data-panel-tab]'), function (child) {
                 child.classList.remove('is-active');
             });
+        }
+
+        function renderOpenHistory() {
+            if (!historyOpen || !historyPanel) {
+                historyBrowser.style.display = 'none';
+                return;
+            }
+
+            renderHistoryBrowser(
+                historyBrowser,
+                historyPanel,
+                selectedHistoryId,
+                function (storedPayload, id) {
+                    var activeBeforeSelection = active;
+                    selectedHistoryId = id;
+                    renderData(storedPayload, activeBeforeSelection, true);
+                },
+                function () {
+                    selectedHistoryId = '';
+                }
+            );
+        }
+
+        function setHistoryOpen(open, preserveBrowser) {
+            historyOpen = Boolean(open && historyPanel);
+            if (historyTab) {
+                historyTab.classList.toggle('is-active', historyOpen);
+            }
+
+            if (!historyOpen) {
+                historyBrowser.style.display = 'none';
+            } else if (!preserveBrowser) {
+                renderOpenHistory();
+            }
         }
 
         function setCollapsed(collapsed) {
             if (collapsed) {
                 closePanel();
+                setHistoryOpen(false);
                 mount.classList.add('is-collapsed');
             } else {
                 mount.classList.remove('is-collapsed');
@@ -246,41 +423,91 @@
             writeCollapsed(collapsed);
         });
 
-        Object.keys(data).forEach(function (name) {
-            var entry = data[name] || {};
-            var widget = widgets[name] || {};
-            var label = widget.label || titleize(name);
-            var type = widget.panel || inferType(entry.panel);
+        function activate(name, tab, entry, type) {
+            closePanel();
+            tab.classList.add('is-active');
+            body.innerHTML = '';
+            body.appendChild(renderPanel(type, entry.panel));
+            body.style.display = 'block';
+            active = name;
+        }
 
-            var tab = el('button', 'phalcon-debugbar-tab');
-            tab.type = 'button';
-            tab.appendChild(el('span', 'phalcon-debugbar-tab-label', label));
-            if (hasBadge(entry.badge)) {
-                tab.appendChild(el('span', 'phalcon-debugbar-badge', scalar(entry.badge)));
-            }
+        function renderData(nextPayload, preferredActive, preserveHistoryBrowser) {
+            payload = nextPayload || {};
+            data = payload.data || {};
+            widgets = (payload.meta && payload.meta.widgets) || {};
+            tabs.innerHTML = '';
+            body.innerHTML = '';
+            body.style.display = 'none';
+            active = null;
 
-            tab.addEventListener('click', function () {
-                if (active === name) {
-                    closePanel();
+            var preferred = null;
+            Object.keys(data).forEach(function (name) {
+                if (name === 'history') {
                     return;
                 }
-                closePanel();
-                tab.classList.add('is-active');
-                body.innerHTML = '';
-                body.appendChild(renderPanel(type, entry.panel));
-                body.style.display = 'block';
-                active = name;
+                var entry = data[name] || {};
+                var widget = widgets[name] || {};
+                var label = widget.label || titleize(name);
+                var type = widget.panel || inferType(entry.panel);
+
+                var tab = el('button', 'phalcon-debugbar-tab');
+                tab.type = 'button';
+                tab.setAttribute('data-panel-tab', name);
+                tab.appendChild(el('span', 'phalcon-debugbar-tab-label', label));
+                if (hasBadge(entry.badge)) {
+                    tab.appendChild(el('span', 'phalcon-debugbar-badge', scalar(entry.badge)));
+                }
+
+                tab.addEventListener('click', function () {
+                    if (active === name) {
+                        closePanel();
+                        return;
+                    }
+                    activate(name, tab, entry, type);
+                });
+
+                tabs.appendChild(tab);
+                if (name === preferredActive) {
+                    preferred = [name, tab, entry, type];
+                }
             });
 
-            tabs.appendChild(tab);
-        });
+            var historyEntry = data.history || {};
+            historyPanel = historyEntry.panel || null;
+            historyTab = null;
+            if (historyPanel && typeof historyPanel.url === 'string') {
+                var historyWidget = widgets.history || {};
+                historyTab = el('button', 'phalcon-debugbar-tab');
+                historyTab.type = 'button';
+                historyTab.appendChild(el(
+                    'span',
+                    'phalcon-debugbar-tab-label',
+                    historyWidget.label || 'History'
+                ));
+                historyTab.addEventListener('click', function () {
+                    setHistoryOpen(!historyOpen);
+                });
+                tabs.appendChild(historyTab);
+            } else {
+                historyOpen = false;
+            }
+
+            if (preferred) {
+                activate(preferred[0], preferred[1], preferred[2], preferred[3]);
+            }
+
+            setHistoryOpen(historyOpen, preserveHistoryBrowser);
+        }
 
         row.appendChild(tabs);
         row.appendChild(toggle);
+        bar.appendChild(historyBrowser);
         bar.appendChild(body);
         bar.appendChild(row);
         mount.appendChild(bar);
 
+        renderData(payload, null);
         setCollapsed(readCollapsed());
     });
 })();

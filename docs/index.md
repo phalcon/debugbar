@@ -35,7 +35,7 @@ The remainder of this document covers the debug bar.
 
 ## Registering the Debug Bar
 
-The bar is booted by `Phalcon\DebugBar\Provider`. It takes the MVC application and an optional configuration array. Its only coupling to the application is the application's events manager, so the application must have one set before the bar boots.
+The bar is booted by `Phalcon\DebugBar\Provider`. It takes the MVC application and an optional configuration array. The application must have an events manager set before the bar boots. Request history additionally requires the application's shared `router`, `request`, and `response` services.
 
 ```php
 <?php
@@ -73,6 +73,11 @@ The second argument to `Provider` is a nested array. Every key is optional.
 | `env.strict`       | `bool`                    | `false`                  | When `true`, `boot()` throws in a blocked/undefined environment instead of returning silently. |
 | `env.var`          | `string`                  | `APP_ENV`                | Environment variable inspected by the gate.                      |
 | `headers`          | `bool`                    | `true`                   | Emit the `X-Debug-Bar` diagnostic header.                        |
+| `history.enabled`  | `bool`                    | `false`                  | Store and browse recent requests for the active session.         |
+| `history.url`      | `string`                  | `/_debugbar/open`        | Internal GET endpoint registered by the provider.                |
+| `history.path`     | `string`                  | system temporary path    | Storage directory; keep it outside the document root.            |
+| `history.max_requests` | `int`                 | `100`                    | Maximum stored requests per session.                             |
+| `history.ttl_seconds` | `int`                  | `86400`                  | Lifetime of stored requests in seconds.                          |
 | `redact.hidden`    | `list<string>`            | `[]`                     | Keys dropped from the output entirely.                           |
 | `redact.mask`      | `list<string>`            | `[]`                     | Extra keys whose values are masked (added to the defaults).      |
 
@@ -85,9 +90,24 @@ use Phalcon\DebugBar\Provider;
     'env'        => ['var' => 'APP_ENV', 'blocked' => ['production', 'staging']],
     'access'     => ['allow_ips' => ['127.0.0.1', '10.0.0.5']],
     'collectors' => ['cache' => false, 'view' => false],
+    'history'    => [
+        'enabled'      => true,
+        'path'         => dirname(__DIR__) . '/runtime/debugbar',
+        'max_requests' => 100,
+        'ttl_seconds'  => 86400,
+    ],
     'redact'     => ['mask' => ['api_key'], 'hidden' => ['secret_question']],
 ]))->boot();
 ```
+
+When history is enabled, the provider registers `GET /_debugbar/open`,
+`DELETE /_debugbar/open`, and their internal controller automatically. A GET
+without an `id` returns the recent request metadata; `?id=<request-id>` returns
+a stored payload. DELETE clears the active session's stored requests. The
+`History` item in the bottom bar opens the browser above it; its controls refresh
+or clear the list, and selecting an item replaces the collectors shown below.
+Storage is isolated by a SHA-256 hash of the active PHP session id. With no
+active session, no request is written or exposed.
 
 ## Collectors
 

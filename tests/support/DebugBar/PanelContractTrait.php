@@ -71,6 +71,12 @@ trait PanelContractTrait
                 Assert::assertIsString($data);
 
                 break;
+            case 'history':
+                Assert::assertIsArray($data);
+                Assert::assertArrayHasKey('url', $data);
+                Assert::assertIsString($data['url']);
+
+                break;
             default:
                 Assert::fail('Unknown panel type: ' . $panel);
         }
