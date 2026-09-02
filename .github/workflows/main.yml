@@ -85,11 +85,17 @@ jobs:
 
       # v5 = cphalcon C extension, built from source via PIE (pecl caps at PHP 8.4).
       # v6 needs no extension: it runs on the phalcon/phalcon composer dev dependency.
+      #
+      # PIE enables the extension itself, but on the runner that gives a second
+      # "extension=phalcon" and PHP then prints "Module phalcon is already
+      # loaded" on every start. The warning makes tests that run in a separate
+      # process fail. Use --skip-enable-extension and write one INI entry here.
       - name: "Install Phalcon v5 (cphalcon) via PIE"
         if: matrix.variant == 'v5'
         run: |
           curl -fsSL https://github.com/php/pie/releases/latest/download/pie.phar -o pie.phar
-          sudo "$(which php)" pie.phar install --no-interaction "phalcon/cphalcon:${{ env.PHALCON_CONSTRAINT }}"
+          sudo "$(which php)" pie.phar install --skip-enable-extension --no-interaction "phalcon/cphalcon:${{ env.PHALCON_CONSTRAINT }}"
+          echo "extension=phalcon.so" | sudo tee /etc/php/${{ matrix.php }}/cli/conf.d/80-phalcon.ini
           php -m | grep -i phalcon
 
       - name: Install development dependencies with Composer
