@@ -25,7 +25,8 @@ namespace Phalcon\DebugBar;
  * @phpstan-type log_row array{label: string, message: string, context: string}
  * @phpstan-type log_panel list<log_row>
  * @phpstan-type widget array{label: string, icon: string, panel: string}
- * @phpstan-type collector_summary array<string, scalar>
+ * @phpstan-type summary_row array{label: string, value: scalar}
+ * @phpstan-type collector_summary list<summary_row>
  * @phpstan-type envelope array{panel: mixed, badge: scalar|null, summary?: collector_summary}
  * @phpstan-type list_envelope array{panel: list_panel, badge: scalar|null, summary?: collector_summary}
  * @phpstan-type grid_envelope array{panel: grid_panel, badge: scalar|null, summary?: collector_summary}
@@ -33,8 +34,9 @@ namespace Phalcon\DebugBar;
  * @phpstan-type log_envelope array{panel: log_panel, badge: scalar|null, summary?: collector_summary}
  * @phpstan-type payload array{data: array<string, envelope>, meta: array<string, mixed>}
  * @phpstan-type db_query array{sql: string, bindings: array<array-key, mixed>, time: int|float}
- * @phpstan-type database_summary array{Queries: int, Duplicates: int, 'Total time': string}
- * @phpstan-type database_envelope array{panel: list_panel, badge: int, summary: database_summary}
+ * @phpstan-type database_row array{label: string, message: string, occurrences: int|null}
+ * @phpstan-type database_panel list<database_row>
+ * @phpstan-type database_envelope array{panel: database_panel, badge: int, summary: collector_summary}
  * @phpstan-type time_measure array{label: string, start: int|float, end: int|float|null}
  * @phpstan-type view_pending array{path: string, start: int|float}
  * @phpstan-type view_render array{path: string, time: int|float}

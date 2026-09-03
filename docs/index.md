@@ -242,7 +242,7 @@ The bar's CSS and JavaScript are minified and injected inline; the bar has no ex
 
 The bar sits at the bottom of the page. Each collector is a tab; a tab shows a badge when the collector reports a count or a summary value. Clicking a tab opens its panel:
 
-Collectors may expose a summary above their panel. The database collector reports the total query count, duplicate executions, and accumulated SQL time. Duplicate detection groups the same SQL statement after whitespace normalization and deliberately ignores binding values, making repeated prepared statements visible.
+Collectors may expose a summary above their panel. The database collector reports the total query count, duplicate executions, and accumulated SQL time. These metrics remain visible with zero values when no queries are executed. Duplicate detection groups the same SQL statement after whitespace normalization and deliberately ignores binding values; repeated statements are highlighted and show how many times they were executed.
 
 - **grid** panels (version, request, config, session, route) render a key and value table.
 - **list** panels (time, messages, database, view, cache) render labelled rows.

@@ -49,18 +49,34 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
     public function testDuplicateDetectionIgnoresBindingsButNotDifferentStatements(): void
     {
         $collector = new DatabaseCollector();
-        $property = new ReflectionProperty(DatabaseCollector::class, 'queries');
-        $property->setValue($collector, [
+        $property  = new ReflectionProperty(DatabaseCollector::class, 'queries');
+        $property->setAccessible(true);
+        $property->setValue(
+            $collector,
+            [
                 ['sql' => 'SELECT * FROM users WHERE id = :id', 'bindings' => ['id' => 1], 'time' => 100000],
                 ['sql' => 'SELECT * FROM users WHERE id = :id', 'bindings' => ['id' => 2], 'time' => 200000],
+                ['sql' => 'SELECT * FROM users WHERE id = :id', 'bindings' => ['id' => 3], 'time' => 300000],
                 [
                     'sql'      => 'SELECT * FROM users WHERE email = :email',
                     'bindings' => ['email' => 'a@b.c'],
-                    'time'     => 300000,
+                    'time'     => 400000,
                 ],
-            ]);
+                ['sql' => 'SELECT * FROM roles', 'bindings' => [], 'time' => 500000],
+            ]
+        );
+
         $envelope = $collector->collect();
-        $this->assertSame(1, $envelope['summary']['Duplicates']);
+
+        $this->assertSame(
+            [
+                ['label' => 'queries', 'value' => 5],
+                ['label' => 'duplicates', 'value' => 2],
+                ['label' => 'total_time', 'value' => '1.5ms'],
+            ],
+            $envelope['summary']
+        );
+        $this->assertSame([3, 3, 3, null, null], array_column($envelope['panel'], 'occurrences'));
     }
 
     public function testDurationIsMeasuredBetweenBeforeAndAfterQuery(): void
@@ -96,7 +112,14 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
     public function testEmptyCollectorHasZeroSummaryValues(): void
     {
         $envelope = (new DatabaseCollector())->collect();
-        $this->assertSame(['Queries' => 0, 'Duplicates' => 0, 'Total time' => '0ms'], $envelope['summary']);
+        $this->assertSame(
+            [
+                ['label' => 'queries', 'value' => 0],
+                ['label' => 'duplicates', 'value' => 0],
+                ['label' => 'total_time', 'value' => '0ms'],
+            ],
+            $envelope['summary']
+        );
     }
 
     public function testLabelReflectsQueryDurationInMilliseconds(): void
@@ -118,8 +141,10 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
         $this->assertArrayHasKey('label', $row);
         $this->assertSame('3.46ms', $row['label']);
         $this->assertSame('SELECT 1', $row['message']);
+        $this->assertNull($row['occurrences']);
         $this->assertSame(1, $envelope['badge']);
     }
+
     public function testNameAndPanelContract(): void
     {
         $collector = new DatabaseCollector();
@@ -161,8 +186,11 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
     public function testSummaryReportsQueryCountDuplicatesAndTotalDuration(): void
     {
         $collector = new DatabaseCollector();
-        $property = new ReflectionProperty(DatabaseCollector::class, 'queries');
-        $property->setValue($collector, [
+        $property  = new ReflectionProperty(DatabaseCollector::class, 'queries');
+        $property->setAccessible(true);
+        $property->setValue(
+            $collector,
+            [
                 [
                     'sql'      => 'SELECT * FROM users WHERE id = :id',
                     'bindings' => ['id' => 1],
@@ -178,15 +206,32 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
                     'bindings' => [],
                     'time'     => 500000,
                 ],
-            ]);
+            ]
+        );
+
         $envelope = $collector->collect();
-        $this->assertSame([
-                'Queries'     => 3,
-                'Duplicates' => 1,
-                'Total time'  => '3.75ms',
-            ], $envelope['summary']);
-        $this->assertStringContainsString('duplicate x2', $envelope['panel'][0]['label']);
-        $this->assertStringContainsString('duplicate x2', $envelope['panel'][1]['label']);
-        $this->assertStringNotContainsString('duplicate', $envelope['panel'][2]['label']);
+
+        $this->assertSame(
+            [
+                ['label' => 'queries', 'value' => 3],
+                ['label' => 'duplicates', 'value' => 1],
+                ['label' => 'total_time', 'value' => '3.75ms'],
+            ],
+            $envelope['summary']
+        );
+        $this->assertSame(
+            [
+                ['label' => '1.25ms', 'occurrences' => 2],
+                ['label' => '2ms', 'occurrences' => 2],
+                ['label' => '0.5ms', 'occurrences' => null],
+            ],
+            array_map(
+                static fn (array $row): array => [
+                    'label'       => $row['label'],
+                    'occurrences' => $row['occurrences'],
+                ],
+                $envelope['panel']
+            )
+        );
     }
 }

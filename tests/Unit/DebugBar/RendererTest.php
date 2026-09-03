@@ -109,6 +109,8 @@ final class RendererTest extends AbstractUnitTestCase
         $html = (new Renderer())->renderHead();
         $this->assertStringContainsString('phalcon-debugbar-summary', $html);
         $this->assertStringContainsString('entry.summary', $html);
+        $this->assertStringContainsString('is-duplicate', $html);
+        $this->assertStringContainsString('Executed ', $html);
     }
 
     public function testRenderHeadInlinesMinifiedAssets(): void

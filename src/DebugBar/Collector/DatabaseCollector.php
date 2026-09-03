@@ -72,37 +72,35 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
     {
         $rows              = [];
         $occurrences       = [];
+        $queryKeys         = [];
+        $duplicates        = 0;
         $totalNanoseconds  = 0;
         foreach ($this->queries as $query) {
             $key               = $this->queryKey($query['sql']);
+            $queryKeys[]       = $key;
             $occurrences[$key] = ($occurrences[$key] ?? 0) + 1;
+            if ($occurrences[$key] > 1) {
+                $duplicates++;
+            }
             $totalNanoseconds += $query['time'];
         }
 
-        $duplicates = 0;
-        foreach ($occurrences as $occurrenceCount) {
-            $duplicates += $occurrenceCount - 1;
-        }
-
-        foreach ($this->queries as $query) {
-            $occurrenceCount = $occurrences[$this->queryKey($query['sql'])];
-            $label           = $this->nanosToMs($query['time']);
-            if ($occurrenceCount > 1) {
-                $label .= ' - duplicate x' . $occurrenceCount;
-            }
-
+        foreach ($this->queries as $index => $query) {
+            $occurrenceCount = $occurrences[$queryKeys[$index]];
             $rows[] = [
-                'label'   => $label,
-                'message' => $this->formatQuery($query['sql'], $query['bindings']),
+                'label'       => $this->nanosToMs($query['time']),
+                'message'     => $this->formatQuery($query['sql'], $query['bindings']),
+                'occurrences' => $occurrenceCount > 1 ? $occurrenceCount : null,
             ];
         }
+
         return [
             'panel'   => $rows,
             'badge'   => count($this->queries),
             'summary' => [
-                'Queries'     => count($this->queries),
-                'Duplicates' => $duplicates,
-                'Total time'  => $this->nanosToMs($totalNanoseconds),
+                ['label' => 'queries', 'value' => count($this->queries)],
+                ['label' => 'duplicates', 'value' => $duplicates],
+                ['label' => 'total_time', 'value' => $this->nanosToMs($totalNanoseconds)],
             ],
         ];
     }

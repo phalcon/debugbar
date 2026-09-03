@@ -173,6 +173,22 @@
     color: #e2e2ef;
 }
 
+#phalcon-debugbar .phalcon-debugbar-list tr.is-duplicate {
+    background: #2a2118;
+}
+
+#phalcon-debugbar .phalcon-debugbar-duplicate-count {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #8a4b08;
+    color: #fff1d6;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 #phalcon-debugbar .phalcon-debugbar-code {
     margin: 0;
     white-space: pre-wrap;

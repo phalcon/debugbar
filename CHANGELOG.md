@@ -6,7 +6,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 
 ### Added
 
-- Optional collector summaries rendered as headline metrics above a panel. The database collector uses them to report total queries, duplicate executions, and accumulated SQL time, and marks statements belonging to a duplicate group.
+- Optional, extensible collector summaries rendered as headline metrics above a panel. The database collector uses them to report total queries, duplicate executions, and accumulated SQL time, and marks repeated statements with their execution count.
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 

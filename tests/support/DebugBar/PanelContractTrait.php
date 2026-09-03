@@ -30,9 +30,13 @@ trait PanelContractTrait
         $data      = $collected['panel'];
         if (isset($collected['summary'])) {
             Assert::assertIsArray($collected['summary']);
-            foreach ($collected['summary'] as $label => $value) {
-                Assert::assertIsString($label);
-                Assert::assertIsScalar($value);
+            Assert::assertIsList($collected['summary']);
+            foreach ($collected['summary'] as $metric) {
+                Assert::assertIsArray($metric);
+                Assert::assertArrayHasKey('label', $metric);
+                Assert::assertArrayHasKey('value', $metric);
+                Assert::assertIsString($metric['label']);
+                Assert::assertIsScalar($metric['value']);
             }
         }
         switch ($panel) {
