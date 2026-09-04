@@ -117,6 +117,34 @@
     border-bottom: 1px solid #2b2b40;
 }
 
+#phalcon-debugbar .phalcon-debugbar-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+#phalcon-debugbar .phalcon-debugbar-summary-metric {
+    display: flex;
+    min-width: 130px;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 7px 10px;
+    border: 1px solid #303047;
+    border-radius: 4px;
+    background: #20202e;
+}
+
+#phalcon-debugbar .phalcon-debugbar-summary-label {
+    color: #9a9ac8;
+}
+
+#phalcon-debugbar .phalcon-debugbar-summary-value {
+    color: #ffffff;
+    font-size: 13px;
+}
+
 #phalcon-debugbar table {
     width: 100%;
     border-collapse: collapse;
@@ -143,6 +171,22 @@
 
 #phalcon-debugbar .phalcon-debugbar-value {
     color: #e2e2ef;
+}
+
+#phalcon-debugbar .phalcon-debugbar-list tr.is-duplicate {
+    background: #2a2118;
+}
+
+#phalcon-debugbar .phalcon-debugbar-duplicate-count {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #8a4b08;
+    color: #fff1d6;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
 }
 
 #phalcon-debugbar .phalcon-debugbar-code {

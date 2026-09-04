@@ -25,9 +25,20 @@ trait PanelContractTrait
 {
     protected function assertPanelContract(Renderable $collector): void
     {
-        $panel = $collector->getWidget()['panel'];
-        $data  = $collector->collect()['panel'];
-
+        $panel     = $collector->getWidget()['panel'];
+        $collected = $collector->collect();
+        $data      = $collected['panel'];
+        if (isset($collected['summary'])) {
+            Assert::assertIsArray($collected['summary']);
+            Assert::assertIsList($collected['summary']);
+            foreach ($collected['summary'] as $metric) {
+                Assert::assertIsArray($metric);
+                Assert::assertArrayHasKey('label', $metric);
+                Assert::assertArrayHasKey('value', $metric);
+                Assert::assertIsString($metric['label']);
+                Assert::assertIsScalar($metric['value']);
+            }
+        }
         switch ($panel) {
             case 'grid':
                 Assert::assertIsArray($data);
