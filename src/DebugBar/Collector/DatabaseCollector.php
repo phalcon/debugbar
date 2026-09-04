@@ -73,14 +73,14 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
         $rows              = [];
         $occurrences       = [];
         $queryKeys         = [];
-        $duplicates        = 0;
+        $duplicateRuns     = 0;
         $totalNanoseconds  = 0;
-        foreach ($this->queries as $query) {
+        foreach ($this->queries as $index => $query) {
             $key               = $this->queryKey($query['sql']);
-            $queryKeys[]       = $key;
+            $queryKeys[$index] = $key;
             $occurrences[$key] = ($occurrences[$key] ?? 0) + 1;
             if ($occurrences[$key] > 1) {
-                $duplicates++;
+                $duplicateRuns++;
             }
             $totalNanoseconds += $query['time'];
         }
@@ -99,7 +99,7 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
             'badge'   => count($this->queries),
             'summary' => [
                 ['label' => 'queries', 'value' => count($this->queries)],
-                ['label' => 'duplicates', 'value' => $duplicates],
+                ['label' => 'duplicate_runs', 'value' => $duplicateRuns],
                 ['label' => 'total_time', 'value' => $this->nanosToMs($totalNanoseconds)],
             ],
         ];

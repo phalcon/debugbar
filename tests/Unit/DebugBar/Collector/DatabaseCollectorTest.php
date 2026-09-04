@@ -71,7 +71,7 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
         $this->assertSame(
             [
                 ['label' => 'queries', 'value' => 5],
-                ['label' => 'duplicates', 'value' => 2],
+                ['label' => 'duplicate_runs', 'value' => 2],
                 ['label' => 'total_time', 'value' => '1.5ms'],
             ],
             $envelope['summary']
@@ -115,7 +115,7 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
         $this->assertSame(
             [
                 ['label' => 'queries', 'value' => 0],
-                ['label' => 'duplicates', 'value' => 0],
+                ['label' => 'duplicate_runs', 'value' => 0],
                 ['label' => 'total_time', 'value' => '0ms'],
             ],
             $envelope['summary']
@@ -214,7 +214,7 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
         $this->assertSame(
             [
                 ['label' => 'queries', 'value' => 3],
-                ['label' => 'duplicates', 'value' => 1],
+                ['label' => 'duplicate_runs', 'value' => 1],
                 ['label' => 'total_time', 'value' => '3.75ms'],
             ],
             $envelope['summary']
