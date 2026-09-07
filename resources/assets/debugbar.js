@@ -95,8 +95,21 @@
         panel.forEach(function (row) {
             row = row || {};
             var tr = el('tr');
+            var value = el('td', 'phalcon-debugbar-value');
+            var occurrences = Number(row.occurrences);
+
             tr.appendChild(el('td', 'phalcon-debugbar-key', scalar(row.label)));
-            tr.appendChild(el('td', 'phalcon-debugbar-value', scalar(row.message)));
+            value.appendChild(el('span', 'phalcon-debugbar-message', scalar(row.message)));
+            if (occurrences > 1) {
+                tr.classList.add('is-duplicate');
+
+                value.appendChild(el(
+                    'span',
+                    'phalcon-debugbar-duplicate-count',
+                    'Executed ' + occurrences + ' times'
+                ));
+            }
+            tr.appendChild(value);
             table.appendChild(tr);
         });
         return table;
@@ -173,6 +186,23 @@
             default:
                 return renderGrid(panel);
         }
+    }
+
+    function renderSummary(summary) {
+        if (!Array.isArray(summary) || !summary.length) {
+            return null;
+        }
+
+        var wrap = el('div', 'phalcon-debugbar-summary');
+        summary.forEach(function (item) {
+            item = item || {};
+            var metric = el('div', 'phalcon-debugbar-summary-metric');
+            metric.appendChild(el('span', 'phalcon-debugbar-summary-label', titleize(item.label)));
+            metric.appendChild(el('strong', 'phalcon-debugbar-summary-value', scalar(item.value)));
+            wrap.appendChild(metric);
+        });
+
+        return wrap;
     }
 
     function hasBadge(badge) {
@@ -267,6 +297,10 @@
                 closePanel();
                 tab.classList.add('is-active');
                 body.innerHTML = '';
+                var summary = renderSummary(entry.summary);
+                if (summary) {
+                    body.appendChild(summary);
+                }
                 body.appendChild(renderPanel(type, entry.panel));
                 body.style.display = 'block';
                 active = name;
