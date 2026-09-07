@@ -19,18 +19,7 @@ namespace Phalcon\DebugBar\Contracts;
  */
 interface TimeAware
 {
-    /**
-     * @param string      $name
-     * @param string|null $label
-     *
-     * @return void
-     */
     public function startMeasure(string $name, ?string $label = null): void;
 
-    /**
-     * @param string $name
-     *
-     * @return void
-     */
     public function stopMeasure(string $name): void;
 }

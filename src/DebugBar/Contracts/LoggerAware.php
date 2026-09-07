@@ -21,11 +21,7 @@ namespace Phalcon\DebugBar\Contracts;
 interface LoggerAware
 {
     /**
-     * @param string                  $message
-     * @param string                  $level
      * @param array<array-key, mixed> $context
-     *
-     * @return void
      */
     public function addLog(string $message, string $level, array $context = []): void;
 }

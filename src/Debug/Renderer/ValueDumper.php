@@ -39,10 +39,6 @@ class ValueDumper
 {
     /**
      * Formats a single value as a compact one-line string.
-     *
-     * @param mixed $variable
-     *
-     * @return string
      */
     public function dump(mixed $variable): string
     {
@@ -62,9 +58,6 @@ class ValueDumper
      * nesting and collapsing arrays of ten or more entries to their count.
      *
      * @param array<array-key, mixed> $arguments
-     * @param int                     $number
-     *
-     * @return string|null
      */
     public function dumpArray(array $arguments, int $number = 0): string | null
     {
@@ -103,10 +96,6 @@ class ValueDumper
     /**
      * Escapes a string for safe inclusion in the HTML output, rendering literal
      * newlines as the two-character "\n" sequence.
-     *
-     * @param string $value
-     *
-     * @return string
      */
     public function escape(string $value): string
     {
@@ -117,39 +106,21 @@ class ValueDumper
         );
     }
 
-    /**
-     * @param bool $variable
-     *
-     * @return string
-     */
     private function dumpBool(bool $variable): string
     {
         return $variable ? 'true' : 'false';
     }
 
-    /**
-     * @return string
-     */
     private function dumpNull(): string
     {
         return 'null';
     }
 
-    /**
-     * @param float|int $variable
-     *
-     * @return string
-     */
     private function dumpNumber(float | int $variable): string
     {
         return (string) $variable;
     }
 
-    /**
-     * @param object $variable
-     *
-     * @return string
-     */
     private function dumpObject(object $variable): string
     {
         $className = get_class($variable);
@@ -163,11 +134,6 @@ class ValueDumper
         return 'Object(' . $className . ')';
     }
 
-    /**
-     * @param string $variable
-     *
-     * @return string
-     */
     private function dumpString(string $variable): string
     {
         return $this->escape($variable);

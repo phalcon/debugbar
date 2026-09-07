@@ -52,7 +52,7 @@ final class VariableTest extends AbstractUnitTestCase
             Talon::settings()->supportPath('assets/Support/Dump/variable_output.txt'),
         );
         $expected = trim($contents);
-        $actual = $dump->variable($test);
+        $actual   = $dump->variable($test);
         $this->assertSame($expected, $actual);
     }
 }

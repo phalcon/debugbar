@@ -25,9 +25,6 @@ final class RecordingTimeCollector extends AbstractCollector implements TimeAwar
 {
     public const NAME = 'time';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'list';
 
     /**

@@ -27,9 +27,6 @@ final class RecordingExceptionsCollector extends AbstractCollector implements Ex
 {
     public const NAME = 'exceptions';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'list';
 
     /**

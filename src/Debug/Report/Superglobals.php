@@ -33,8 +33,6 @@ final class Superglobals
 
     /**
      * Builds a snapshot from the live request superglobals.
-     *
-     * @return self
      */
     public static function fromGlobals(): self
     {

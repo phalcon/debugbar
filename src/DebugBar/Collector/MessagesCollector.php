@@ -34,19 +34,10 @@ final class MessagesCollector extends AbstractCollector implements MessageAware
 
     public const NAME = 'messages';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-messages';
 
-    /**
-     * @var string
-     */
     protected string $label = 'Messages';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'list';
 
     /**
@@ -54,12 +45,6 @@ final class MessagesCollector extends AbstractCollector implements MessageAware
      */
     private array $messages = [];
 
-    /**
-     * @param mixed  $message
-     * @param string $label
-     *
-     * @return void
-     */
     public function addMessage(mixed $message, string $label): void
     {
         $this->messages[] = [
@@ -79,11 +64,6 @@ final class MessagesCollector extends AbstractCollector implements MessageAware
         ];
     }
 
-    /**
-     * @param mixed $value
-     *
-     * @return string
-     */
     private function valueToString(mixed $value): string
     {
         if (is_string($value)) {

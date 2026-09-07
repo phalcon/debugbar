@@ -31,12 +31,6 @@ final class Injector
     /**
      * Inserts the head assets and bar body just before the last `</body>`
      * (or appends them when there is no body tag).
-     *
-     * @param ResponseInterface $response
-     * @param string            $head
-     * @param string            $body
-     *
-     * @return ResponseInterface
      */
     public function inject(ResponseInterface $response, string $head, string $body): ResponseInterface
     {
@@ -58,11 +52,6 @@ final class Injector
 
     /**
      * Whether the bar may be injected: HTML content, not a redirect, not AJAX.
-     *
-     * @param ResponseInterface $response
-     * @param bool              $isAjax
-     *
-     * @return bool
      */
     public function shouldInject(ResponseInterface $response, bool $isAjax = false): bool
     {

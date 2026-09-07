@@ -34,8 +34,6 @@ interface Collector
 
     /**
      * The unique key for this collector (its NAME constant).
-     *
-     * @return string
      */
     public function getName(): string;
 }

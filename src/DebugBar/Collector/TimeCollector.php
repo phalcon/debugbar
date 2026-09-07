@@ -34,19 +34,10 @@ final class TimeCollector extends AbstractCollector implements TimeAware
 
     public const NAME = 'time';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-time';
 
-    /**
-     * @var string
-     */
     protected string $label = 'Time';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'list';
 
     /**
@@ -74,12 +65,6 @@ final class TimeCollector extends AbstractCollector implements TimeAware
         ];
     }
 
-    /**
-     * @param string      $name
-     * @param string|null $label
-     *
-     * @return void
-     */
     public function startMeasure(string $name, ?string $label = null): void
     {
         $this->measures[$name] = [
@@ -89,11 +74,6 @@ final class TimeCollector extends AbstractCollector implements TimeAware
         ];
     }
 
-    /**
-     * @param string $name
-     *
-     * @return void
-     */
     public function stopMeasure(string $name): void
     {
         if (isset($this->measures[$name])) {
@@ -101,9 +81,6 @@ final class TimeCollector extends AbstractCollector implements TimeAware
         }
     }
 
-    /**
-     * @return float
-     */
     private function requestStart(): float
     {
         $value = $_SERVER['REQUEST_TIME_FLOAT'] ?? null;
@@ -112,9 +89,6 @@ final class TimeCollector extends AbstractCollector implements TimeAware
     }
 
     /**
-     * @param string $label
-     * @param string $message
-     *
      * @return list_row
      */
     private function row(string $label, string $message): array

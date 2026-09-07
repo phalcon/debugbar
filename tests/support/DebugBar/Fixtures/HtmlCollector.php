@@ -22,9 +22,6 @@ final class HtmlCollector extends AbstractCollector
 {
     public const NAME = 'html_fixture';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'html';
 
     /**

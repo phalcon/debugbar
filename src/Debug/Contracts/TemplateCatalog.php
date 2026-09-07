@@ -21,10 +21,6 @@ interface TemplateCatalog
 {
     /**
      * Returns the embedded default template for the given name.
-     *
-     * @param string $name
-     *
-     * @return string
      */
     public function defaultFor(string $name): string;
 }

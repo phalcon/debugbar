@@ -32,7 +32,6 @@ trait FlattensToGrid
 {
     /**
      * @param array<array-key, mixed> $data
-     * @param string                  $prefix
      *
      * @return grid_panel
      */
@@ -56,11 +55,6 @@ trait FlattensToGrid
         return $result;
     }
 
-    /**
-     * @param mixed $value
-     *
-     * @return string
-     */
     private function scalarToString(mixed $value): string
     {
         if (is_string($value)) {

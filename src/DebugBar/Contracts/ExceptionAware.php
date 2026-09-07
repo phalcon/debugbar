@@ -21,10 +21,5 @@ use Throwable;
  */
 interface ExceptionAware
 {
-    /**
-     * @param Throwable $throwable
-     *
-     * @return void
-     */
     public function addThrowable(Throwable $throwable): void;
 }

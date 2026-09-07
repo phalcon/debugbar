@@ -22,10 +22,5 @@ use Phalcon\Events\ManagerInterface;
  */
 interface Subscriber
 {
-    /**
-     * @param ManagerInterface $eventsManager
-     *
-     * @return void
-     */
     public function subscribe(ManagerInterface $eventsManager): void;
 }

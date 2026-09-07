@@ -34,11 +34,6 @@ final class AccessGate
     ) {
     }
 
-    /**
-     * @param string|null $clientIp
-     *
-     * @return bool
-     */
     public function allows(?string $clientIp): bool
     {
         if (

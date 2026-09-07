@@ -40,19 +40,10 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
 {
     public const NAME = 'logger';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-messages';
 
-    /**
-     * @var string
-     */
     protected string $label = 'Logs';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'logs';
 
     /**
@@ -61,11 +52,7 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
     private array $logs = [];
 
     /**
-     * @param string                  $message
-     * @param string                  $level
      * @param array<array-key, mixed> $context
-     *
-     * @return void
      */
     public function addLog(string $message, string $level, array $context = []): void
     {
@@ -93,8 +80,6 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
      * renderer shows as a plain (non-collapsible) row.
      *
      * @param array<array-key, mixed> $context
-     *
-     * @return string
      */
     private function stringifyContext(array $context): string
     {

@@ -45,9 +45,6 @@ class Debug
 {
     use GetTrait;
 
-    /**
-     * @var bool
-     */
     protected static bool $isActive = false;
     /**
      * @var array<array-key, mixed>
@@ -59,39 +56,18 @@ class Debug
      */
     protected array $data = [];
 
-    /**
-     * @var Renderer
-     */
     protected Renderer $renderer;
 
-    /**
-     * @var ReportBuilder
-     */
     protected ReportBuilder $reportBuilder;
 
-    /**
-     * @var bool
-     */
     protected bool $showBackTrace = true;
 
-    /**
-     * @var bool
-     */
     protected bool $showFileFragment = false;
 
-    /**
-     * @var bool
-     */
     protected bool $showFiles = true;
 
-    /**
-     * @var string
-     */
     protected string $uri = "https://assets.phalcon.io/debug/6.0.x/";
 
-    /**
-     * @var Superglobals|null
-     */
     private ?Superglobals $superglobals = null;
 
     public function __construct()
@@ -115,8 +91,6 @@ class Debug
     /**
      * Adds a variable to the debug output
      *
-     * @param mixed $variable
-     *
      * @return $this
      */
     public function debugVar(mixed $variable): static
@@ -132,8 +106,6 @@ class Debug
 
     /**
      * Returns the CSS sources
-     *
-     * @return string
      */
     public function getCssSources(): string
     {
@@ -142,8 +114,6 @@ class Debug
 
     /**
      * Returns the JavaScript sources
-     *
-     * @return string
      */
     public function getJsSources(): string
     {
@@ -152,8 +122,6 @@ class Debug
 
     /**
      * Returns the renderer used to produce the output
-     *
-     * @return Renderer
      */
     public function getRenderer(): Renderer
     {
@@ -162,8 +130,6 @@ class Debug
 
     /**
      * Generates a link to the current version documentation
-     *
-     * @return string
      */
     public function getVersion(): string
     {
@@ -182,9 +148,6 @@ class Debug
 
     /**
      * Listen for uncaught exceptions and non silent notices or warnings
-     *
-     * @param bool $exceptions
-     * @param bool $lowSeverity
      *
      * @return $this
      */
@@ -234,9 +197,6 @@ class Debug
     /**
      * Handles uncaught exceptions
      *
-     * @param Throwable $exception
-     *
-     * @return bool
      * @throws ReflectionException
      */
     public function onUncaughtException(Throwable $exception): bool
@@ -280,11 +240,6 @@ class Debug
     /**
      * Throws an exception when a notice or warning is raised
      *
-     * @param int    $severity
-     * @param string $message
-     * @param string $file
-     * @param int    $line
-     *
      * @throws RuntimeWarning
      */
     public function onUncaughtLowSeverity(
@@ -301,9 +256,6 @@ class Debug
     /**
      * Render exception to html format.
      *
-     * @param Throwable $exception
-     *
-     * @return string
      * @throws ReflectionException
      */
     public function renderHtml(Throwable $exception): string
@@ -349,8 +301,6 @@ class Debug
     /**
      * Sets the renderer used to produce the output
      *
-     * @param Renderer $renderer
-     *
      * @return $this
      */
     public function setRenderer(Renderer $renderer): static
@@ -362,8 +312,6 @@ class Debug
 
     /**
      * Sets if files the exception's backtrace must be showed
-     *
-     * @param bool $showBackTrace
      *
      * @return $this
      */
@@ -378,8 +326,6 @@ class Debug
      * Sets if files must be completely opened and showed in the output
      * or just the fragment related to the exception
      *
-     * @param bool $showFileFragment
-     *
      * @return $this
      */
     public function setShowFileFragment(bool $showFileFragment): static
@@ -391,8 +337,6 @@ class Debug
 
     /**
      * Set if files part of the backtrace must be shown in the output
-     *
-     * @param bool $showFiles
      *
      * @return $this
      */
@@ -407,8 +351,6 @@ class Debug
      * Injects a fixed superglobals snapshot, bypassing the lazy read from
      * $_REQUEST/$_SERVER performed at render time.
      *
-     * @param Superglobals $superglobals
-     *
      * @return $this
      */
     public function setSuperglobals(Superglobals $superglobals): static
@@ -420,8 +362,6 @@ class Debug
 
     /**
      * Change the base URI for static resources
-     *
-     * @param string $uri
      *
      * @return $this
      */

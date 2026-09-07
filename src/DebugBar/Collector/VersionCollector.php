@@ -27,19 +27,10 @@ final class VersionCollector extends AbstractCollector
 {
     public const NAME = 'version';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-version';
 
-    /**
-     * @var string
-     */
     protected string $label = 'Version';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'grid';
 
     /**

@@ -20,10 +20,6 @@ namespace Phalcon\DebugBar;
  */
 final class BarOptions
 {
-    /**
-     * @param bool        $headers
-     * @param string|null $nonce
-     */
     public function __construct(
         public readonly bool $headers,
         public readonly ?string $nonce

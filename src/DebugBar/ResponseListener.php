@@ -30,14 +30,6 @@ use function is_string;
  */
 final class ResponseListener
 {
-    /**
-     * @param DebugBar              $bar
-     * @param Renderer              $renderer
-     * @param Injector              $injector
-     * @param AccessGate            $accessGate
-     * @param RequestInterface|null $request
-     * @param BarOptions            $options
-     */
     public function __construct(
         private readonly DebugBar $bar,
         private readonly Renderer $renderer,
@@ -48,13 +40,6 @@ final class ResponseListener
     ) {
     }
 
-    /**
-     * @param EventInterface $event
-     * @param mixed          $source
-     * @param mixed          $response
-     *
-     * @return void
-     */
     public function __invoke(EventInterface $event, mixed $source, mixed $response): void
     {
         if (!$response instanceof ResponseInterface) {

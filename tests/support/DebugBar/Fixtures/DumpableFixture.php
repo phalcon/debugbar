@@ -22,9 +22,6 @@ use stdClass;
  */
 final class DumpableFixture
 {
-    /**
-     * @return stdClass
-     */
     public function dump(): stdClass
     {
         $result        = new stdClass();

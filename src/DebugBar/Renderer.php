@@ -42,11 +42,6 @@ class Renderer
      */
     protected array $templates = [];
 
-    /**
-     * @param string $name
-     *
-     * @return string
-     */
     public function getTemplate(string $name): string
     {
         return $this->templates[$name] ?? $this->defaultTemplate($name);
@@ -56,9 +51,6 @@ class Renderer
      * Renders the bar shell plus the collected payload as escaped JSON.
      *
      * @param array<array-key, mixed> $collected
-     * @param string|null             $nonce
-     *
-     * @return string
      */
     public function render(array $collected, ?string $nonce = null): string
     {
@@ -80,10 +72,6 @@ class Renderer
     /**
      * Renders the head: the minified CSS and JS injected inline, so the bar
      * carries no external asset dependency.
-     *
-     * @param string|null $nonce
-     *
-     * @return string
      */
     public function renderHead(?string $nonce = null): string
     {
@@ -97,12 +85,6 @@ class Renderer
         );
     }
 
-    /**
-     * @param string $name
-     * @param string $template
-     *
-     * @return static
-     */
     public function setTemplate(string $name, string $template): static
     {
         $this->templates[$name] = $template;
@@ -112,19 +94,12 @@ class Renderer
 
     /**
      * The package directory holding the source `debugbar.css`/`debugbar.js`.
-     *
-     * @return string
      */
     protected function assetsPath(): string
     {
         return dirname(__DIR__, 2) . '/resources/assets/';
     }
 
-    /**
-     * @param string $name
-     *
-     * @return string
-     */
     protected function defaultTemplate(string $name): string
     {
         return match ($name) {
@@ -139,10 +114,6 @@ class Renderer
 
     /**
      * Returns the minified asset ('css' or 'js').
-     *
-     * @param string $type
-     *
-     * @return string
      */
     private function asset(string $type): string
     {
@@ -153,21 +124,13 @@ class Renderer
     }
 
     /**
-     * @param string                $template
      * @param array<string, string> $replacements
-     *
-     * @return string
      */
     private function interpolate(string $template, array $replacements): string
     {
         return str_replace(array_keys($replacements), array_values($replacements), $template);
     }
 
-    /**
-     * @param string|null $nonce
-     *
-     * @return string
-     */
     private function nonceAttribute(?string $nonce): string
     {
         return (null !== $nonce && '' !== $nonce) ? ' nonce="' . $nonce . '"' : '';

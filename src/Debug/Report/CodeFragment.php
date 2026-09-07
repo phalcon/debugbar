@@ -20,10 +20,6 @@ namespace Phalcon\Debug\Report;
 final class CodeFragment
 {
     /**
-     * @param string             $mode
-     * @param int                $firstLine
-     * @param int                $line
-     * @param int                $lastLine
      * @param array<int, string> $lines
      */
     public function __construct(
@@ -35,25 +31,16 @@ final class CodeFragment
     ) {
     }
 
-    /**
-     * @return int
-     */
     public function getFirstLine(): int
     {
         return $this->firstLine;
     }
 
-    /**
-     * @return int
-     */
     public function getLastLine(): int
     {
         return $this->lastLine;
     }
 
-    /**
-     * @return int
-     */
     public function getLine(): int
     {
         return $this->line;
@@ -67,9 +54,6 @@ final class CodeFragment
         return $this->lines;
     }
 
-    /**
-     * @return string
-     */
     public function getMode(): string
     {
         return $this->mode;

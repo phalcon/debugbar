@@ -90,10 +90,7 @@ final class ResponseListenerTest extends AbstractUnitTestCase
     }
 
     /**
-     * @param bool         $headers
      * @param list<string> $allowedIps
-     *
-     * @return ResponseListener
      */
     private function listener(bool $headers, array $allowedIps = []): ResponseListener
     {

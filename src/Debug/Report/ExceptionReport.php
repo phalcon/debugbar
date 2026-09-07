@@ -29,14 +29,8 @@ final class ExceptionReport
      */
     private array $includedFiles = [];
 
-    /**
-     * @var int
-     */
     private int $memoryUsage = 0;
 
-    /**
-     * @var int
-     */
     private int $peakMemoryUsage = 0;
 
     /**
@@ -54,14 +48,6 @@ final class ExceptionReport
      */
     private array $variables = [];
 
-    /**
-     * @param string $className
-     * @param string $message
-     * @param string $file
-     * @param int    $line
-     * @param bool   $showBackTrace
-     * @param string $uri
-     */
     public function __construct(
         private readonly string $className,
         private readonly string $message,
@@ -80,17 +66,11 @@ final class ExceptionReport
         return $this->backtrace;
     }
 
-    /**
-     * @return string
-     */
     public function getClassName(): string
     {
         return $this->className;
     }
 
-    /**
-     * @return string
-     */
     public function getFile(): string
     {
         return $this->file;
@@ -104,33 +84,21 @@ final class ExceptionReport
         return $this->includedFiles;
     }
 
-    /**
-     * @return int
-     */
     public function getLine(): int
     {
         return $this->line;
     }
 
-    /**
-     * @return int
-     */
     public function getMemoryUsage(): int
     {
         return $this->memoryUsage;
     }
 
-    /**
-     * @return string
-     */
     public function getMessage(): string
     {
         return $this->message;
     }
 
-    /**
-     * @return int
-     */
     public function getPeakMemoryUsage(): int
     {
         return $this->peakMemoryUsage;
@@ -152,9 +120,6 @@ final class ExceptionReport
         return $this->server;
     }
 
-    /**
-     * @return string
-     */
     public function getUri(): string
     {
         return $this->uri;
@@ -168,17 +133,11 @@ final class ExceptionReport
         return $this->variables;
     }
 
-    /**
-     * @return bool
-     */
     public function hasVariables(): bool
     {
         return !empty($this->variables);
     }
 
-    /**
-     * @return bool
-     */
     public function isShowBackTrace(): bool
     {
         return $this->showBackTrace;
@@ -186,8 +145,6 @@ final class ExceptionReport
 
     /**
      * @param list<BacktraceItem> $backtrace
-     *
-     * @return static
      */
     public function setBacktrace(array $backtrace): static
     {
@@ -198,8 +155,6 @@ final class ExceptionReport
 
     /**
      * @param list<string> $includedFiles
-     *
-     * @return static
      */
     public function setIncludedFiles(array $includedFiles): static
     {
@@ -208,11 +163,6 @@ final class ExceptionReport
         return $this;
     }
 
-    /**
-     * @param int $memoryUsage
-     *
-     * @return static
-     */
     public function setMemoryUsage(int $memoryUsage): static
     {
         $this->memoryUsage = $memoryUsage;
@@ -220,11 +170,6 @@ final class ExceptionReport
         return $this;
     }
 
-    /**
-     * @param int $peakMemoryUsage
-     *
-     * @return static
-     */
     public function setPeakMemoryUsage(int $peakMemoryUsage): static
     {
         $this->peakMemoryUsage = $peakMemoryUsage;
@@ -234,8 +179,6 @@ final class ExceptionReport
 
     /**
      * @param array<array-key, mixed> $request
-     *
-     * @return static
      */
     public function setRequest(array $request): static
     {
@@ -246,8 +189,6 @@ final class ExceptionReport
 
     /**
      * @param array<array-key, mixed> $server
-     *
-     * @return static
      */
     public function setServer(array $server): static
     {
@@ -258,8 +199,6 @@ final class ExceptionReport
 
     /**
      * @param array<array-key, mixed> $variables
-     *
-     * @return static
      */
     public function setVariables(array $variables): static
     {

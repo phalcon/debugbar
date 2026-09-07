@@ -37,19 +37,10 @@ final class ExceptionsCollector extends AbstractCollector implements ExceptionAw
 {
     public const NAME = 'exceptions';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-exception';
 
-    /**
-     * @var string
-     */
     protected string $label = 'Exceptions';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'exceptions';
 
     /**
@@ -57,11 +48,6 @@ final class ExceptionsCollector extends AbstractCollector implements ExceptionAw
      */
     private array $exceptions = [];
 
-    /**
-     * @param Throwable $throwable
-     *
-     * @return void
-     */
     public function addThrowable(Throwable $throwable): void
     {
         $this->exceptions[] = [
@@ -86,10 +72,6 @@ final class ExceptionsCollector extends AbstractCollector implements ExceptionAw
     /**
      * Auto-captures dispatch exceptions. The throwable is recorded and left to
      * bubble - the bar never handles or swallows it.
-     *
-     * @param ManagerInterface $eventsManager
-     *
-     * @return void
      */
     public function subscribe(ManagerInterface $eventsManager): void
     {
@@ -103,11 +85,6 @@ final class ExceptionsCollector extends AbstractCollector implements ExceptionAw
         );
     }
 
-    /**
-     * @param string $class
-     *
-     * @return string
-     */
     private function shortClass(string $class): string
     {
         $position = strrpos($class, '\\');

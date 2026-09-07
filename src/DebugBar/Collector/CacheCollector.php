@@ -33,19 +33,10 @@ final class CacheCollector extends AbstractCollector implements Subscriber
 {
     public const NAME = 'cache';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-cache';
 
-    /**
-     * @var string
-     */
     protected string $label = 'Cache';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'list';
 
     /**
@@ -64,11 +55,6 @@ final class CacheCollector extends AbstractCollector implements Subscriber
         ];
     }
 
-    /**
-     * @param ManagerInterface $eventsManager
-     *
-     * @return void
-     */
     public function subscribe(ManagerInterface $eventsManager): void
     {
         $events = [

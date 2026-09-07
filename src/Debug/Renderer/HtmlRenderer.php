@@ -45,14 +45,8 @@ class HtmlRenderer implements Renderer
 {
     use InterpolateTrait;
 
-    /**
-     * @var TemplateStore
-     */
     private TemplateStore $templates;
 
-    /**
-     * @var ValueDumper
-     */
     private ValueDumper $values;
 
     public function __construct()
@@ -61,11 +55,6 @@ class HtmlRenderer implements Renderer
         $this->values    = new ValueDumper();
     }
 
-    /**
-     * @param string $uri
-     *
-     * @return string
-     */
     public function getCssSources(string $uri): string
     {
         return $this->toInterpolate(
@@ -74,11 +63,6 @@ class HtmlRenderer implements Renderer
         );
     }
 
-    /**
-     * @param string $uri
-     *
-     * @return string
-     */
     public function getJsSources(string $uri): string
     {
         return $this->toInterpolate(
@@ -87,19 +71,11 @@ class HtmlRenderer implements Renderer
         );
     }
 
-    /**
-     * @param string $name
-     *
-     * @return string
-     */
     public function getTemplate(string $name): string
     {
         return $this->templates->get($name);
     }
 
-    /**
-     * @return string
-     */
     public function getVersion(): string
     {
         $version = new Version();
@@ -118,11 +94,6 @@ class HtmlRenderer implements Renderer
         );
     }
 
-    /**
-     * @param ExceptionReport $report
-     *
-     * @return string
-     */
     public function render(ExceptionReport $report): string
     {
         $className      = $report->getClassName();
@@ -169,12 +140,6 @@ class HtmlRenderer implements Renderer
             . $this->getTemplate('documentClose');
     }
 
-    /**
-     * @param string $name
-     * @param string $template
-     *
-     * @return static
-     */
     public function setTemplate(string $name, string $template): static
     {
         $this->templates->set($name, $template);
@@ -182,11 +147,6 @@ class HtmlRenderer implements Renderer
         return $this;
     }
 
-    /**
-     * @param int $bytes
-     *
-     * @return string
-     */
     private function formatBytes(int $bytes): string
     {
         return number_format($bytes / 1048576, 1);
@@ -194,10 +154,6 @@ class HtmlRenderer implements Renderer
 
     /**
      * Frames whose file lives outside a vendor directory are application code.
-     *
-     * @param string|null $file
-     *
-     * @return bool
      */
     private function isApp(string | null $file): bool
     {
@@ -206,8 +162,6 @@ class HtmlRenderer implements Renderer
 
     /**
      * @param BacktraceItem[] $backtrace
-     *
-     * @return string
      */
     private function renderBacktrace(array $backtrace): string
     {
@@ -219,11 +173,6 @@ class HtmlRenderer implements Renderer
         return $html . $this->getTemplate('panelClose');
     }
 
-    /**
-     * @param CodeFragment $fragment
-     *
-     * @return string
-     */
     private function renderFragment(CodeFragment $fragment): string
     {
         $firstLine = $fragment->getFirstLine();
@@ -257,8 +206,6 @@ class HtmlRenderer implements Renderer
 
     /**
      * @param list<string> $files
-     *
-     * @return string
      */
     private function renderIncludedFiles(array $files): string
     {
@@ -281,11 +228,6 @@ class HtmlRenderer implements Renderer
         return $html . $this->getTemplate('tableClose') . $this->getTemplate('panelClose');
     }
 
-    /**
-     * @param ExceptionReport $report
-     *
-     * @return string
-     */
     private function renderMemory(ExceptionReport $report): string
     {
         return $this->toInterpolate($this->getTemplate('panelOpen'), ['id' => 'memory'])
@@ -299,18 +241,13 @@ class HtmlRenderer implements Renderer
             . $this->getTemplate('panelClose');
     }
 
-    /**
-     * @param BacktraceItem $item
-     *
-     * @return string
-     */
     private function renderSignature(BacktraceItem $item): string
     {
         $html = '';
 
         if (null !== $item->getClassName()) {
-            $name = $this->values->escape($item->getClassName());
-            $link = $item->getClassLink();
+            $name      = $this->values->escape($item->getClassName());
+            $link      = $item->getClassLink();
             $classHtml = (null !== $link)
                 ? $this->toInterpolate($this->getTemplate('link'), ['url' => $link, 'name' => $name])
                 : $name;
@@ -319,8 +256,8 @@ class HtmlRenderer implements Renderer
             $html .= "<span class='op'>" . (string)$item->getType() . "</span>";
         }
 
-        $fnName = $this->values->escape($item->getFunctionName());
-        $fnLink = $item->getFunctionLink();
+        $fnName       = $this->values->escape($item->getFunctionName());
+        $fnLink       = $item->getFunctionLink();
         $functionHtml = (null !== $fnLink)
             ? $this->toInterpolate($this->getTemplate('link'), ['url' => $fnLink, 'name' => $fnName])
             : $fnName;
@@ -340,10 +277,7 @@ class HtmlRenderer implements Renderer
     }
 
     /**
-     * @param string                  $div
      * @param array<array-key, mixed> $source
-     *
-     * @return string
      */
     private function renderSuperglobal(string $div, array $source): string
     {
@@ -366,11 +300,6 @@ class HtmlRenderer implements Renderer
         return $html . $this->getTemplate('tableClose') . $this->getTemplate('panelClose');
     }
 
-    /**
-     * @param ExceptionReport $report
-     *
-     * @return string
-     */
     private function renderTabs(ExceptionReport $report): string
     {
         $variablesTab = '';
@@ -393,12 +322,6 @@ class HtmlRenderer implements Renderer
         );
     }
 
-    /**
-     * @param int           $index
-     * @param BacktraceItem $item
-     *
-     * @return string
-     */
     private function renderTraceItem(int $index, BacktraceItem $item): string
     {
         $isApp = $this->isApp($item->getFile());
@@ -434,8 +357,6 @@ class HtmlRenderer implements Renderer
 
     /**
      * @param array<array-key, mixed> $variables
-     *
-     * @return string
      */
     private function renderVariables(array $variables): string
     {

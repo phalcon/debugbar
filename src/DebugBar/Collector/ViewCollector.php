@@ -39,19 +39,10 @@ final class ViewCollector extends AbstractCollector implements Subscriber
 
     public const NAME = 'view';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-view';
 
-    /**
-     * @var string
-     */
     protected string $label = 'View';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'list';
 
     /**
@@ -83,11 +74,6 @@ final class ViewCollector extends AbstractCollector implements Subscriber
         ];
     }
 
-    /**
-     * @param ManagerInterface $eventsManager
-     *
-     * @return void
-     */
     public function subscribe(ManagerInterface $eventsManager): void
     {
         $eventsManager->attach(

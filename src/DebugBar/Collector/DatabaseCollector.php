@@ -40,19 +40,10 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
 
     public const NAME = 'database';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-database';
 
-    /**
-     * @var string
-     */
     protected string $label = 'Database';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'list';
 
     /**
@@ -60,9 +51,6 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
      */
     private array $queries = [];
 
-    /**
-     * @var float|int
-     */
     private float | int $started = 0;
 
     /**
@@ -87,7 +75,7 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
 
         foreach ($this->queries as $index => $query) {
             $occurrenceCount = $occurrences[$queryKeys[$index]];
-            $rows[] = [
+            $rows[]          = [
                 'label'       => $this->nanosToMs($query['time']),
                 'message'     => $this->formatQuery($query['sql'], $query['bindings']),
                 'occurrences' => $occurrenceCount > 1 ? $occurrenceCount : null,
@@ -105,11 +93,6 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
         ];
     }
 
-    /**
-     * @param ManagerInterface $eventsManager
-     *
-     * @return void
-     */
     public function subscribe(ManagerInterface $eventsManager): void
     {
         $eventsManager->attach(
@@ -137,10 +120,7 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
      * Appends the bound parameters (e.g. `:APL0`) to the statement so the panel
      * shows the actual values sent to the database.
      *
-     * @param string                  $sql
      * @param array<array-key, mixed> $bindings
-     *
-     * @return string
      */
     private function formatQuery(string $sql, array $bindings): string
     {

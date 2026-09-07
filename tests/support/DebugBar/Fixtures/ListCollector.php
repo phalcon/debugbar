@@ -22,9 +22,6 @@ final class ListCollector extends AbstractCollector
 {
     public const NAME = 'list_fixture';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'list';
 
     /**

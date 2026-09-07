@@ -19,11 +19,5 @@ namespace Phalcon\DebugBar\Contracts;
  */
 interface MessageAware
 {
-    /**
-     * @param mixed  $message
-     * @param string $label
-     *
-     * @return void
-     */
     public function addMessage(mixed $message, string $label): void;
 }

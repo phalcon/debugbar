@@ -22,10 +22,6 @@ final class ReportOptions
 {
     /**
      * @param array<array-key, mixed> $blacklist
-     * @param bool                    $showBackTrace
-     * @param bool                    $showFiles
-     * @param bool                    $showFileFragment
-     * @param string                  $uri
      * @param array<array-key, mixed> $data
      */
     public function __construct(
@@ -54,33 +50,21 @@ final class ReportOptions
         return $this->data;
     }
 
-    /**
-     * @return bool
-     */
     public function getShowBackTrace(): bool
     {
         return $this->showBackTrace;
     }
 
-    /**
-     * @return bool
-     */
     public function getShowFileFragment(): bool
     {
         return $this->showFileFragment;
     }
 
-    /**
-     * @return bool
-     */
     public function getShowFiles(): bool
     {
         return $this->showFiles;
     }
 
-    /**
-     * @return string
-     */
     public function getUri(): string
     {
         return $this->uri;

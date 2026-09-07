@@ -30,25 +30,12 @@ final class ConfigCollector extends AbstractCollector
 
     public const NAME = 'config';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-config';
 
-    /**
-     * @var string
-     */
     protected string $label = 'Config';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'grid';
 
-    /**
-     * @param ConfigInterface|null $config
-     * @param Redactor             $redactor
-     */
     public function __construct(
         private readonly ?ConfigInterface $config,
         private readonly Redactor $redactor

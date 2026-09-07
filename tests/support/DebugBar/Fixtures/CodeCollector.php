@@ -22,9 +22,6 @@ final class CodeCollector extends AbstractCollector
 {
     public const NAME = 'code_fixture';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'code';
 
     /**

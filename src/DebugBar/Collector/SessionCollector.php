@@ -37,24 +37,12 @@ final class SessionCollector extends AbstractCollector
 
     public const NAME = 'session';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-session';
 
-    /**
-     * @var string
-     */
     protected string $label = 'Session';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'grid';
 
-    /**
-     * @param Redactor $redactor
-     */
     public function __construct(private readonly Redactor $redactor)
     {
     }

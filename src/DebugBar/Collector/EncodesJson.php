@@ -23,11 +23,6 @@ use function json_encode;
  */
 trait EncodesJson
 {
-    /**
-     * @param mixed $value
-     *
-     * @return string
-     */
     private function jsonOrEmpty(mixed $value): string
     {
         $json = json_encode($value);

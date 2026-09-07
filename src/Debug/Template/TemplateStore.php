@@ -27,19 +27,12 @@ final class TemplateStore
      */
     private array $overrides = [];
 
-    /**
-     * @param TemplateCatalog $catalog
-     */
     public function __construct(private readonly TemplateCatalog $catalog)
     {
     }
 
     /**
      * Returns the override for the name if set, otherwise the catalog default.
-     *
-     * @param string $name
-     *
-     * @return string
      */
     public function get(string $name): string
     {
@@ -48,11 +41,6 @@ final class TemplateStore
 
     /**
      * Overrides the template for the given name.
-     *
-     * @param string $name
-     * @param string $template
-     *
-     * @return void
      */
     public function set(string $name, string $template): void
     {

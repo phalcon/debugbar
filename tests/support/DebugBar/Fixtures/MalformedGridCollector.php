@@ -23,9 +23,6 @@ final class MalformedGridCollector extends AbstractCollector
 {
     public const NAME = 'malformed_grid_fixture';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'grid';
 
     /**

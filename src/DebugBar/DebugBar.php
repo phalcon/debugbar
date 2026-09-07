@@ -51,10 +51,6 @@ class DebugBar
 
     /**
      * Registers (or replaces) a collector under its name.
-     *
-     * @param Collector $collector
-     *
-     * @return static
      */
     public function addCollector(Collector $collector): static
     {
@@ -63,11 +59,6 @@ class DebugBar
         return $this;
     }
 
-    /**
-     * @param Throwable $throwable
-     *
-     * @return static
-     */
     public function addException(Throwable $throwable): static
     {
         $collector = $this->collectors['exceptions'] ?? null;
@@ -79,11 +70,7 @@ class DebugBar
     }
 
     /**
-     * @param string                  $message
-     * @param string                  $level
      * @param array<array-key, mixed> $context
-     *
-     * @return static
      */
     public function addLog(string $message, string $level, array $context = []): static
     {
@@ -117,11 +104,6 @@ class DebugBar
         return $this->data;
     }
 
-    /**
-     * @param mixed ...$args
-     *
-     * @return static
-     */
     public function debug(mixed ...$args): static
     {
         foreach ($args as $arg) {
@@ -131,11 +113,6 @@ class DebugBar
         return $this;
     }
 
-    /**
-     * @param mixed ...$args
-     *
-     * @return static
-     */
     public function error(mixed ...$args): static
     {
         foreach ($args as $arg) {
@@ -146,9 +123,6 @@ class DebugBar
     }
 
     /**
-     * @param string $name
-     *
-     * @return Collector
      * @throws Exception when no collector is registered under $name
      */
     public function getCollector(string $name): Collector
@@ -178,21 +152,11 @@ class DebugBar
         return $this->data;
     }
 
-    /**
-     * @param string $name
-     *
-     * @return bool
-     */
     public function hasCollector(string $name): bool
     {
         return isset($this->collectors[$name]);
     }
 
-    /**
-     * @param mixed ...$args
-     *
-     * @return static
-     */
     public function info(mixed ...$args): static
     {
         foreach ($args as $arg) {
@@ -202,12 +166,6 @@ class DebugBar
         return $this;
     }
 
-    /**
-     * @param mixed  $message
-     * @param string $label
-     *
-     * @return static
-     */
     public function message(mixed $message, string $label = 'info'): static
     {
         $collector = $this->collectors['messages'] ?? null;
@@ -218,11 +176,6 @@ class DebugBar
         return $this;
     }
 
-    /**
-     * @param mixed ...$args
-     *
-     * @return static
-     */
     public function notice(mixed ...$args): static
     {
         foreach ($args as $arg) {
@@ -232,11 +185,6 @@ class DebugBar
         return $this;
     }
 
-    /**
-     * @param string $name
-     *
-     * @return static
-     */
     public function removeCollector(string $name): static
     {
         unset($this->collectors[$name]);
@@ -244,12 +192,6 @@ class DebugBar
         return $this;
     }
 
-    /**
-     * @param string      $name
-     * @param string|null $label
-     *
-     * @return static
-     */
     public function startMeasure(string $name, ?string $label = null): static
     {
         $collector = $this->collectors['time'] ?? null;
@@ -260,11 +202,6 @@ class DebugBar
         return $this;
     }
 
-    /**
-     * @param string $name
-     *
-     * @return static
-     */
     public function stopMeasure(string $name): static
     {
         $collector = $this->collectors['time'] ?? null;
@@ -275,11 +212,6 @@ class DebugBar
         return $this;
     }
 
-    /**
-     * @param mixed ...$args
-     *
-     * @return static
-     */
     public function warning(mixed ...$args): static
     {
         foreach ($args as $arg) {

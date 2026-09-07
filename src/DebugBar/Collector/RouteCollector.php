@@ -33,24 +33,12 @@ final class RouteCollector extends AbstractCollector implements Subscriber
 
     public const NAME = 'route';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-route';
 
-    /**
-     * @var string
-     */
     protected string $label = 'Route';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'grid';
 
-    /**
-     * @var RouterInterface|null
-     */
     private ?RouterInterface $router = null;
 
     /**
@@ -77,11 +65,6 @@ final class RouteCollector extends AbstractCollector implements Subscriber
         ];
     }
 
-    /**
-     * @param ManagerInterface $eventsManager
-     *
-     * @return void
-     */
     public function subscribe(ManagerInterface $eventsManager): void
     {
         $eventsManager->attach(

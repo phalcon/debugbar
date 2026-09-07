@@ -77,9 +77,6 @@ class Dump implements TemplateAware
 {
     use InterpolateTrait;
 
-    /**
-     * @var bool
-     */
     protected bool $detailed = false;
 
     /**
@@ -87,21 +84,14 @@ class Dump implements TemplateAware
      */
     protected array $styles = [];
 
-    /**
-     * @var Encode
-     */
     private Encode $encode;
 
-    /**
-     * @var TemplateStore
-     */
     private TemplateStore $templates;
 
     /**
      * Dump constructor.
      *
      * @param array<string, string> $styles
-     * @param bool                  $detailed
      */
     public function __construct(array $styles = [], bool $detailed = false)
     {
@@ -116,9 +106,6 @@ class Dump implements TemplateAware
     /**
      * Alias of variables() method
      *
-     * @param mixed ...$vars
-     *
-     * @return string
      * @throws ReflectionException
      */
     public function all(mixed ...$vars): string
@@ -126,19 +113,11 @@ class Dump implements TemplateAware
         return $this->variables(...$vars);
     }
 
-    /**
-     * @return bool
-     */
     public function getDetailed(): bool
     {
         return $this->detailed;
     }
 
-    /**
-     * @param string $name
-     *
-     * @return string
-     */
     public function getTemplate(string $name): string
     {
         return $this->templates->get($name);
@@ -147,10 +126,6 @@ class Dump implements TemplateAware
     /**
      * Alias of variable() method
      *
-     * @param mixed       $variable
-     * @param string|null $name
-     *
-     * @return string
      * @throws ReflectionException
      */
     public function one(mixed $variable, string | null $name = null): string
@@ -158,9 +133,6 @@ class Dump implements TemplateAware
         return $this->variable($variable, $name);
     }
 
-    /**
-     * @param bool $flag
-     */
     public function setDetailed(bool $flag): void
     {
         $this->detailed = $flag;
@@ -198,11 +170,6 @@ class Dump implements TemplateAware
 
     /**
      * Overrides the template for the given name.
-     *
-     * @param string $name
-     * @param string $template
-     *
-     * @return static
      */
     public function setTemplate(string $name, string $template): static
     {
@@ -227,9 +194,6 @@ class Dump implements TemplateAware
      * echo (new \Phalcon\Debug\Dump())->toJson($foo);
      * ```
      *
-     * @param mixed $variable
-     *
-     * @return string
      * @throws InvalidArgumentException if the JSON cannot be encoded.
      * @throws JsonException
      */
@@ -248,10 +212,6 @@ class Dump implements TemplateAware
      * echo (new \Phalcon\Debug\Dump())->variable($foo, "foo");
      * ```
      *
-     * @param mixed       $variable
-     * @param string|null $name
-     *
-     * @return string
      * @throws ReflectionException
      */
     public function variable(mixed $variable, string | null $name = null): string
@@ -273,9 +233,6 @@ class Dump implements TemplateAware
      * echo (new \Phalcon\Debug\Dump())->variables($foo, $bar, $baz);
      * ```
      *
-     * @param mixed ...$vars
-     *
-     * @return string
      * @throws ReflectionException
      */
     public function variables(mixed ...$vars): string
@@ -293,12 +250,8 @@ class Dump implements TemplateAware
     /**
      * Prepare an HTML string of information about a single variable.
      *
-     * @param mixed                    $variable
-     * @param string|null              $name
-     * @param int                      $tab
      * @param array<class-string, bool> $seen
      *
-     * @return string
      * @throws ReflectionException
      */
     protected function formatValue(
@@ -324,10 +277,6 @@ class Dump implements TemplateAware
 
     /**
      * Get style for type
-     *
-     * @param string $type
-     *
-     * @return string
      */
     protected function getStyle(string $type): string
     {
@@ -340,11 +289,8 @@ class Dump implements TemplateAware
 
     /**
      * @param array<array-key, mixed>   $variable
-     * @param string|null               $name
-     * @param int                       $tab
      * @param array<class-string, bool> $seen
      *
-     * @return string
      * @throws ReflectionException
      */
     private function formatArray(array $variable, string | null $name, int $tab, array &$seen): string
@@ -382,31 +328,16 @@ class Dump implements TemplateAware
         return $output . str_repeat($space, $tab - 1) . ')';
     }
 
-    /**
-     * @param bool $variable
-     *
-     * @return string
-     */
     private function formatBoolean(bool $variable): string
     {
         return $this->formatLabeledValue('Boolean', 'bool', ($variable) ? 'TRUE' : 'FALSE');
     }
 
-    /**
-     * @param float $variable
-     *
-     * @return string
-     */
     private function formatFloat(float $variable): string
     {
         return $this->formatLabeledValue('Float', 'float', (string) $variable);
     }
 
-    /**
-     * @param int $variable
-     *
-     * @return string
-     */
     private function formatInteger(int $variable): string
     {
         return $this->formatLabeledValue('Integer', 'int', (string) $variable);
@@ -415,12 +346,6 @@ class Dump implements TemplateAware
     /**
      * Formats the near-identical int/float/bool leaves that share the
      * bold-label plus parenthesized-value shape.
-     *
-     * @param string $label
-     * @param string $styleType
-     * @param string $value
-     *
-     * @return string
      */
     private function formatLabeledValue(string $label, string $styleType, string $value): string
     {
@@ -433,9 +358,6 @@ class Dump implements TemplateAware
         return $this->toInterpolate($message, $context);
     }
 
-    /**
-     * @return string
-     */
     private function formatNull(): string
     {
         return $this->toInterpolate(
@@ -444,11 +366,6 @@ class Dump implements TemplateAware
         );
     }
 
-    /**
-     * @param string $variable
-     *
-     * @return string
-     */
     private function formatNumericString(string $variable): string
     {
         $message = $this->renderBoldLabel('Numeric String') . ' ' . $this->getTemplate('lengthValue');
@@ -462,11 +379,8 @@ class Dump implements TemplateAware
     }
 
     /**
-     * @param object                    $variable
-     * @param int                       $tab
      * @param array<class-string, bool> $seen
      *
-     * @return string
      * @throws ReflectionException
      */
     private function formatObject(object $variable, int $tab, array &$seen): string
@@ -496,11 +410,7 @@ class Dump implements TemplateAware
     }
 
     /**
-     * @param object                    $variable
-     * @param int                       $tab
      * @param array<class-string, bool> $seen
-     *
-     * @return string
      */
     private function formatObjectMethods(object $variable, int $tab, array &$seen): string
     {
@@ -541,11 +451,8 @@ class Dump implements TemplateAware
     }
 
     /**
-     * @param object                    $variable
-     * @param int                       $tab
      * @param array<class-string, bool> $seen
      *
-     * @return string
      * @throws ReflectionException
      */
     private function formatObjectProperties(object $variable, int $tab, array &$seen): string
@@ -567,11 +474,8 @@ class Dump implements TemplateAware
     }
 
     /**
-     * @param object                    $variable
-     * @param int                       $tab
      * @param array<class-string, bool> $seen
      *
-     * @return string
      * @throws ReflectionException
      */
     private function formatPublicProperties(object $variable, int $tab, array &$seen): string
@@ -598,11 +502,8 @@ class Dump implements TemplateAware
     }
 
     /**
-     * @param object                    $variable
-     * @param int                       $tab
      * @param array<class-string, bool> $seen
      *
-     * @return string
      * @throws ReflectionException
      */
     private function formatReflectedProperties(object $variable, int $tab, array &$seen): string
@@ -639,11 +540,6 @@ class Dump implements TemplateAware
         return $output;
     }
 
-    /**
-     * @param mixed $variable
-     *
-     * @return string
-     */
     private function formatResource(mixed $variable): string
     {
         /** @var resource $variable */
@@ -656,11 +552,6 @@ class Dump implements TemplateAware
         return $this->toInterpolate($message, $context);
     }
 
-    /**
-     * @param string $variable
-     *
-     * @return string
-     */
     private function formatString(string $variable): string
     {
         $message = $this->renderBoldLabel('String') . ' ' . $this->getTemplate('lengthValue');
@@ -673,11 +564,6 @@ class Dump implements TemplateAware
         return $this->toInterpolate($message, $context);
     }
 
-    /**
-     * @param string $text
-     *
-     * @return string
-     */
     private function renderBoldLabel(string $text): string
     {
         return $this->toInterpolate(
@@ -691,11 +577,8 @@ class Dump implements TemplateAware
      * $seen guard so classes already listed earlier in the same top-level dump
      * are collapsed to "[already listed]".
      *
-     * @param mixed                     $variable
-     * @param string|null               $name
      * @param array<class-string, bool> $seen
      *
-     * @return string
      * @throws ReflectionException
      */
     private function renderPreBlock(mixed $variable, string | null $name, array &$seen): string

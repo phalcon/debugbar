@@ -33,25 +33,12 @@ final class RequestCollector extends AbstractCollector
 
     public const NAME = 'request';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-request';
 
-    /**
-     * @var string
-     */
     protected string $label = 'Request';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'grid';
 
-    /**
-     * @param RequestInterface|null $request
-     * @param Redactor              $redactor
-     */
     public function __construct(
         private readonly ?RequestInterface $request,
         private readonly Redactor $redactor
@@ -94,8 +81,6 @@ final class RequestCollector extends AbstractCollector
     }
 
     /**
-     * @param mixed $value
-     *
      * @return array<array-key, mixed>
      */
     private function toArray(mixed $value): array

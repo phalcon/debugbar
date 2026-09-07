@@ -34,26 +34,15 @@ use Phalcon\Logger\Item;
  */
 final class Adapter extends AbstractAdapter
 {
-    /**
-     * @param DebugBar|null $bar
-     */
     public function __construct(private readonly ?DebugBar $bar = null)
     {
     }
 
-    /**
-     * @return bool
-     */
     public function close(): bool
     {
         return true;
     }
 
-    /**
-     * @param Item $item
-     *
-     * @return void
-     */
     public function process(Item $item): void
     {
         $this->bar?->addLog($item->getMessage(), $item->getLevelName(), $item->getContext());

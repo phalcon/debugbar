@@ -398,10 +398,7 @@ final class ProviderTest extends AbstractUnitTestCase
     }
 
     /**
-     * @param Manager               $em
      * @param array<string, object> $services
-     *
-     * @return Application
      */
     private function applicationWithServices(Manager $em, array $services): Application
     {

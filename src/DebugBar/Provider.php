@@ -71,38 +71,19 @@ class Provider
      */
     private array $collectorsConfig;
 
-    /**
-     * @var bool
-     */
     private bool $enabled;
 
-    /**
-     * @var string
-     */
     private string $envVar;
 
-    /**
-     * @var bool
-     */
     private bool $headers;
 
-    /**
-     * @var string|null
-     */
     private ?string $nonce;
 
-    /**
-     * @var Redactor
-     */
     private Redactor $redactor;
 
-    /**
-     * @var bool
-     */
     private bool $strict;
 
     /**
-     * @param Application     $app
      * @param provider_config $config
      */
     public function __construct(private readonly Application $app, array $config = [])
@@ -132,7 +113,6 @@ class Provider
      * it, and - when the app has an EventsManager - subscribes the streamed
      * collectors and attaches the response listener.
      *
-     * @return void
      * @throws CannotUseInProduction When `env.strict` is set and the environment is blocked or undefined.
      */
     public function boot(): void
@@ -188,8 +168,6 @@ class Provider
 
     /**
      * Whether the resolved environment permits the bar (present and not blocked).
-     *
-     * @return bool
      */
     public function isAllowed(): bool
     {
@@ -203,9 +181,6 @@ class Provider
 
     /**
      * Builds the enabled collectors (per the config map; all on by default).
-     *
-     * @param DiInterface|null      $container
-     * @param RequestInterface|null $request
      *
      * @return list<Collector>
      */
@@ -264,21 +239,11 @@ class Provider
         return $collectors;
     }
 
-    /**
-     * @param string $name
-     *
-     * @return bool
-     */
     private function isCollectorEnabled(string $name): bool
     {
         return $this->collectorsConfig[$name] ?? true;
     }
 
-    /**
-     * @param DiInterface $container
-     *
-     * @return ConfigInterface|null
-     */
     private function resolveConfig(DiInterface $container): ?ConfigInterface
     {
         if (!$container->has('config')) {
@@ -290,9 +255,6 @@ class Provider
         return $config instanceof ConfigInterface ? $config : null;
     }
 
-    /**
-     * @return string
-     */
     private function resolveEnv(): string
     {
         $candidates = [
@@ -310,11 +272,6 @@ class Provider
         return '';
     }
 
-    /**
-     * @param DiInterface|null $container
-     *
-     * @return RequestInterface|null
-     */
     private function resolveRequest(?DiInterface $container): ?RequestInterface
     {
         if (null === $container || !$container->has('request')) {

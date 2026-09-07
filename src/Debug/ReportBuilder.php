@@ -47,11 +47,6 @@ class ReportBuilder
     use InfoTrait;
 
     /**
-     * @param Throwable     $exception
-     * @param ReportOptions $options
-     * @param Superglobals  $superglobals
-     *
-     * @return ExceptionReport
      * @throws ReflectionException
      */
     public function build(
@@ -105,13 +100,6 @@ class ReportBuilder
         return $report;
     }
 
-    /**
-     * @param string $file
-     * @param int    $line
-     * @param bool   $showFileFragment
-     *
-     * @return CodeFragment
-     */
     private function buildFragment(string $file, int $line, bool $showFileFragment): CodeFragment
     {
         $lines = file($file);
@@ -146,10 +134,7 @@ class ReportBuilder
      *     args?: array<array-key, mixed>,
      *     object?: object
      * } $trace
-     * @param bool  $showFiles
-     * @param bool  $showFileFragment
      *
-     * @return BacktraceItem
      * @throws ReflectionException
      */
     private function buildItem(array $trace, bool $showFiles, bool $showFileFragment): BacktraceItem
@@ -220,7 +205,6 @@ class ReportBuilder
     /**
      * @param class-string $className
      *
-     * @return string|null
      * @throws ReflectionException
      */
     private function resolveClassLink(string $className): string | null
@@ -242,9 +226,6 @@ class ReportBuilder
     }
 
     /**
-     * @param string $functionName
-     *
-     * @return string|null
      * @throws ReflectionException
      */
     private function resolveFunctionLink(string $functionName): string | null

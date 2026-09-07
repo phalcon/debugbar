@@ -27,24 +27,12 @@ abstract class AbstractCollector implements Renderable
 {
     public const NAME = '';
 
-    /**
-     * @var string
-     */
     protected string $icon = '';
 
-    /**
-     * @var string
-     */
     protected string $label = '';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'grid';
 
-    /**
-     * @return string
-     */
     public function getName(): string
     {
         /** @var string $name */

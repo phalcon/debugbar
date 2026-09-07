@@ -25,9 +25,6 @@ final class RecordingMessagesCollector extends AbstractCollector implements Mess
 {
     public const NAME = 'messages';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'list';
 
     /**

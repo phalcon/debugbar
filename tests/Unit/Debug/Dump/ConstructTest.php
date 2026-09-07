@@ -28,7 +28,7 @@ final class ConstructTest extends AbstractUnitTestCase
     public function testSupportDebugDumpConstructDump(): void
     {
         $patient = new ClassProperties();
-        $dump = new Dump([], true);
+        $dump    = new Dump([], true);
 
         /** @var string $actual */
         $actual = $this->callProtectedMethod($dump, 'formatValue', $patient);
