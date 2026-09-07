@@ -98,13 +98,11 @@
             var value = el('td', 'phalcon-debugbar-value');
             var occurrences = Number(row.occurrences);
 
-            if (occurrences > 1) {
-                tr.classList.add('is-duplicate');
-            }
-
             tr.appendChild(el('td', 'phalcon-debugbar-key', scalar(row.label)));
             value.appendChild(el('span', 'phalcon-debugbar-message', scalar(row.message)));
             if (occurrences > 1) {
+                tr.classList.add('is-duplicate');
+
                 value.appendChild(el(
                     'span',
                     'phalcon-debugbar-duplicate-count',
