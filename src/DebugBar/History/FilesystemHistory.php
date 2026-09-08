@@ -19,30 +19,27 @@ use DateTimeZone;
 use function array_slice;
 use function basename;
 use function bin2hex;
-use function file_get_contents;
-use function file_put_contents;
 use function glob;
 use function hash;
 use function is_array;
 use function is_dir;
 use function is_file;
-use function is_string;
 use function json_decode;
 use function json_encode;
+use function min;
 use function mkdir;
 use function preg_match;
 use function random_bytes;
-use function rename;
 use function rsort;
 use function session_id;
 use function session_status;
+use function str_ends_with;
 use function time;
-use function unlink;
 
+use const GLOB_ONLYDIR;
 use const JSON_PRETTY_PRINT;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
-use const LOCK_EX;
 use const PHP_SESSION_ACTIVE;
 
 /**
@@ -64,11 +61,21 @@ use const PHP_SESSION_ACTIVE;
  */
 final class FilesystemHistory
 {
+    private const GARBAGE_COLLECTION_MARKER               = '.gc';
+    private const GARBAGE_COLLECTION_MAX_INTERVAL_SECONDS = 3600;
+    private const METADATA_SUFFIX                         = '.meta';
+
+    private readonly HistoryFileOperations $fileOperations;
+    private bool $garbageCollectionAttempted = false;
+
     /**
      * @param HistoryOptions $options
      */
-    public function __construct(private readonly HistoryOptions $options)
-    {
+    public function __construct(
+        private readonly HistoryOptions $options,
+        ?HistoryFileOperations $fileOperations = null
+    ) {
+        $this->fileOperations = $fileOperations ?? new NativeHistoryFileOperations();
     }
 
     /**
@@ -78,6 +85,10 @@ final class FilesystemHistory
      */
     public function clear(): int
     {
+        if (PHP_SESSION_ACTIVE !== session_status()) {
+            return 0;
+        }
+
         $directory = $this->sessionDirectory(false);
         if (null === $directory) {
             return 0;
@@ -85,10 +96,18 @@ final class FilesystemHistory
 
         $removed = 0;
         foreach ($this->files($directory) as $file) {
-            if (@unlink($file)) {
+            if ($this->fileOperations->remove($file)) {
                 $removed++;
             }
+            $this->fileOperations->remove($this->metadataFile($file));
         }
+        foreach ($this->metadataFiles($directory) as $file) {
+            $this->fileOperations->remove($file);
+        }
+        foreach ($this->temporaryFiles($directory) as $file) {
+            $this->fileOperations->remove($file);
+        }
+        $this->removeDirectoryIfEmpty($directory);
 
         return $removed;
     }
@@ -98,20 +117,23 @@ final class FilesystemHistory
      */
     public function find(): array
     {
+        if (PHP_SESSION_ACTIVE !== session_status()) {
+            return [];
+        }
+
         $directory = $this->sessionDirectory(false);
         if (null === $directory) {
             return [];
         }
-
-        $files = $this->files($directory);
-        $this->removeExpired($files);
-        $files = array_slice($this->files($directory), 0, $this->options->maxRequests);
+        $files = $this->removeExpired($this->files($directory));
+        rsort($files, SORT_STRING);
+        $files = array_slice($files, 0, $this->options->maxRequests);
 
         $requests = [];
         foreach ($files as $file) {
-            $entry = $this->read($file);
-            if (null !== $entry) {
-                $requests[] = $entry['meta'];
+            $metadata = $this->readMetadata($file);
+            if (null !== $metadata) {
+                $requests[] = $metadata;
             }
         }
 
@@ -129,12 +151,23 @@ final class FilesystemHistory
             return null;
         }
 
+        if (PHP_SESSION_ACTIVE !== session_status()) {
+            return null;
+        }
+
         $directory = $this->sessionDirectory(false);
         if (null === $directory) {
             return null;
         }
+        $file = $directory . '/' . basename($id) . '.json';
+        if ($this->isExpired($file)) {
+            $this->removeEntry($file);
+            $this->removeDirectoryIfEmpty($directory);
 
-        return $this->read($directory . '/' . basename($id) . '.json');
+            return null;
+        }
+
+        return $this->read($file);
     }
 
     /**
@@ -145,45 +178,50 @@ final class FilesystemHistory
      */
     public function save(array $payload, RequestMetadata $request): ?string
     {
+        if (PHP_SESSION_ACTIVE !== session_status()) {
+            return null;
+        }
+
         $directory = $this->sessionDirectory(true);
         if (null === $directory) {
             return null;
         }
 
-        $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
-        $id  = $now->format('YmdHis-u-') . bin2hex(random_bytes(4));
+        $storedAt   = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $requestedAt = $request->requestedAt ?? $storedAt;
+        $id         = $storedAt->format('YmdHis-u-') . bin2hex(random_bytes(4));
 
         $entry = [
             'meta' => [
-                'requested_at' => $now->format(DATE_ATOM),
+                'requested_at' => $requestedAt->format(DATE_ATOM),
                 'method'       => $request->method,
                 'uri'          => $request->uri,
                 'status'       => $request->status,
                 'ajax'         => $request->ajax,
                 'id'           => $id,
-                'stored_at'    => $now->format(DATE_ATOM),
+                'stored_at'    => $storedAt->format(DATE_ATOM),
             ],
             'payload' => $payload,
         ];
 
-        $json = json_encode($entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        if (false === $json) {
+        $flags        = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+        $json         = json_encode($entry, $flags);
+        $metadataJson = json_encode($entry['meta'], $flags);
+        if (false === $json || false === $metadataJson) {
+            $this->removeDirectoryIfEmpty($directory);
+
             return null;
         }
 
-        $target    = $directory . '/' . $id . '.json';
-        $temporary = $target . '.tmp-' . bin2hex(random_bytes(4));
-        if (false === file_put_contents($temporary, $json, LOCK_EX)) {
-            return null;
-        }
-
-        if (!rename($temporary, $target)) {
-            @unlink($temporary);
+        $target = $directory . '/' . $id . '.json';
+        if (!$this->saveFiles($target, $json, $metadataJson)) {
+            $this->removeDirectoryIfEmpty($directory);
 
             return null;
         }
 
         $this->prune($directory);
+        $this->garbageCollect();
 
         return $id;
     }
@@ -195,14 +233,68 @@ final class FilesystemHistory
      */
     private function files(string $directory): array
     {
-        $files = glob($directory . '/*.json');
-        if (false === $files) {
-            return [];
+        return @glob($directory . '/*.json') ?: [];
+    }
+
+    private function garbageCollect(): void
+    {
+        if ($this->garbageCollectionAttempted) {
+            return;
         }
 
-        rsort($files, SORT_STRING);
+        $this->garbageCollectionAttempted = true;
+        $marker                           = $this->options->path . '/' . self::GARBAGE_COLLECTION_MARKER;
+        $modified                         = @filemtime($marker);
+        $interval                         = min(
+            $this->options->ttlSeconds,
+            self::GARBAGE_COLLECTION_MAX_INTERVAL_SECONDS
+        );
+        if (false !== $modified && $modified >= time() - $interval) {
+            return;
+        }
 
-        return $files;
+        if (!$this->fileOperations->write($marker, (string) time())) {
+            return;
+        }
+
+        foreach ($this->sessionDirectories() as $directory) {
+            $storedFiles = [
+                ...$this->files($directory),
+                ...$this->metadataFiles($directory),
+                ...$this->temporaryFiles($directory),
+            ];
+            foreach ($storedFiles as $file) {
+                if ($this->isExpired($file)) {
+                    if (str_ends_with($file, '.json')) {
+                        $this->removeEntry($file);
+                    } else {
+                        $this->fileOperations->remove($file);
+                    }
+                }
+            }
+
+            $this->removeDirectoryIfEmpty($directory);
+        }
+    }
+
+    private function isExpired(string $file): bool
+    {
+        $modified = @filemtime($file);
+
+        return false !== $modified && $modified < time() - $this->options->ttlSeconds;
+    }
+
+    private function metadataFile(string $file): string
+    {
+        return $file . self::METADATA_SUFFIX;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function metadataFiles(string $directory): array
+    {
+        return @glob($directory . '/*.json' . self::METADATA_SUFFIX) ?: [];
     }
 
     /**
@@ -212,11 +304,10 @@ final class FilesystemHistory
      */
     private function prune(string $directory): void
     {
-        $files = $this->files($directory);
-        $this->removeExpired($files);
-
-        foreach (array_slice($this->files($directory), $this->options->maxRequests) as $file) {
-            @unlink($file);
+        $files = $this->removeExpired($this->files($directory));
+        rsort($files, SORT_STRING);
+        foreach (array_slice($files, $this->options->maxRequests) as $file) {
+            $this->removeEntry($file);
         }
     }
 
@@ -231,7 +322,7 @@ final class FilesystemHistory
             return null;
         }
 
-        $json = file_get_contents($file);
+        $json = $this->fileOperations->read($file);
         if (false === $json) {
             return null;
         }
@@ -253,20 +344,98 @@ final class FilesystemHistory
     }
 
     /**
-     * @param list<string> $files
-     *
-     * @return void
+     * @return array<string, mixed>|null
      */
-    private function removeExpired(array $files): void
+    private function readMetadata(string $file): ?array
     {
-        $oldest = time() - $this->options->ttlSeconds;
-
-        foreach ($files as $file) {
-            $modified = @filemtime($file);
-            if (false !== $modified && $modified < $oldest) {
-                @unlink($file);
+        $metadataFile = $this->metadataFile($file);
+        if (is_file($metadataFile)) {
+            $json = $this->fileOperations->read($metadataFile);
+            if (false !== $json) {
+                $metadata = json_decode($json, true);
+                if (is_array($metadata)) {
+                    /** @var array<string, mixed> $metadata */
+                    return $metadata;
+                }
             }
         }
+
+        $entry = $this->read($file);
+
+        return null === $entry ? null : $entry['meta'];
+    }
+
+    private function removeDirectoryIfEmpty(string $directory): void
+    {
+        if ([] === (@glob($directory . '/*') ?: [])) {
+            $this->fileOperations->removeDirectory($directory);
+        }
+    }
+
+    private function removeEntry(string $file): void
+    {
+        $this->fileOperations->remove($file);
+        $this->fileOperations->remove($this->metadataFile($file));
+    }
+
+    /**
+     * @param list<string> $files
+     *
+     * @return list<string>
+     */
+    private function removeExpired(array $files): array
+    {
+        $remaining = [];
+        foreach ($files as $file) {
+            if ($this->isExpired($file)) {
+                $this->removeEntry($file);
+                continue;
+            }
+
+            $remaining[] = $file;
+        }
+
+        return $remaining;
+    }
+
+    private function saveFiles(string $target, string $json, string $metadataJson): bool
+    {
+        $metadataTarget    = $this->metadataFile($target);
+        $metadataTemporary = $metadataTarget . '.tmp-' . bin2hex(random_bytes(4));
+        $temporary         = $target . '.tmp-' . bin2hex(random_bytes(4));
+        if (!$this->fileOperations->write($temporary, $json)) {
+            $this->fileOperations->remove($temporary);
+
+            return false;
+        }
+        if (!$this->fileOperations->write($metadataTemporary, $metadataJson)) {
+            $this->fileOperations->remove($metadataTemporary);
+            $this->fileOperations->remove($temporary);
+
+            return false;
+        }
+        if (!$this->fileOperations->move($metadataTemporary, $metadataTarget)) {
+            $this->fileOperations->remove($metadataTemporary);
+            $this->fileOperations->remove($temporary);
+
+            return false;
+        }
+        if (!$this->fileOperations->move($temporary, $target)) {
+            $this->fileOperations->remove($temporary);
+            $this->fileOperations->remove($metadataTarget);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function sessionDirectories(): array
+    {
+        return @glob($this->options->path . '/*', GLOB_ONLYDIR) ?: [];
     }
 
     /**
@@ -276,16 +445,7 @@ final class FilesystemHistory
      */
     private function sessionDirectory(bool $create): ?string
     {
-        if (PHP_SESSION_ACTIVE !== session_status()) {
-            return null;
-        }
-
-        $sessionId = session_id();
-        if (!is_string($sessionId) || '' === $sessionId) {
-            return null;
-        }
-
-        $directory = $this->options->path . '/' . hash('sha256', $sessionId);
+        $directory = $this->options->path . '/' . hash('sha256', (string) session_id());
         if (is_dir($directory)) {
             return $directory;
         }
@@ -295,5 +455,13 @@ final class FilesystemHistory
         }
 
         return $directory;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function temporaryFiles(string $directory): array
+    {
+        return @glob($directory . '/*.tmp-*') ?: [];
     }
 }

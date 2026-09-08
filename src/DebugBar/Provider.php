@@ -37,6 +37,7 @@ use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Di\DiInterface;
 use Phalcon\Http\RequestInterface;
+use Phalcon\Http\ResponseInterface;
 use Phalcon\Mvc\Application;
 use Phalcon\Mvc\RouterInterface;
 
@@ -55,7 +56,7 @@ use function mb_strtolower;
  */
 class Provider
 {
-    public const ACCESS_GATE_SERVICE = 'debugbar.accessGate';
+    public const ACCESS_GATE_SERVICE = 'debugbar.access_gate';
     public const HISTORY_SERVICE     = 'debugbar.history';
 
     /**
@@ -152,7 +153,7 @@ class Provider
         $container  = $this->app->getDI();
         $request    = $this->resolveRequest($container);
         $accessGate = new AccessGate($this->allowedIps, $this->accessCallback);
-        $history    = $this->registerHistory($container, $accessGate);
+        $history    = $this->registerHistory($container, $accessGate, $request);
 
         $bar = new DebugBar();
         foreach ($this->buildCollectors($container, $request) as $collector) {
@@ -272,18 +273,24 @@ class Provider
      * Registers the internal history module and its MVC route. History stays
      * disabled when the app has no compatible container/router.
      */
-    private function registerHistory(?DiInterface $container, AccessGate $accessGate): ?FilesystemHistory
-    {
+    private function registerHistory(
+        ?DiInterface $container,
+        AccessGate $accessGate,
+        ?RequestInterface $request
+    ): ?FilesystemHistory {
         if (
             !$this->historyOptions->enabled
             || null === $container
+            || null === $request
             || !$container->has('router')
+            || !$container->has('response')
         ) {
             return null;
         }
 
-        $router = $container->getShared('router');
-        if (!$router instanceof RouterInterface) {
+        $router   = $container->getShared('router');
+        $response = $container->getShared('response');
+        if (!$router instanceof RouterInterface || !$response instanceof ResponseInterface) {
             return null;
         }
 
@@ -295,19 +302,19 @@ class Provider
             $this->historyOptions->url,
             [
                 'namespace'  => 'Phalcon\\DebugBar\\Controllers',
-                'controller' => 'openHandler',
+                'controller' => 'history',
                 'action'     => 'index',
             ]
-        )->setName('debugbar.openhandler');
+        )->setName('debugbar.history.index');
 
         $router->addDelete(
             $this->historyOptions->url,
             [
                 'namespace'  => 'Phalcon\\DebugBar\\Controllers',
-                'controller' => 'openHandler',
+                'controller' => 'history',
                 'action'     => 'clear',
             ]
-        )->setName('debugbar.clearhistory');
+        )->setName('debugbar.history.clear');
 
         return $history;
     }

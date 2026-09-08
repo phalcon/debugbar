@@ -236,7 +236,56 @@
         return requestJson(url, {});
     }
 
-    function renderHistoryBrowser(mount, panel, selectedId, onSelect, onClear) {
+    function createHistoryRequestGuard(isCurrent) {
+        var clearInProgress = false;
+        var listGeneration = 0;
+        var detailGeneration = 0;
+
+        return {
+            startList: function () {
+                if (clearInProgress) {
+                    return null;
+                }
+
+                detailGeneration++;
+                return ++listGeneration;
+            },
+            startDetail: function () {
+                if (clearInProgress) {
+                    return null;
+                }
+
+                return ++detailGeneration;
+            },
+            startClear: function () {
+                if (clearInProgress) {
+                    return null;
+                }
+
+                clearInProgress = true;
+                detailGeneration++;
+
+                return ++listGeneration;
+            },
+            finishClear: function (generation) {
+                if (!clearInProgress || !isCurrent() || generation !== listGeneration) {
+                    return false;
+                }
+
+                clearInProgress = false;
+
+                return true;
+            },
+            isListCurrent: function (generation) {
+                return isCurrent() && generation === listGeneration;
+            },
+            isDetailCurrent: function (generation) {
+                return isCurrent() && generation === detailGeneration;
+            }
+        };
+    }
+
+    function renderHistoryBrowser(mount, panel, selectedId, onSelect, onClear, isCurrent) {
         mount.innerHTML = '';
 
         var url = panel && typeof panel.url === 'string' ? panel.url : '';
@@ -252,8 +301,10 @@
         var refreshButton = el('button', 'phalcon-debugbar-history-action', 'Refresh');
         var clearButton = el('button', 'phalcon-debugbar-history-action is-danger', 'Clear');
         var content = el('div', 'phalcon-debugbar-history-content');
+        var requestGuard = createHistoryRequestGuard(isCurrent);
         refreshButton.type = 'button';
         clearButton.type = 'button';
+        clearButton.disabled = true;
         actions.appendChild(refreshButton);
         actions.appendChild(clearButton);
         toolbar.appendChild(title);
@@ -267,10 +318,19 @@
         }
 
         function refresh() {
+            var generation = requestGuard.startList();
+            if (generation === null) {
+                return;
+            }
+
             refreshButton.disabled = true;
             message('phalcon-debugbar-history-loading', 'Loading request history...');
 
             loadJson(url).then(function (result) {
+                if (!requestGuard.isListCurrent(generation)) {
+                    return;
+                }
+
                 content.innerHTML = '';
                 var requests = result && Array.isArray(result.requests) ? result.requests : [];
                 clearButton.disabled = !requests.length;
@@ -299,8 +359,18 @@
                     button.appendChild(el('time', 'phalcon-debugbar-history-time', scalar(request.requested_at)));
 
                     button.addEventListener('click', function () {
+                        var selection = requestGuard.startDetail();
+                        if (selection === null) {
+                            return;
+                        }
+
                         button.disabled = true;
                         loadJson(historyUrl(url, id)).then(function (detail) {
+                            if (!requestGuard.isDetailCurrent(selection)) {
+                                button.disabled = false;
+                                return;
+                            }
+
                             if (detail && detail.request && detail.request.payload) {
                                 Array.prototype.forEach.call(
                                     list.querySelectorAll('.phalcon-debugbar-history-request'),
@@ -313,7 +383,9 @@
                             }
                             button.disabled = false;
                         }).catch(function () {
-                            button.disabled = false;
+                            if (requestGuard.isDetailCurrent(selection)) {
+                                button.disabled = false;
+                            }
                         });
                     });
 
@@ -321,9 +393,13 @@
                 });
                 content.appendChild(list);
             }).catch(function () {
-                message('phalcon-debugbar-history-error', 'Unable to load request history');
+                if (requestGuard.isListCurrent(generation)) {
+                    message('phalcon-debugbar-history-error', 'Unable to load request history');
+                }
             }).then(function () {
-                refreshButton.disabled = false;
+                if (requestGuard.isListCurrent(generation)) {
+                    refreshButton.disabled = false;
+                }
             });
         }
 
@@ -333,13 +409,27 @@
                 return;
             }
 
+            var generation = requestGuard.startClear();
+            if (generation === null) {
+                return;
+            }
+
+            refreshButton.disabled = true;
             clearButton.disabled = true;
+            message('phalcon-debugbar-history-loading', 'Clearing request history...');
             requestJson(url, {method: 'DELETE'}).then(function () {
+                if (!requestGuard.finishClear(generation)) {
+                    return;
+                }
+
                 onClear();
                 refresh();
             }).catch(function () {
-                clearButton.disabled = false;
-                message('phalcon-debugbar-history-error', 'Unable to clear request history');
+                if (requestGuard.finishClear(generation)) {
+                    refreshButton.disabled = false;
+                    clearButton.disabled = false;
+                    message('phalcon-debugbar-history-error', 'Unable to clear request history');
+                }
             });
         });
 
@@ -360,6 +450,17 @@
         } catch (error) {
             /* storage unavailable - collapse still works for the session */
         }
+    }
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = {
+            createHistoryRequestGuard: createHistoryRequestGuard,
+            renderHistoryBrowser: renderHistoryBrowser
+        };
+    }
+
+    if (typeof document === 'undefined') {
+        return;
     }
 
     ready(function () {
@@ -393,6 +494,7 @@
         var selectedHistoryId = '';
         var historyOpen = false;
         var historyPanel = null;
+        var historyRenderGeneration = 0;
         var historyTab = null;
 
         function closePanel() {
@@ -409,6 +511,7 @@
                 return;
             }
 
+            var generation = ++historyRenderGeneration;
             renderHistoryBrowser(
                 historyBrowser,
                 historyPanel,
@@ -420,6 +523,9 @@
                 },
                 function () {
                     selectedHistoryId = '';
+                },
+                function () {
+                    return historyOpen && generation === historyRenderGeneration;
                 }
             );
         }
@@ -431,6 +537,7 @@
             }
 
             if (!historyOpen) {
+                historyRenderGeneration++;
                 historyBrowser.style.display = 'none';
             } else if (!preserveBrowser) {
                 renderOpenHistory();
@@ -477,11 +584,16 @@
 
             var preferred = null;
             Object.keys(data).forEach(function (name) {
-                if (name === 'history') {
-                    return;
-                }
                 var entry = data[name] || {};
                 var widget = widgets[name] || {};
+                if (
+                    name === 'history'
+                    && widget.panel === 'history'
+                    && entry.panel
+                    && typeof entry.panel.url === 'string'
+                ) {
+                    return;
+                }
                 var label = widget.label || titleize(name);
                 var type = widget.panel || inferType(entry.panel);
 
@@ -508,10 +620,15 @@
             });
 
             var historyEntry = data.history || {};
-            historyPanel = historyEntry.panel || null;
+            var historyWidget = widgets.history || {};
+            historyPanel = null;
             historyTab = null;
-            if (historyPanel && typeof historyPanel.url === 'string') {
-                var historyWidget = widgets.history || {};
+            if (
+                historyWidget.panel === 'history'
+                && historyEntry.panel
+                && typeof historyEntry.panel.url === 'string'
+            ) {
+                historyPanel = historyEntry.panel;
                 historyTab = el('button', 'phalcon-debugbar-tab');
                 historyTab.type = 'button';
                 historyTab.appendChild(el(

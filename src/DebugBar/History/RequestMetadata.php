@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\History;
 
+use DateTimeImmutable;
+
 /**
  * The small request snapshot stored next to a collected debug-bar payload.
  */
@@ -23,12 +25,14 @@ final class RequestMetadata
      * @param string $uri
      * @param int    $status
      * @param bool   $ajax
+     * @param DateTimeImmutable|null $requestedAt
      */
     public function __construct(
         public readonly string $method,
         public readonly string $uri,
         public readonly int $status,
-        public readonly bool $ajax
+        public readonly bool $ajax,
+        public readonly ?DateTimeImmutable $requestedAt = null
     ) {
     }
 }

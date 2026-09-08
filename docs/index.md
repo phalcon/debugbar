@@ -74,10 +74,10 @@ The second argument to `Provider` is a nested array. Every key is optional.
 | `env.var`          | `string`                  | `APP_ENV`                | Environment variable inspected by the gate.                      |
 | `headers`          | `bool`                    | `true`                   | Emit the `X-Debug-Bar` diagnostic header.                        |
 | `history.enabled`  | `bool`                    | `false`                  | Store and browse recent requests for the active session.         |
-| `history.url`      | `string`                  | `/_debugbar/open`        | Internal GET endpoint registered by the provider.                |
+| `history.url`      | `string`                  | `/_debugbar/open`        | Internal GET/DELETE endpoint registered by the provider.         |
 | `history.path`     | `string`                  | system temporary path    | Storage directory; keep it outside the document root.            |
 | `history.max_requests` | `int`                 | `100`                    | Maximum stored requests per session.                             |
-| `history.ttl_seconds` | `int`                  | `86400`                  | Lifetime of stored requests in seconds.                          |
+| `history.ttl_seconds` | `int`                  | `86400`                  | Lifetime in seconds; active-session entries are checked immediately. |
 | `redact.hidden`    | `list<string>`            | `[]`                     | Keys dropped from the output entirely.                           |
 | `redact.mask`      | `list<string>`            | `[]`                     | Extra keys whose values are masked (added to the defaults).      |
 
@@ -101,13 +101,24 @@ use Phalcon\DebugBar\Provider;
 ```
 
 When history is enabled, the provider registers `GET /_debugbar/open`,
-`DELETE /_debugbar/open`, and their internal controller automatically. A GET
+`DELETE /_debugbar/open`, and its internal history controller automatically. A GET
 without an `id` returns the recent request metadata; `?id=<request-id>` returns
 a stored payload. DELETE clears the active session's stored requests. The
 `History` item in the bottom bar opens the browser above it; its controls refresh
-or clear the list, and selecting an item replaces the collectors shown below.
-Storage is isolated by a SHA-256 hash of the active PHP session id. With no
-active session, no request is written or exposed.
+or clear the list, and selecting an item replaces the collectors shown below. An
+empty history displays `No stored requests` and leaves the clear control disabled.
+
+Storage is isolated by a SHA-256 hash of the active PHP session id. Each stored
+entry distinguishes the request start time (`requested_at`) from the time it was
+persisted (`stored_at`). If the server does not expose `REQUEST_TIME_FLOAT`, the
+persistence time is used for both values. Each payload has a small metadata sidecar,
+so listing requests does not read the full collector payload. Files created by an
+earlier version without a sidecar remain readable through a legacy fallback. Reads
+clean expired entries only from the active session so opening the browser remains
+fast on network filesystems. A rate-limited collection during request storage
+removes expired entries, abandoned temporary files, and empty directories from all
+sessions at most once per hour (or once per configured TTL when it is shorter). With
+no active session, no request is written or exposed.
 
 ## Collectors
 

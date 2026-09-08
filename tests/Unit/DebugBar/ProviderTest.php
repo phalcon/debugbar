@@ -256,6 +256,25 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertFalse($response->getHeaders()->has('X-Debug-Bar'));
     }
 
+    public function testHistoryIgnoresAnIncompatibleRouterService(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $app                 = $this->applicationWithServices(
+            new Manager(),
+            ['router' => new stdClass()]
+        );
+
+        (new Provider($app, [
+            'env'     => ['var' => self::ENV_VAR],
+            'history' => ['enabled' => true],
+        ]))->boot();
+
+        $container = $app->getDI();
+        $this->assertNotNull($container);
+        $this->assertFalse($container->has(Provider::HISTORY_SERVICE));
+        $this->assertFalse($this->bootedBar()->hasCollector('history'));
+    }
+
     public function testHistoryRegistersItsCollectorRouteAndServices(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
@@ -276,20 +295,48 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertNotNull($container);
         $this->assertTrue($container->has(Provider::HISTORY_SERVICE));
         $this->assertTrue($container->has(Provider::ACCESS_GATE_SERVICE));
+        $this->assertSame('debugbar.access_gate', Provider::ACCESS_GATE_SERVICE);
         $this->assertTrue($this->bootedBar()->hasCollector('history'));
-        $route = $router->getRouteByName('debugbar.openhandler');
+        $route = $router->getRouteByName('debugbar.history.index');
         if (!$route instanceof RouteInterface) {
-            $this->fail('Expected the debugbar.openhandler route.');
+            $this->fail('Expected the debugbar.history.index route.');
         }
 
         $this->assertSame('/_debugbar/open', $route->getPattern());
+        $this->assertSame('history', $route->getPaths()['controller']);
 
-        $clearRoute = $router->getRouteByName('debugbar.clearhistory');
+        $clearRoute = $router->getRouteByName('debugbar.history.clear');
         if (!$clearRoute instanceof RouteInterface) {
-            $this->fail('Expected the debugbar.clearhistory route.');
+            $this->fail('Expected the debugbar.history.clear route.');
         }
 
         $this->assertSame('/_debugbar/open', $clearRoute->getPattern());
+        $this->assertSame('history', $clearRoute->getPaths()['controller']);
+    }
+
+    public function testHistoryRequiresCompatibleRequestAndResponseServices(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $serviceSets = [
+            ['request' => new stdClass(), 'response' => new Response(), 'router' => new Router(false)],
+            ['request' => new Request(), 'response' => new stdClass(), 'router' => new Router(false)],
+            ['request' => new Request(), 'router' => new Router(false)],
+        ];
+
+        foreach ($serviceSets as $services) {
+            $app = $this->applicationWithServices(new Manager(), $services);
+
+            (new Provider($app, [
+                'env'     => ['var' => self::ENV_VAR],
+                'history' => ['enabled' => true],
+            ]))->boot();
+
+            $container = $app->getDI();
+            $this->assertNotNull($container);
+            $this->assertFalse($container->has(Provider::HISTORY_SERVICE));
+            $this->assertFalse($this->bootedBar()->hasCollector('history'));
+        }
     }
 
     #[RunInSeparateProcess]

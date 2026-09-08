@@ -10,7 +10,10 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Optional, session-isolated request history with filesystem retention, an
   internal `GET/DELETE /_debugbar/open` controller, and a collapsible request
   browser with refresh and clear controls that swaps the bar payload without
-  leaving the current page.
+  leaving the current page. Retention cleanup covers abandoned session
+  directories without delaying history reads, and distinguishes request-start
+  and persistence timestamps. Metadata sidecars keep request listings independent
+  of collector payload size while preserving legacy stored entries.
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 

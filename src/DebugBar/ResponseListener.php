@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use Phalcon\DebugBar\History\FilesystemHistory;
 use Phalcon\DebugBar\History\HistoryOptions;
 use Phalcon\DebugBar\History\RequestMetadata;
@@ -22,8 +24,10 @@ use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
 
 use function count;
+use function is_float;
 use function is_string;
 use function parse_url;
+use function sprintf;
 
 use const PHP_URL_PATH;
 
@@ -102,7 +106,8 @@ final class ResponseListener
                 $this->request->getMethod(),
                 $uri,
                 $response->getStatusCode() ?? 200,
-                $isAjax
+                $isAjax,
+                $this->requestedAt()
             )
         );
     }
@@ -119,5 +124,21 @@ final class ResponseListener
         $clientIp = $this->request->getClientAddress();
 
         return [is_string($clientIp) ? $clientIp : null, $this->request->isAjax()];
+    }
+
+    private function requestedAt(): ?DateTimeImmutable
+    {
+        $timestamp = $_SERVER['REQUEST_TIME_FLOAT'] ?? null;
+        if (!is_float($timestamp)) {
+            return null;
+        }
+
+        $requestedAt = DateTimeImmutable::createFromFormat(
+            'U.u',
+            sprintf('%.6F', $timestamp),
+            new DateTimeZone('UTC')
+        );
+
+        return false === $requestedAt ? null : $requestedAt;
     }
 }

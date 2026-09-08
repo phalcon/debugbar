@@ -31,56 +31,59 @@ use const JSON_UNESCAPED_UNICODE;
  * Internal MVC adapter for /_debugbar/open. GET returns the current session's
  * request list or one stored entry; DELETE clears that session's history.
  */
-final class OpenHandlerController extends Controller
+final class HistoryController extends Controller
 {
     /**
      * @return ResponseInterface
      */
     public function clearAction(): ResponseInterface
     {
-        $container = $this->getDI();
-        if (null === $container) {
-            throw new RuntimeException('The OpenHandler controller requires a DI container.');
-        }
-
-        $request  = $container->getShared('request');
-        $response = $container->getShared('response');
-        $history  = $container->getShared(Provider::HISTORY_SERVICE);
-        $access   = $container->getShared(Provider::ACCESS_GATE_SERVICE);
-
-        if (!$response instanceof ResponseInterface) {
-            throw new RuntimeException('The response service must implement ResponseInterface.');
-        }
-
-        if (
-            !$request instanceof RequestInterface
-            || !$history instanceof FilesystemHistory
-            || !$access instanceof AccessGate
-        ) {
-            return $this->json($response, ['error' => 'History is unavailable.'], 500);
-        }
-
-        $clientIp = $request->getClientAddress();
-        if (!$access->allows(is_string($clientIp) ? $clientIp : null)) {
-            return $this->json($response, ['error' => 'Not found.'], 404);
-        }
-
-        if ('DELETE' !== $request->getMethod()) {
-            return $this->json($response, ['error' => 'Method not allowed.'], 405);
-        }
-
-        return $this->json($response, ['cleared' => $history->clear()]);
+        return $this->handle(
+            'DELETE',
+            fn (
+                RequestInterface $request,
+                ResponseInterface $response,
+                FilesystemHistory $history
+            ): ResponseInterface => $this->json($response, ['cleared' => $history->clear()])
+        );
     }
+
     /**
      * @return ResponseInterface
      */
     public function indexAction(): ResponseInterface
     {
-        $container = $this->getDI();
-        if (null === $container) {
-            throw new RuntimeException('The OpenHandler controller requires a DI container.');
-        }
+        return $this->handle(
+            'GET',
+            function (
+                RequestInterface $request,
+                ResponseInterface $response,
+                FilesystemHistory $history
+            ): ResponseInterface {
+                $id = $request->getQuery('id');
+                if (null === $id) {
+                    return $this->json($response, ['requests' => $history->find()]);
+                }
+                if (!is_string($id)) {
+                    return $this->json($response, ['error' => 'Request not found.'], 404);
+                }
 
+                $entry = $history->get($id);
+                if (null === $entry) {
+                    return $this->json($response, ['error' => 'Request not found.'], 404);
+                }
+
+                return $this->json($response, ['request' => $entry]);
+            }
+        );
+    }
+
+    /**
+     * @param callable(RequestInterface, ResponseInterface, FilesystemHistory): ResponseInterface $action
+     */
+    private function handle(string $expectedMethod, callable $action): ResponseInterface
+    {
+        $container = $this->getDI() ?? throw new RuntimeException('The History controller requires a DI container.');
         $request   = $container->getShared('request');
         $response  = $container->getShared('response');
         $history   = $container->getShared(Provider::HISTORY_SERVICE);
@@ -103,21 +106,11 @@ final class OpenHandlerController extends Controller
             return $this->json($response, ['error' => 'Not found.'], 404);
         }
 
-        if ('GET' !== $request->getMethod()) {
+        if ($expectedMethod !== $request->getMethod()) {
             return $this->json($response, ['error' => 'Method not allowed.'], 405);
         }
 
-        $id = $request->getQuery('id');
-        if (!is_string($id) || '' === $id) {
-            return $this->json($response, ['requests' => $history->find()]);
-        }
-
-        $entry = $history->get($id);
-        if (null === $entry) {
-            return $this->json($response, ['error' => 'Request not found.'], 404);
-        }
-
-        return $this->json($response, ['request' => $entry]);
+        return $action($request, $response, $history);
     }
 
     /**
