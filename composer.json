@@ -26,6 +26,7 @@
         "pds/skeleton": "^1",
         "phalcon/phalcon": "^6.0@beta",
         "phalcon/talon": "^1.0.0",
+        "phalcon/code-quality": "^1.0",
         "phalcon/traits": "^4.0",
         "phpstan/phpstan": "^2",
         "phpunit/phpunit": "^10.5",
@@ -50,9 +51,12 @@
         ]
     },
     "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {
-            "pds/skeleton": false
+            "pds/skeleton": false,
+            "dealerdirect/phpcodesniffer-composer-installer": true
         }
     },
     "minimum-stability": "dev",
