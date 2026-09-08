@@ -77,11 +77,11 @@ final class HistoryController extends Controller
      */
     private function handle(string $expectedMethod, callable $action): ResponseInterface
     {
-        $container = $this->getDI() ?? throw new RuntimeException('The History controller requires a DI container.');
-        $request   = $container->getShared('request');
-        $response  = $container->getShared('response');
-        $history   = $container->getShared(Provider::HISTORY_SERVICE);
-        $access    = $container->getShared(Provider::ACCESS_GATE_SERVICE);
+        $container  = $this->getDI() ?? throw new RuntimeException('The History controller requires a DI container.');
+        $request    = $container->getShared('request');
+        $response   = $container->getShared('response');
+        $history    = $container->getShared(Provider::HISTORY_SERVICE);
+        $accessGate = $container->getShared(Provider::ACCESS_GATE_SERVICE);
 
         if (!$response instanceof ResponseInterface) {
             throw new RuntimeException('The response service must implement ResponseInterface.');
@@ -90,13 +90,13 @@ final class HistoryController extends Controller
         if (
             !$request instanceof RequestInterface
             || !$history instanceof FilesystemHistory
-            || !$access instanceof AccessGate
+            || !$accessGate instanceof AccessGate
         ) {
             return $this->json($response, ['error' => 'History is unavailable.'], 500);
         }
 
         $clientIp = $request->getClientAddress();
-        if (!$access->allows(is_string($clientIp) ? $clientIp : null)) {
+        if (!$accessGate->allows(is_string($clientIp) ? $clientIp : null)) {
             return $this->json($response, ['error' => 'Not found.'], 404);
         }
 

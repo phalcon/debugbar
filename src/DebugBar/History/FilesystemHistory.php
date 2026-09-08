@@ -61,7 +61,6 @@ use const PHP_SESSION_ACTIVE;
  *     id: string,
  *     stored_at: string
  * }
- * @phpstan-type history_entry array{meta: history_meta, payload: payload}
  */
 final class FilesystemHistory
 {
@@ -100,7 +99,6 @@ final class FilesystemHistory
             if ($this->fileOperations->remove($file)) {
                 $removed++;
             }
-            $this->fileOperations->remove($this->metadataFile($file));
         }
         foreach ($this->metadataFiles($directory) as $file) {
             $this->fileOperations->remove($file);
