@@ -23,28 +23,12 @@ use function sys_get_temp_dir;
  */
 final class HistoryOptions
 {
-    /**
-     * @var int
-     */
     public readonly int $maxRequests;
 
-    /**
-     * @var string
-     */
     public readonly string $path;
 
-    /**
-     * @var int
-     */
     public readonly int $ttlSeconds;
 
-    /**
-     * @param bool   $enabled
-     * @param string $url
-     * @param string $path
-     * @param int    $maxRequests
-     * @param int    $ttlSeconds
-     */
     public function __construct(
         public readonly bool $enabled = false,
         public readonly string $url = '/_debugbar/open',

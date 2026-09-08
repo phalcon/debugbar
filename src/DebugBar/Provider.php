@@ -98,10 +98,10 @@ class Provider
      */
     public function __construct(private readonly Application $app, array $config = [])
     {
-        $env    = $config['env'] ?? [];
-        $assets = $config['assets'] ?? [];
-        $access = $config['access'] ?? [];
-        $redact = $config['redact'] ?? [];
+        $env     = $config['env'] ?? [];
+        $assets  = $config['assets'] ?? [];
+        $access  = $config['access'] ?? [];
+        $redact  = $config['redact'] ?? [];
         $history = $config['history'] ?? [];
 
         $this->envVar           = $env['var'] ?? 'APP_ENV';

@@ -82,11 +82,7 @@ final class ResponseListener
     }
 
     /**
-     * @param payload              $collected
-     * @param ResponseInterface   $response
-     * @param bool                $isAjax
-     *
-     * @return void
+     * @param payload $collected
      */
     private function record(array $collected, ResponseInterface $response, bool $isAjax): void
     {

@@ -44,7 +44,7 @@ final class HistoryControllerTest extends AbstractUnitTestCase
     public function testActionsHideHistoryWhenAccessIsDenied(): void
     {
         $_SERVER['REMOTE_ADDR'] = '203.0.113.10';
-        $history               = new FilesystemHistory(new HistoryOptions());
+        $history                = new FilesystemHistory(new HistoryOptions());
 
         foreach (['indexAction', 'clearAction'] as $action) {
             $response = $this->executeWithServices(
@@ -155,8 +155,8 @@ final class HistoryControllerTest extends AbstractUnitTestCase
 
         try {
             $_SERVER['REQUEST_METHOD'] = 'GET';
-            $history = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path));
-            $id      = $history->save(
+            $history                   = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path));
+            $id                        = $history->save(
                 ['data' => [], 'meta' => ['collectors' => 0]],
                 new RequestMetadata('GET', '/orders', 200, false)
             );
@@ -171,7 +171,7 @@ final class HistoryControllerTest extends AbstractUnitTestCase
             $this->assertIsArray($requests);
             $this->assertCount(1, $requests);
 
-            $_GET = ['id' => $id];
+            $_GET   = ['id' => $id];
             $detail = $this->execute($history);
             $this->assertSame(200, $detail->getStatusCode());
             $detailBody = json_decode($detail->getContent(), true);
@@ -184,8 +184,8 @@ final class HistoryControllerTest extends AbstractUnitTestCase
             $this->assertSame('no-store, private', $detail->getHeaders()->get('Cache-Control'));
 
             $_SERVER['REQUEST_METHOD'] = 'DELETE';
-            $_GET = [];
-            $clear = $this->execute($history, 'clear');
+            $_GET                      = [];
+            $clear                     = $this->execute($history, 'clear');
             $this->assertSame(200, $clear->getStatusCode());
             $clearBody = json_decode($clear->getContent(), true);
             $this->assertIsArray($clearBody);

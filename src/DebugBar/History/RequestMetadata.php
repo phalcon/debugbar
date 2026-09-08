@@ -20,13 +20,6 @@ use DateTimeImmutable;
  */
 final class RequestMetadata
 {
-    /**
-     * @param string $method
-     * @param string $uri
-     * @param int    $status
-     * @param bool   $ajax
-     * @param DateTimeImmutable|null $requestedAt
-     */
     public function __construct(
         public readonly string $method,
         public readonly string $uri,

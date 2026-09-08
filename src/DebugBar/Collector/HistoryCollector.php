@@ -21,24 +21,12 @@ final class HistoryCollector extends AbstractCollector
 {
     public const NAME = 'history';
 
-    /**
-     * @var string
-     */
     protected string $icon = 'icon-history';
 
-    /**
-     * @var string
-     */
     protected string $label = 'History';
 
-    /**
-     * @var string
-     */
     protected string $panel = 'history';
 
-    /**
-     * @param string $url
-     */
     public function __construct(private readonly string $url)
     {
     }

@@ -45,6 +45,7 @@ use function stream_wrapper_unregister;
 use function sys_get_temp_dir;
 use function touch;
 use function unlink;
+use function usleep;
 
 final class FilesystemHistoryTest extends AbstractUnitTestCase
 {
@@ -182,6 +183,8 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
         [$path, $firstSessionId] = $this->startSession();
         $firstDirectory          = $path . '/' . hash('sha256', $firstSessionId);
         $secondSessionId         = 'debugbar-' . bin2hex(random_bytes(8));
+        $unrelatedDirectory      = $path . '/application-cache';
+        $unrelatedFile           = $unrelatedDirectory . '/response.json';
 
         try {
             $history = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path, 10, 1));
@@ -194,6 +197,9 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             $temporary = $firstDirectory . '/' . $id . '.json.tmp-deadbeef';
             $this->assertIsInt(file_put_contents($temporary, '{}'));
             $this->assertTrue(touch($temporary, time() - 10));
+            $this->assertTrue(mkdir($unrelatedDirectory));
+            $this->assertIsInt(file_put_contents($unrelatedFile, '{}'));
+            $this->assertTrue(touch($unrelatedFile, time() - 10));
 
             session_write_close();
             session_id($secondSessionId);
@@ -226,10 +232,14 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             $this->assertFalse(file_exists($firstDirectory . '/' . $id . '.json'));
             $this->assertFalse(file_exists($temporary));
             $this->assertFalse(is_dir($firstDirectory));
+            $this->assertTrue(file_exists($unrelatedFile));
         } finally {
             session_write_close();
             $this->removeHistory($path, $firstSessionId);
             $this->removeHistory($path, $secondSessionId);
+            @unlink($unrelatedFile);
+            @rmdir($unrelatedDirectory);
+            @rmdir($path);
         }
     }
 
@@ -269,6 +279,45 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     }
 
     #[RunInSeparateProcess]
+    public function testMalformedEntriesDoNotConsumeTheRequestLimit(): void
+    {
+        [$path, $sessionId] = $this->startSession();
+        $directory          = $path . '/' . hash('sha256', $sessionId);
+
+        try {
+            $writer = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path, 10, 60));
+            $ids    = [];
+            for ($index = 0; $index < 3; $index++) {
+                $id = $writer->save(
+                    ['data' => [], 'meta' => ['index' => $index]],
+                    new RequestMetadata('GET', '/' . $index, 200, false)
+                );
+                $this->assertIsString($id);
+                $ids[] = $id;
+                usleep(1000);
+            }
+
+            $newest = $directory . '/' . $ids[2] . '.json';
+            $this->assertIsInt(file_put_contents($newest . '.meta', '{"id":123}'));
+
+            $history  = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path, 2, 60));
+            $requests = $history->find();
+            $this->assertCount(2, $requests);
+            $this->assertSame($ids[2], $requests[0]['id']);
+            $this->assertSame($ids[1], $requests[1]['id']);
+
+            $this->assertIsInt(file_put_contents($newest, '{invalid'));
+            $requests = $history->find();
+            $this->assertCount(2, $requests);
+            $this->assertSame($ids[1], $requests[0]['id']);
+            $this->assertSame($ids[0], $requests[1]['id']);
+        } finally {
+            session_write_close();
+            $this->removeHistory($path, $sessionId);
+        }
+    }
+
+    #[RunInSeparateProcess]
     public function testMaximumRequestCountIsPruned(): void
     {
         [$path, $sessionId] = $this->startSession();
@@ -293,7 +342,7 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     public function testMetadataWriteFailureRemovesTemporaryFilesAndReturnsNull(): void
     {
         [$path, $sessionId] = $this->startSession();
-        $history = new FilesystemHistory(
+        $history            = new FilesystemHistory(
             new HistoryOptions(true, '/_debugbar/open', $path),
             new MetadataWriteFailingHistoryFileOperations()
         );
@@ -329,7 +378,7 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     public function testPayloadMoveFailureRollsBackPublishedMetadata(): void
     {
         [$path, $sessionId] = $this->startSession();
-        $history = new FilesystemHistory(
+        $history            = new FilesystemHistory(
             new HistoryOptions(true, '/_debugbar/open', $path),
             new PayloadMoveFailingHistoryFileOperations()
         );
@@ -350,8 +399,8 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     public function testRenameFailureRemovesTemporaryFileAndReturnsNull(): void
     {
         [$path, $sessionId] = $this->startSession();
-        $fileOperations = new RenameFailingHistoryFileOperations();
-        $history        = new FilesystemHistory(
+        $fileOperations     = new RenameFailingHistoryFileOperations();
+        $history            = new FilesystemHistory(
             new HistoryOptions(true, '/_debugbar/open', $path),
             $fileOperations
         );
@@ -375,7 +424,7 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
         $secondSessionId         = 'debugbar-' . bin2hex(random_bytes(8));
 
         try {
-            $history = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path, 10, 60));
+            $history     = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path, 10, 60));
             $requestedAt = new DateTimeImmutable('2000-01-02T03:04:05+00:00');
             $id          = $history->save(
                 ['data' => [], 'meta' => ['collectors' => 0]],

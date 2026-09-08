@@ -33,9 +33,6 @@ use const JSON_UNESCAPED_UNICODE;
  */
 final class HistoryController extends Controller
 {
-    /**
-     * @return ResponseInterface
-     */
     public function clearAction(): ResponseInterface
     {
         return $this->handle(
@@ -48,9 +45,6 @@ final class HistoryController extends Controller
         );
     }
 
-    /**
-     * @return ResponseInterface
-     */
     public function indexAction(): ResponseInterface
     {
         return $this->handle(
@@ -114,11 +108,7 @@ final class HistoryController extends Controller
     }
 
     /**
-     * @param ResponseInterface     $response
      * @param array<string, mixed> $body
-     * @param int                  $status
-     *
-     * @return ResponseInterface
      */
     private function json(ResponseInterface $response, array $body, int $status = 200): ResponseInterface
     {
