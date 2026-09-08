@@ -35,6 +35,7 @@ use function putenv;
 final class ProviderTest extends AbstractUnitTestCase
 {
     private const ENV_VAR    = 'DEBUGBAR_TEST_ENV';
+
     private const GETENV_VAR = 'DEBUGBAR_TEST_GETENV';
 
     protected function setUp(): void

@@ -34,6 +34,7 @@ final class Redactor
         'secret',
         'token',
     ];
+
     public const MASK         = '***';
 
     /**

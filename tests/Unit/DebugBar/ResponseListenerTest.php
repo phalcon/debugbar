@@ -38,6 +38,7 @@ final class ResponseListenerTest extends AbstractUnitTestCase
 
         $this->assertStringNotContainsString('phalcon-debugbar-data', $response->getContent());
     }
+
     public function testIgnoresNonResponsePayloads(): void
     {
         $listener = $this->listener(true);

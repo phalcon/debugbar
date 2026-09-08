@@ -46,6 +46,7 @@ class Debug
     use GetTrait;
 
     protected static bool $isActive = false;
+
     /**
      * @var array<array-key, mixed>
      */

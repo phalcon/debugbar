@@ -122,6 +122,7 @@ final class RendererTest extends AbstractUnitTestCase
         $this->assertStringContainsString('<script', $html);
         $this->assertStringContainsString('phalcon-debugbar-data', $html);
     }
+
     public function testRenderHeadUsesCssMinifierForStyles(): void
     {
         // The CSS minifier shortens #ffffff to #fff; running the JS minifier on

@@ -29,6 +29,7 @@ final class BacktraceItemTest extends AbstractUnitTestCase
         $this->assertSame([], $item->getArgs());
         $this->assertNull($item->getFragment());
     }
+
     public function testGettersReturnConstructorValues(): void
     {
         $fragment = new CodeFragment('full', 1, 4, 9, ["<?php\n", "echo 1;\n"]);
