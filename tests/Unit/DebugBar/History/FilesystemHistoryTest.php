@@ -417,6 +417,7 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             @rmdir($path);
         }
     }
+
     #[RunInSeparateProcess]
     public function testSaveFindAndGetAreSessionScoped(): void
     {

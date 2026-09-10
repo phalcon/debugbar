@@ -21,6 +21,7 @@ use Phalcon\DebugBar\Collector\DatabaseCollector;
 use Phalcon\DebugBar\Collector\ExceptionsCollector;
 use Phalcon\DebugBar\Collector\HistoryCollector;
 use Phalcon\DebugBar\Collector\LoggerCollector;
+use Phalcon\DebugBar\Collector\MemoryCollector;
 use Phalcon\DebugBar\Collector\MessagesCollector;
 use Phalcon\DebugBar\Collector\RequestCollector;
 use Phalcon\DebugBar\Collector\RouteCollector;
@@ -57,6 +58,7 @@ use function mb_strtolower;
 class Provider
 {
     public const ACCESS_GATE_SERVICE = 'debugbar.access_gate';
+
     public const HISTORY_SERVICE     = 'debugbar.history';
 
     /**
@@ -156,11 +158,15 @@ class Provider
         $history    = $this->registerHistory($container, $accessGate, $request);
 
         $bar = new DebugBar();
-        foreach ($this->buildCollectors($container, $request) as $collector) {
+        foreach ($this->buildCollectors($container, $request, null !== $history) as $collector) {
             $bar->addCollector($collector);
         }
         if (null !== $history) {
-            $bar->addCollector(new HistoryCollector($this->historyOptions->url));
+            $bar->addCollector(new HistoryCollector(
+                $this->historyOptions->url,
+                $request?->getMethod(),
+                $request?->getURI()
+            ));
         }
 
         Debug::setBar($bar);
@@ -209,8 +215,11 @@ class Provider
      *
      * @return list<Collector>
      */
-    private function buildCollectors(?DiInterface $container, ?RequestInterface $request): array
-    {
+    private function buildCollectors(
+        ?DiInterface $container,
+        ?RequestInterface $request,
+        bool $historyEnabled
+    ): array {
         $collectors = [];
 
         if ($this->isCollectorEnabled(VersionCollector::NAME)) {
@@ -231,6 +240,10 @@ class Provider
 
         if ($this->isCollectorEnabled(TimeCollector::NAME)) {
             $collectors[] = new TimeCollector();
+        }
+
+        if ($historyEnabled && $this->isCollectorEnabled(MemoryCollector::NAME)) {
+            $collectors[] = new MemoryCollector();
         }
 
         if ($this->isCollectorEnabled(DatabaseCollector::NAME)) {

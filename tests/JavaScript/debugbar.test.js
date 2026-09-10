@@ -191,7 +191,7 @@ test('selecting a request loads and exposes its stored payload', async function 
     };
     var mount = new dom.TestElement('div');
 
-    renderHistoryBrowser(mount, {url: '/_debugbar/open'}, '', function (payload, id) {
+    renderHistoryBrowser(mount, {url: '/_debugbar/open'}, '', function (payload, metadata, id) {
         selected = {payload: payload, id: id};
     }, function () {}, function () {
         return true;
@@ -386,18 +386,164 @@ test('request history reports clear failures and restores controls', async funct
     );
 });
 
-test('selecting stored data preserves the open history browser', async function () {
+test('request metrics render on the right instead of time and memory tabs', function () {
+    var dataNode = new dom.TestElement('script');
+    var mount = new dom.TestElement('div');
+    dataNode.textContent = JSON.stringify({
+        data: {
+            messages: {panel: []},
+            time: {panel: [], badge: '12.34ms'},
+            memory: {
+                panel: {'Current usage': '7.5MB', 'Peak usage': '8MB'},
+                badge: '8MB'
+            },
+            request: {panel: {Method: 'GET', URI: '/orders'}},
+            history: {panel: {url: '/_debugbar/open'}}
+        },
+        meta: {
+            widgets: {
+                messages: {label: 'Messages', panel: 'list'},
+                time: {label: 'Time', panel: 'list'},
+                memory: {label: 'Memory', panel: 'grid'},
+                request: {label: 'Request', panel: 'grid'}
+            }
+        }
+    });
+    global.document = dom.createDocument({
+        'phalcon-debugbar': mount,
+        'phalcon-debugbar-data': dataNode
+    });
+    global.window = {
+        localStorage: {
+            getItem: function () {
+                return null;
+            },
+            setItem: function () {}
+        }
+    };
+
+    require(debugbarPath);
+
+    var labels = mount.querySelectorAll('.phalcon-debugbar-tab-label').map(function (label) {
+        return label.textContent;
+    });
+    var indicators = dom.findByClass(mount, 'phalcon-debugbar-indicators');
+    assert.deepEqual(labels, ['Messages', 'Request']);
+    assert.ok(indicators);
+    assert.equal(indicators.textContent, '12.34ms7.5MBGET/orders');
+});
+
+test('history-disabled payload retains the existing collector tabs', function () {
+    var dataNode = new dom.TestElement('script');
+    var mount = new dom.TestElement('div');
+    dataNode.textContent = JSON.stringify({
+        data: {
+            time: {panel: [], badge: '12.34ms'},
+            request: {panel: {Method: 'GET', URI: '/orders'}}
+        },
+        meta: {
+            widgets: {
+                time: {label: 'Time', panel: 'list'},
+                request: {label: 'Request', panel: 'grid'}
+            }
+        }
+    });
+    global.document = dom.createDocument({
+        'phalcon-debugbar': mount,
+        'phalcon-debugbar-data': dataNode
+    });
+    global.window = {
+        localStorage: {
+            getItem: function () {
+                return null;
+            },
+            setItem: function () {}
+        }
+    };
+
+    require(debugbarPath);
+
+    var labels = mount.querySelectorAll('.phalcon-debugbar-tab-label').map(function (label) {
+        return label.textContent;
+    });
+    var indicators = dom.findByClass(mount, 'phalcon-debugbar-indicators');
+    assert.deepEqual(labels, ['Time', 'Request']);
+    assert.equal(indicators.textContent, '');
+});
+
+test('request control replaces the History tab and opens request history', async function () {
+    var dataNode = new dom.TestElement('script');
+    var mount = new dom.TestElement('div');
+    dataNode.textContent = JSON.stringify({
+        data: {
+            messages: {panel: []},
+            request: {panel: {Method: 'GET', URI: '/orders'}},
+            history: {panel: {url: '/_debugbar/open'}}
+        },
+        meta: {
+            widgets: {
+                messages: {label: 'Messages', panel: 'list'},
+                request: {label: 'Request', panel: 'grid'}
+            }
+        }
+    });
+    global.document = dom.createDocument({
+        'phalcon-debugbar': mount,
+        'phalcon-debugbar-data': dataNode
+    });
+    global.window = {
+        fetch: function () {
+            return Promise.resolve(response({requests: []}));
+        }
+    };
+
+    delete require.cache[debugbarPath];
+    require(debugbarPath);
+
+    var tabs = dom.findByClass(mount, 'phalcon-debugbar-tabs');
+    var requestControl = dom.findByClass(mount, 'phalcon-debugbar-request-control');
+    assert.equal(requestControl.tagName, 'BUTTON');
+    assert.equal(requestControl.textContent, 'GET/orders');
+    assert.equal(requestControl.querySelectorAll('.phalcon-debugbar-indicator-icon').length, 1);
+    assert.equal(requestControl.attributes['aria-expanded'], 'false');
+    assert.equal(requestControl.title, 'Open request history: GET /orders');
+    assert.equal(tabs.querySelectorAll('.phalcon-debugbar-tab-label').map(function (label) {
+        return label.textContent;
+    }).includes('History'), false);
+    var requestTab = tabs.querySelectorAll('.phalcon-debugbar-tab').filter(function (tab) {
+        return tab.textContent === 'Request';
+    })[0];
+    requestTab.click();
+    requestControl.click();
+    await dom.flushPromises();
+    requestControl = dom.findByClass(mount, 'phalcon-debugbar-request-control');
+    assert.equal(requestControl.attributes['aria-expanded'], 'true');
+    assert.equal(requestControl.title, 'Close request history: GET /orders');
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-history-browser').style.display, 'block');
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-body').style.display, 'none');
+    assert.equal(requestTab.classList.contains('is-active'), false);
+
+    requestTab.click();
+    requestControl = dom.findByClass(mount, 'phalcon-debugbar-request-control');
+    assert.equal(requestControl.attributes['aria-expanded'], 'false');
+    assert.equal(requestControl.title, 'Open request history: GET /orders');
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-history-browser').style.display, 'none');
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-body').style.display, 'block');
+    assert.equal(requestTab.classList.contains('is-active'), true);
+});
+
+test('selecting stored data closes history and uses metadata without a request collector', async function () {
     var dataNode = new dom.TestElement('script');
     var mount = new dom.TestElement('div');
     var historyPanel = {url: '/_debugbar/open'};
     var widgets = {
         history: {label: 'History', panel: 'history'},
-        route: {label: 'Route', panel: 'grid'}
+        request: {label: 'Request', panel: 'grid'}
     };
     dataNode.textContent = JSON.stringify({
         data: {
             history: {panel: historyPanel},
-            route: {panel: {path: '/current'}}
+            request: {panel: {Method: 'GET', URI: '/current'}}
         },
         meta: {widgets: widgets}
     });
@@ -417,10 +563,10 @@ test('selecting stored data preserves the open history browser', async function 
 
             return Promise.resolve(response({
                 request: {
+                    meta: {method: 'POST', uri: '/stored'},
                     payload: {
                         data: {
-                            history: {panel: historyPanel},
-                            route: {panel: {path: '/stored'}}
+                            history: {panel: historyPanel}
                         },
                         meta: {widgets: widgets}
                     }
@@ -430,11 +576,8 @@ test('selecting stored data preserves the open history browser', async function 
     };
 
     require(debugbarPath);
-    var tabs = mount.querySelectorAll('.phalcon-debugbar-tab');
-    var historyTab = tabs.filter(function (tab) {
-        return tab.textContent === 'History';
-    })[0];
-    historyTab.click();
+    var requestControl = dom.findByClass(mount, 'phalcon-debugbar-request-control');
+    requestControl.click();
     await dom.flushPromises();
 
     var historyBrowser = dom.findByClass(mount, 'phalcon-debugbar-history-browser');
@@ -444,6 +587,7 @@ test('selecting stored data preserves the open history browser', async function 
 
     assert.equal(calls, 2);
     assert.equal(dom.findByClass(mount, 'phalcon-debugbar-history-browser'), historyBrowser);
-    assert.equal(historyBrowser.style.display, 'block');
+    assert.equal(historyBrowser.style.display, 'none');
     assert.equal(request.classList.contains('is-selected'), true);
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-request-control').textContent, 'POST/stored');
 });

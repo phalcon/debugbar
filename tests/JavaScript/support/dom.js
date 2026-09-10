@@ -128,6 +128,15 @@ TestElement.prototype.querySelectorAll = function (selector) {
 
 TestElement.prototype.setAttribute = function (name, value) {
     this.attributes[name] = String(value);
+    if (name === 'class') {
+        this.className = value;
+    }
+};
+
+TestElement.prototype.getAttribute = function (name) {
+    return Object.prototype.hasOwnProperty.call(this.attributes, name)
+        ? this.attributes[name]
+        : null;
 };
 
 function createDocument(elements) {
@@ -136,6 +145,9 @@ function createDocument(elements) {
     return {
         readyState: 'complete',
         createElement: function (tagName) {
+            return new TestElement(tagName);
+        },
+        createElementNS: function (namespace, tagName) {
             return new TestElement(tagName);
         },
         getElementById: function (id) {

@@ -7,10 +7,11 @@
  * file that was distributed with this source code.
  *
  * Phalcon DebugBar client. Reads the JSON payload injected by the PHP renderer
- * and builds the bottom bar: one tab per collector, a panel per tab. It is
- * self-describing where possible (meta.widgets) and infers the panel type from
- * the data shape otherwise. The bar collapses to a bottom-right handle so it
- * never permanently covers the host page's own controls.
+ * and builds the bottom bar: interactive collector tabs on the left and compact
+ * request metrics on the right. It is self-describing where possible
+ * (meta.widgets) and infers the panel type from the data shape otherwise. The
+ * bar collapses to a bottom-right handle so it never permanently covers the
+ * host page's own controls.
  */
 (function () {
     'use strict';
@@ -34,6 +35,115 @@
             node.textContent = text;
         }
         return node;
+    }
+
+    function svgElement(tag, attributes) {
+        var node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+        Object.keys(attributes).forEach(function (name) {
+            node.setAttribute(name, attributes[name]);
+        });
+        return node;
+    }
+
+    function indicatorIcon(name) {
+        var svg = svgElement('svg', {
+            'aria-hidden': 'true',
+            'class': 'phalcon-debugbar-indicator-icon',
+            'viewBox': '0 0 18 18'
+        });
+
+        if (name === 'clock') {
+            svg.appendChild(svgElement('circle', {cx: '9', cy: '9', r: '6.5'}));
+            svg.appendChild(svgElement('path', {d: 'M9 5.2V9l2.8 1.7'}));
+            return svg;
+        }
+
+        if (name === 'search') {
+            svg.appendChild(svgElement('circle', {cx: '7.5', cy: '7.5', r: '4.5'}));
+            svg.appendChild(svgElement('path', {d: 'M10.8 10.8l4 4'}));
+            return svg;
+        }
+
+        function gear(cx, cy, radius) {
+            var group = svgElement('g', {});
+            group.appendChild(svgElement('circle', {cx: cx, cy: cy, r: radius}));
+            group.appendChild(svgElement('circle', {cx: cx, cy: cy, r: radius / 3}));
+            for (var index = 0; index < 8; index++) {
+                var angle = index * Math.PI / 4;
+                group.appendChild(svgElement('line', {
+                    x1: cx + Math.cos(angle) * radius,
+                    y1: cy + Math.sin(angle) * radius,
+                    x2: cx + Math.cos(angle) * (radius + 1.5),
+                    y2: cy + Math.sin(angle) * (radius + 1.5)
+                }));
+            }
+            svg.appendChild(group);
+        }
+
+        gear(6.2, 10.5, 3.1);
+        gear(12.2, 6.2, 2.4);
+        return svg;
+    }
+
+    function metricIndicator(icon, label, value) {
+        var indicator = el('span', 'phalcon-debugbar-indicator');
+        indicator.title = label;
+        indicator.appendChild(indicatorIcon(icon));
+        indicator.appendChild(el('span', 'phalcon-debugbar-indicator-value', scalar(value)));
+        return indicator;
+    }
+
+    function renderIndicators(mount, data, onHistoryToggle, historyOpen, requestMetadata) {
+        mount.innerHTML = '';
+        var historyTrigger = null;
+
+        var time = data.time || {};
+        if (hasBadge(time.badge)) {
+            mount.appendChild(metricIndicator('clock', 'Request time', time.badge));
+        }
+
+        var memory = data.memory || {};
+        var memoryPanel = memory.panel || {};
+        var currentMemory = memoryPanel['Current usage'];
+        if (hasBadge(currentMemory)) {
+            mount.appendChild(metricIndicator('cogs', 'Current memory usage', currentMemory));
+        }
+
+        var request = data.request || {};
+        var requestPanel = request.panel || {};
+        var method = scalar(requestPanel.Method);
+        var uri = scalar(requestPanel.URI);
+        var historyPanel = (data.history && data.history.panel) || {};
+        requestMetadata = requestMetadata || {};
+        method = method || scalar(historyPanel.method) || scalar(requestMetadata.method);
+        uri = uri || scalar(historyPanel.uri) || scalar(requestMetadata.uri);
+        if (method || uri || onHistoryToggle) {
+            var requestControl = el(
+                onHistoryToggle ? 'button' : 'span',
+                'phalcon-debugbar-indicator phalcon-debugbar-request-control'
+            );
+            var requestLabel = (method + ' ' + uri).trim() || 'History';
+            requestControl.title = onHistoryToggle
+                ? (historyOpen ? 'Close request history: ' : 'Open request history: ') + requestLabel
+                : requestLabel;
+            if (onHistoryToggle) {
+                requestControl.appendChild(indicatorIcon('search'));
+            }
+            requestControl.appendChild(el('strong', 'phalcon-debugbar-request-method', method));
+            requestControl.appendChild(el('span', 'phalcon-debugbar-request-uri', uri || 'History'));
+            if (onHistoryToggle) {
+                requestControl.type = 'button';
+                requestControl.classList.add('is-history-trigger');
+                requestControl.setAttribute('data-history-label', requestLabel);
+                requestControl.classList.toggle('is-active', Boolean(historyOpen));
+                requestControl.setAttribute('aria-expanded', historyOpen ? 'true' : 'false');
+                requestControl.addEventListener('click', onHistoryToggle);
+                historyTrigger = requestControl;
+            }
+            mount.appendChild(requestControl);
+        }
+
+        return historyTrigger;
     }
 
     function titleize(name) {
@@ -379,7 +489,7 @@
                                     }
                                 );
                                 button.classList.add('is-selected');
-                                onSelect(detail.request.payload, id);
+                                onSelect(detail.request.payload, detail.request.meta || {}, id);
                             }
                             button.disabled = false;
                         }).catch(function () {
@@ -485,6 +595,7 @@
         var body = el('div', 'phalcon-debugbar-body');
         var row = el('div', 'phalcon-debugbar-row');
         var tabs = el('div', 'phalcon-debugbar-tabs');
+        var indicators = el('div', 'phalcon-debugbar-indicators');
         var toggle = el('button', 'phalcon-debugbar-toggle', '⚡');
         toggle.type = 'button';
         toggle.title = 'Toggle Phalcon DebugBar';
@@ -495,7 +606,7 @@
         var historyOpen = false;
         var historyPanel = null;
         var historyRenderGeneration = 0;
-        var historyTab = null;
+        var historyTrigger = null;
 
         function closePanel() {
             body.style.display = 'none';
@@ -516,10 +627,11 @@
                 historyBrowser,
                 historyPanel,
                 selectedHistoryId,
-                function (storedPayload, id) {
+                function (storedPayload, storedMetadata, id) {
                     var activeBeforeSelection = active;
                     selectedHistoryId = id;
-                    renderData(storedPayload, activeBeforeSelection, true);
+                    setHistoryOpen(false);
+                    renderData(storedPayload, activeBeforeSelection, storedMetadata);
                 },
                 function () {
                     selectedHistoryId = '';
@@ -530,16 +642,19 @@
             );
         }
 
-        function setHistoryOpen(open, preserveBrowser) {
+        function setHistoryOpen(open) {
             historyOpen = Boolean(open && historyPanel);
-            if (historyTab) {
-                historyTab.classList.toggle('is-active', historyOpen);
+            if (historyTrigger) {
+                historyTrigger.classList.toggle('is-active', historyOpen);
+                historyTrigger.setAttribute('aria-expanded', historyOpen ? 'true' : 'false');
+                historyTrigger.title = (historyOpen ? 'Close request history: ' : 'Open request history: ')
+                    + historyTrigger.getAttribute('data-history-label');
             }
 
             if (!historyOpen) {
                 historyRenderGeneration++;
                 historyBrowser.style.display = 'none';
-            } else if (!preserveBrowser) {
+            } else {
                 renderOpenHistory();
             }
         }
@@ -562,6 +677,7 @@
 
         function activate(name, tab, entry, type) {
             closePanel();
+            setHistoryOpen(false);
             tab.classList.add('is-active');
             body.innerHTML = '';
             var summary = renderSummary(entry.summary);
@@ -573,7 +689,7 @@
             active = name;
         }
 
-        function renderData(nextPayload, preferredActive, preserveHistoryBrowser) {
+        function renderData(nextPayload, preferredActive, requestMetadata) {
             payload = nextPayload || {};
             data = payload.data || {};
             widgets = (payload.meta && payload.meta.widgets) || {};
@@ -582,15 +698,24 @@
             body.style.display = 'none';
             active = null;
 
+            var historyEntry = data.history || {};
+            historyPanel = null;
+            if (
+                historyEntry.panel
+                && typeof historyEntry.panel.url === 'string'
+            ) {
+                historyPanel = historyEntry.panel;
+            } else {
+                historyOpen = false;
+            }
+
             var preferred = null;
             Object.keys(data).forEach(function (name) {
                 var entry = data[name] || {};
                 var widget = widgets[name] || {};
                 if (
                     name === 'history'
-                    && widget.panel === 'history'
-                    && entry.panel
-                    && typeof entry.panel.url === 'string'
+                    || (historyPanel && (name === 'time' || name === 'memory'))
                 ) {
                     return;
                 }
@@ -606,6 +731,7 @@
                 }
 
                 tab.addEventListener('click', function () {
+                    setHistoryOpen(false);
                     if (active === name) {
                         closePanel();
                         return;
@@ -619,46 +745,39 @@
                 }
             });
 
-            var historyEntry = data.history || {};
-            var historyWidget = widgets.history || {};
-            historyPanel = null;
-            historyTab = null;
-            if (
-                historyWidget.panel === 'history'
-                && historyEntry.panel
-                && typeof historyEntry.panel.url === 'string'
-            ) {
-                historyPanel = historyEntry.panel;
-                historyTab = el('button', 'phalcon-debugbar-tab');
-                historyTab.type = 'button';
-                historyTab.appendChild(el(
-                    'span',
-                    'phalcon-debugbar-tab-label',
-                    historyWidget.label || 'History'
-                ));
-                historyTab.addEventListener('click', function () {
-                    setHistoryOpen(!historyOpen);
-                });
-                tabs.appendChild(historyTab);
-            } else {
-                historyOpen = false;
-            }
-
             if (preferred) {
                 activate(preferred[0], preferred[1], preferred[2], preferred[3]);
             }
 
-            setHistoryOpen(historyOpen, preserveHistoryBrowser);
+            if (historyPanel) {
+                historyTrigger = renderIndicators(
+                    indicators,
+                    data,
+                    function () {
+                        if (!historyOpen) {
+                            closePanel();
+                        }
+                        setHistoryOpen(!historyOpen);
+                    },
+                    historyOpen,
+                    requestMetadata
+                );
+            } else {
+                indicators.innerHTML = '';
+                historyTrigger = null;
+            }
+            setHistoryOpen(historyOpen);
         }
 
         row.appendChild(tabs);
+        row.appendChild(indicators);
         row.appendChild(toggle);
         bar.appendChild(historyBrowser);
         bar.appendChild(body);
         bar.appendChild(row);
         mount.appendChild(bar);
 
-        renderData(payload, null);
+        renderData(payload, null, null);
         setCollapsed(readCollapsed());
     });
 })();

@@ -91,6 +91,7 @@ final class HistoryControllerTest extends AbstractUnitTestCase
             $this->assertJsonResponse($response, 500, ['error' => 'History is unavailable.']);
         }
     }
+
     #[RunInSeparateProcess]
     public function testActionsRequireADiContainer(): void
     {
@@ -222,6 +223,7 @@ final class HistoryControllerTest extends AbstractUnitTestCase
 
         $this->assertJsonResponse($response, 404, ['error' => 'Request not found.']);
     }
+
     /**
      * @param array<string, mixed> $expectedBody
      */

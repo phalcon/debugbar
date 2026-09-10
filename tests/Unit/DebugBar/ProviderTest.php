@@ -297,6 +297,7 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertTrue($container->has(Provider::ACCESS_GATE_SERVICE));
         $this->assertSame('debugbar.access_gate', Provider::ACCESS_GATE_SERVICE);
         $this->assertTrue($this->bootedBar()->hasCollector('history'));
+        $this->assertTrue($this->bootedBar()->hasCollector('memory'));
         $route = $router->getRouteByName('debugbar.history.index');
         if (!$route instanceof RouteInterface) {
             $this->fail('Expected the debugbar.history.index route.');

@@ -67,7 +67,7 @@ The second argument to `Provider` is a nested array. Every key is optional.
 | `access.allow_ips` | `list<string>`            | `[]` (any client)        | Client IP allowlist. Empty allows any address.                   |
 | `access.callback`  | `(Closure(): bool)\|null` | `null`                   | Extra gate. When present, it must also return `true`.            |
 | `assets.nonce`     | `string\|null`            | `null`                   | CSP nonce stamped on the injected `<style>` and `<script>` tags. |
-| `collectors`       | `array<string, bool>`     | all enabled              | Per-collector switch, keyed by collector name.                   |
+| `collectors`       | `array<string, bool>`     | all applicable enabled   | Per-collector switch, keyed by collector name.                   |
 | `enabled`          | `bool`                    | `true`                   | Master switch. When `false`, `boot()` returns after the gate.    |
 | `env.blocked`      | `list<string>`            | `['production', 'prod']` | Environment values that block the bar (case-insensitive).        |
 | `env.strict`       | `bool`                    | `false`                  | When `true`, `boot()` throws in a blocked/undefined environment instead of returning silently. |
@@ -103,10 +103,18 @@ use Phalcon\DebugBar\Provider;
 When history is enabled, the provider registers `GET /_debugbar/open`,
 `DELETE /_debugbar/open`, and its internal history controller automatically. A GET
 without an `id` returns the recent request metadata; `?id=<request-id>` returns
-a stored payload. DELETE clears the active session's stored requests. The
-`History` item in the bottom bar opens the browser above it; its controls refresh
-or clear the list, and selecting an item replaces the collectors shown below. An
-empty history displays `No stored requests` and leaves the clear control disabled.
+a stored payload. DELETE clears the active session's stored requests.
+
+The request indicator on the right (search icon, HTTP method, and URI) replaces a
+dedicated History tab. It initially identifies the current request. Clicking it
+closes any open collector panel and opens the history browser; clicking it again
+closes the browser. Opening a collector panel also closes history, so only one
+panel is visible at a time. The browser provides refresh and clear controls.
+Selecting a stored request closes history, replaces the complete collector payload,
+and updates the tabs plus the request time, current memory usage, method, and URI
+without navigating away from the page. If request metadata is unavailable, the
+history control uses `History` as its fallback label. An empty history displays
+`No stored requests` and leaves the clear control disabled.
 
 Storage is isolated by a SHA-256 hash of the active PHP session id. Each stored
 entry distinguishes the request start time (`requested_at`) from the time it was
@@ -122,7 +130,10 @@ no active session, no request is written or exposed.
 
 ## Collectors
 
-Each collector contributes one tab. A collector reads its data in one of four ways:
+Collectors contribute data to the bar. Most renderable collectors appear as tabs.
+When request history is enabled, request time, memory usage, and history use the
+compact controls described below.
+A collector reads its data in one of four ways:
 
 - **Snapshot** - reads state when the response is assembled.
 - **Streamed** - subscribes to framework events and accumulates as they fire.
@@ -136,6 +147,7 @@ Each collector contributes one tab. A collector reads its data in one of four wa
 | `database`   | SQL statements, bindings, timings, and query summary     | streamed          |
 | `exceptions` | Throwables, with stack traces                            | manual + streamed |
 | `logger`     | Log entries captured from a `Phalcon\Logger` adapter     | adapter           |
+| `memory`     | Current and peak memory used by the PHP request (history mode) | snapshot      |
 | `messages`   | Messages recorded through the facade                     | manual            |
 | `request`    | Request method, URI, query, post, and headers (redacted) | snapshot          |
 | `route`      | Matched module, controller, action, and parameters       | streamed          |
@@ -271,13 +283,23 @@ use Phalcon\DebugBar\Provider;
 
 The bar's CSS and JavaScript are minified and injected inline; the bar has no external asset to host or serve. On CSP-restricted pages, set `assets.nonce` so the inline tags carry a nonce.
 
-The bar sits at the bottom of the page. Each collector is a tab; a tab shows a badge when the collector reports a count or a summary value. Clicking a tab opens its panel:
+The bar sits at the bottom of the page. Interactive collectors appear as tabs on
+the left; a tab shows a badge when the collector reports a count or summary value.
+When request history is enabled, request time and current memory usage remain
+visible as compact indicators on the right instead of appearing as Time and Memory
+tabs. The rightmost control combines
+a search icon with the current HTTP method and URI; it opens or closes request
+history instead of using a dedicated History tab. The history browser and collector
+panels are mutually exclusive, so opening either closes the other. Selecting a
+stored request closes history and updates the entire bar with that request's data.
 
-Collectors may expose a summary above their panel. The database collector reports the total query count, duplicate runs, and accumulated SQL time. A duplicate run is each execution of a normalized statement after its first execution: running the same statement three times contributes two duplicate runs. These metrics remain visible with zero values when no queries are executed. Duplicate detection deliberately ignores binding values; repeated statements are highlighted and show their total execution count.
+Interactive tabs use the following panel types:
 
 - **grid** panels (version, request, config, session, route) render a key and value table.
-- **list** panels (time, messages, database, view, cache) render labelled rows.
+- **list** panels (messages, database, view, cache) render labelled rows.
 - **exceptions** panels render one collapsible entry per throwable; the summary line stays visible and expands to the stack trace.
 - **logs** panels (logger) render one entry per logged item; an entry with context is collapsible - the level and message stay visible and expand to the context.
+
+Collectors may expose a summary above their panel. The database collector reports the total query count, duplicate runs, and accumulated SQL time. A duplicate run is each execution of a normalized statement after its first execution: running the same statement three times contributes two duplicate runs. These metrics remain visible with zero values when no queries are executed. Duplicate detection deliberately ignores binding values; repeated statements are highlighted and show their total execution count.
 
 A handle at the right of the tab row collapses the whole bar to a corner button, so it never covers the host page's own controls. The collapsed state is remembered across page loads.

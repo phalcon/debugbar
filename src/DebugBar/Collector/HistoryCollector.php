@@ -27,17 +27,31 @@ final class HistoryCollector extends AbstractCollector
 
     protected string $panel = 'history';
 
-    public function __construct(private readonly string $url)
-    {
+    public function __construct(
+        private readonly string $url,
+        private readonly ?string $method = null,
+        private readonly ?string $uri = null
+    ) {
     }
 
     /**
-     * @return array{panel: array{url: string}, badge: null}
+     * @return array{
+     *     panel: array{url: string, method?: string, uri?: string},
+     *     badge: null
+     * }
      */
     public function collect(): array
     {
+        $panel = ['url' => $this->url];
+        if (null !== $this->method) {
+            $panel['method'] = $this->method;
+        }
+        if (null !== $this->uri) {
+            $panel['uri'] = $this->uri;
+        }
+
         return [
-            'panel' => ['url' => $this->url],
+            'panel' => $panel,
             'badge' => null,
         ];
     }

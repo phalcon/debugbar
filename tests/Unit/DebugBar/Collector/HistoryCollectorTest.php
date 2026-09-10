@@ -21,6 +21,23 @@ final class HistoryCollectorTest extends AbstractUnitTestCase
 {
     use PanelContractTrait;
 
+    public function testCollectCarriesCurrentRequestMetadata(): void
+    {
+        $collector = new HistoryCollector('/_debugbar/open', 'POST', '/orders');
+
+        $this->assertSame(
+            [
+                'panel' => [
+                    'url'    => '/_debugbar/open',
+                    'method' => 'POST',
+                    'uri'    => '/orders',
+                ],
+                'badge' => null,
+            ],
+            $collector->collect()
+        );
+    }
+
     public function testCollectCarriesTheInternalEndpoint(): void
     {
         $collector = new HistoryCollector('/_debugbar/open');

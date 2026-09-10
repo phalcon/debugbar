@@ -65,10 +65,13 @@ use const PHP_SESSION_ACTIVE;
 final class FilesystemHistory
 {
     private const GARBAGE_COLLECTION_MARKER               = '.gc';
+
     private const GARBAGE_COLLECTION_MAX_INTERVAL_SECONDS = 3600;
+
     private const METADATA_SUFFIX                         = '.meta';
 
     private readonly HistoryFileOperations $fileOperations;
+
     private bool $garbageCollectionAttempted = false;
 
     public function __construct(

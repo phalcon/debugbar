@@ -48,7 +48,7 @@ class ValueDumper
             is_scalar($variable) => $this->dumpNumber($variable),
             is_object($variable) => $this->dumpObject($variable),
             is_array($variable)  => 'Array(' . $this->dumpArray($variable) . ')',
-            null === $variable   => $this->dumpNull(),
+            null === $variable   => 'null',
             default              => gettype($variable),
         };
     }
@@ -109,11 +109,6 @@ class ValueDumper
     private function dumpBool(bool $variable): string
     {
         return $variable ? 'true' : 'false';
-    }
-
-    private function dumpNull(): string
-    {
-        return 'null';
     }
 
     private function dumpNumber(float | int $variable): string

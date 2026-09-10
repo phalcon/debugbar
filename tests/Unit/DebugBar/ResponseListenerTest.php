@@ -78,6 +78,55 @@ final class ResponseListenerTest extends AbstractUnitTestCase
     }
 
     #[RunInSeparateProcess]
+    public function testInternalHistoryRequestsAreNotRecorded(): void
+    {
+        $sessionId = 'debugbar-' . bin2hex(random_bytes(8));
+        $path      = sys_get_temp_dir() . '/phalcon-debugbar-internal-listener-' . bin2hex(random_bytes(8));
+        session_id($sessionId);
+        session_start();
+
+        try {
+            $request = $this->createMock(RequestInterface::class);
+            $request->method('getClientAddress')->willReturn('127.0.0.1');
+            $request->method('isAjax')->willReturn(true);
+            $request->method('getURI')->willReturn('/_debugbar/open?id=20260909000000-000000-deadbeef');
+            $request->method('getMethod')->willReturn('GET');
+
+            $options  = new HistoryOptions(true, '/_debugbar/open', $path);
+            $history  = new FilesystemHistory($options);
+            $listener = new ResponseListener(
+                new DebugBar(),
+                new Renderer(),
+                new Injector(),
+                new AccessGate([], null),
+                $request,
+                new BarOptions(false, null),
+                $history,
+                $options
+            );
+            $response = new Response();
+            $response->setContent('{}');
+
+            $listener($this->event(), null, $response);
+
+            $this->assertSame([], $history->find());
+        } finally {
+            session_write_close();
+            $directory = $path . '/' . hash('sha256', $sessionId);
+            $files     = glob($directory . '/*');
+            if (false !== $files) {
+                foreach ($files as $file) {
+                    unlink($file);
+                }
+            }
+
+            @rmdir($directory);
+            @unlink($path . '/.gc');
+            @rmdir($path);
+        }
+    }
+
+    #[RunInSeparateProcess]
     public function testRecordsRequestStartTimeFromNativeRequest(): void
     {
         $sessionId = 'debugbar-' . bin2hex(random_bytes(8));

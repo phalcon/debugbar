@@ -6,14 +6,22 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 
 ### Added
 
+- When request history is enabled, a memory collector reports current and peak
+  PHP request usage. Request time, current memory usage, and the HTTP method/URI
+  are displayed as compact status indicators on the right of the bar instead of
+  separate Time and Memory tabs.
 - Optional, extensible collector summaries rendered as headline metrics above a panel. The database collector uses them to report total queries, duplicate runs (executions after the first), and accumulated SQL time, and marks repeated statements with their execution count.
 - Optional, session-isolated request history with filesystem retention, an
   internal `GET/DELETE /_debugbar/open` controller, and a collapsible request
   browser with refresh and clear controls that swaps the bar payload without
-  leaving the current page. Retention cleanup covers abandoned session
-  directories without delaying history reads, and distinguishes request-start
-  and persistence timestamps. Metadata sidecars keep request listings independent
-  of collector payload size while preserving legacy stored entries.
+  leaving the current page. A dynamic request control combining a search icon,
+  method, and URI replaces a dedicated History tab. History and collector panels
+  are mutually exclusive; selecting a stored request closes history and updates
+  the entire bar. Retention
+  cleanup covers abandoned session directories without delaying history reads and
+  distinguishes request-start and persistence timestamps. Metadata sidecars keep
+  request listings independent of collector payload size while preserving legacy
+  stored entries.
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
