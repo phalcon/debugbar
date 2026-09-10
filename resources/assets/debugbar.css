@@ -28,7 +28,9 @@
 }
 
 #phalcon-debugbar.is-collapsed .phalcon-debugbar-body,
-#phalcon-debugbar.is-collapsed .phalcon-debugbar-tabs {
+#phalcon-debugbar.is-collapsed .phalcon-debugbar-history-browser,
+#phalcon-debugbar.is-collapsed .phalcon-debugbar-tabs,
+#phalcon-debugbar.is-collapsed .phalcon-debugbar-indicators {
     display: none;
 }
 
@@ -93,6 +95,67 @@
     background: rgba(0, 0, 0, 0.25);
 }
 
+#phalcon-debugbar .phalcon-debugbar-indicators {
+    display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
+    align-items: stretch;
+}
+
+#phalcon-debugbar .phalcon-debugbar-indicator {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-left: 1px solid #2b2b40;
+    color: #b9b9d4;
+    white-space: nowrap;
+}
+
+#phalcon-debugbar .phalcon-debugbar-indicator-icon {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: #a78bfa;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#phalcon-debugbar .phalcon-debugbar-indicator-value,
+#phalcon-debugbar .phalcon-debugbar-request-method {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+#phalcon-debugbar .phalcon-debugbar-request-control {
+    max-width: 40vw;
+}
+
+#phalcon-debugbar button.phalcon-debugbar-request-control {
+    background: transparent;
+    border: 0;
+    border-left: 1px solid #2b2b40;
+    font: inherit;
+    cursor: pointer;
+}
+
+#phalcon-debugbar button.phalcon-debugbar-request-control:hover,
+#phalcon-debugbar button.phalcon-debugbar-request-control.is-active {
+    background: #26263a;
+}
+
+#phalcon-debugbar .phalcon-debugbar-request-method {
+    color: #a78bfa;
+}
+
+#phalcon-debugbar .phalcon-debugbar-request-uri {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 #phalcon-debugbar .phalcon-debugbar-toggle {
     flex: 0 0 auto;
     padding: 7px 12px;
@@ -143,6 +206,142 @@
 #phalcon-debugbar .phalcon-debugbar-summary-value {
     color: #ffffff;
     font-size: 13px;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-browser {
+    display: none;
+    max-height: 210px;
+    overflow: auto;
+    background: #101018;
+    border-bottom: 1px solid #2b2b40;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 14px;
+    background: #181824;
+    border-bottom: 1px solid #2b2b40;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-title {
+    color: #d5d5e8;
+    font-size: 12px;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-actions {
+    display: flex;
+    gap: 6px;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-action {
+    padding: 3px 9px;
+    border: 1px solid #454563;
+    border-radius: 3px;
+    background: #29293d;
+    color: #d5d5e8;
+    font: inherit;
+    cursor: pointer;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-action:hover {
+    background: #353550;
+    color: #ffffff;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-action.is-danger {
+    border-color: #7f3445;
+    color: #ff9aac;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-action.is-danger:hover {
+    background: #542532;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-action:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-list {
+    display: flex;
+    flex-direction: column;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-request {
+    display: grid;
+    grid-template-columns: 58px minmax(180px, 1fr) 48px 210px;
+    gap: 10px;
+    align-items: center;
+    padding: 5px 14px;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid #232334;
+    color: #b9b9d4;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-request:hover,
+#phalcon-debugbar .phalcon-debugbar-history-request.is-selected {
+    background: #26263a;
+    color: #ffffff;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-request.is-selected {
+    box-shadow: inset 3px 0 #7c3aed;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-method {
+    color: #a78bfa;
+    font-weight: 700;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-uri {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-status,
+#phalcon-debugbar .phalcon-debugbar-history-time {
+    color: #8f8faa;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-loading,
+#phalcon-debugbar .phalcon-debugbar-history-empty,
+#phalcon-debugbar .phalcon-debugbar-history-error {
+    padding: 8px 14px;
+    color: #8f8faa;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-error {
+    color: #ff6b81;
+}
+
+@media (max-width: 760px) {
+    #phalcon-debugbar .phalcon-debugbar-indicator {
+        padding-right: 7px;
+        padding-left: 7px;
+    }
+
+    #phalcon-debugbar .phalcon-debugbar-request-control {
+        max-width: 32vw;
+    }
+
+    #phalcon-debugbar .phalcon-debugbar-history-request {
+        grid-template-columns: 52px minmax(120px, 1fr) 42px;
+    }
+
+    #phalcon-debugbar .phalcon-debugbar-history-time {
+        display: none;
+    }
 }
 
 #phalcon-debugbar table {

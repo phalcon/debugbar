@@ -56,6 +56,9 @@ jobs:
       - name: "PHP CS Fixer (dry-run)"
         run: composer cs-fixer
 
+      - name: "JavaScript tests"
+        run: node --test tests/JavaScript/debugbar.test.js
+
   tests:
     name: "Tests (PHP ${{ matrix.php }}, Phalcon ${{ matrix.variant }})"
     permissions:

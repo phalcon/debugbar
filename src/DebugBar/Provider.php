@@ -19,7 +19,9 @@ use Phalcon\DebugBar\Collector\CacheCollector;
 use Phalcon\DebugBar\Collector\ConfigCollector;
 use Phalcon\DebugBar\Collector\DatabaseCollector;
 use Phalcon\DebugBar\Collector\ExceptionsCollector;
+use Phalcon\DebugBar\Collector\HistoryCollector;
 use Phalcon\DebugBar\Collector\LoggerCollector;
+use Phalcon\DebugBar\Collector\MemoryCollector;
 use Phalcon\DebugBar\Collector\MessagesCollector;
 use Phalcon\DebugBar\Collector\RequestCollector;
 use Phalcon\DebugBar\Collector\RouteCollector;
@@ -30,11 +32,15 @@ use Phalcon\DebugBar\Collector\ViewCollector;
 use Phalcon\DebugBar\Contracts\Collector;
 use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
+use Phalcon\DebugBar\History\FilesystemHistory;
+use Phalcon\DebugBar\History\HistoryOptions;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Di\DiInterface;
 use Phalcon\Http\RequestInterface;
+use Phalcon\Http\ResponseInterface;
 use Phalcon\Mvc\Application;
+use Phalcon\Mvc\RouterInterface;
 
 use function getenv;
 use function in_array;
@@ -44,13 +50,17 @@ use function mb_strtolower;
 /**
  * Boots the debug bar against an MVC application. Its whole coupling to the app
  * is: hold the `Application`, reach its EventsManager, and attach listeners.
- * There is no DI service to register and no container-specific wiring - the
- * app hands over its container and event bus.
+ * When request history is enabled it additionally registers an internal route
+ * and two private DI services used by its controller.
  *
  * @phpstan-import-type provider_config from DebugBarTypes
  */
 class Provider
 {
+    public const ACCESS_GATE_SERVICE = 'debugbar.access_gate';
+
+    public const HISTORY_SERVICE     = 'debugbar.history';
+
     /**
      * @var (Closure(): bool)|null
      */
@@ -77,6 +87,8 @@ class Provider
 
     private bool $headers;
 
+    private HistoryOptions $historyOptions;
+
     private ?string $nonce;
 
     private Redactor $redactor;
@@ -88,10 +100,11 @@ class Provider
      */
     public function __construct(private readonly Application $app, array $config = [])
     {
-        $env    = $config['env'] ?? [];
-        $assets = $config['assets'] ?? [];
-        $access = $config['access'] ?? [];
-        $redact = $config['redact'] ?? [];
+        $env     = $config['env'] ?? [];
+        $assets  = $config['assets'] ?? [];
+        $access  = $config['access'] ?? [];
+        $redact  = $config['redact'] ?? [];
+        $history = $config['history'] ?? [];
 
         $this->envVar           = $env['var'] ?? 'APP_ENV';
         $this->blocked          = $env['blocked'] ?? ['production', 'prod'];
@@ -102,6 +115,13 @@ class Provider
         $this->accessCallback   = $access['callback'] ?? null;
         $this->collectorsConfig = $config['collectors'] ?? [];
         $this->headers          = $config['headers'] ?? true;
+        $this->historyOptions   = new HistoryOptions(
+            $history['enabled'] ?? false,
+            $history['url'] ?? '/_debugbar/open',
+            $history['path'] ?? '',
+            $history['max_requests'] ?? 100,
+            $history['ttl_seconds'] ?? 86400
+        );
         $this->redactor         = new Redactor(
             [...Redactor::DEFAULT_KEYS, ...($redact['mask'] ?? [])],
             $redact['hidden'] ?? []
@@ -132,12 +152,21 @@ class Provider
             return;
         }
 
-        $container = $this->app->getDI();
-        $request   = $this->resolveRequest($container);
+        $container  = $this->app->getDI();
+        $request    = $this->resolveRequest($container);
+        $accessGate = new AccessGate($this->allowedIps, $this->accessCallback);
+        $history    = $this->registerHistory($container, $accessGate, $request);
 
         $bar = new DebugBar();
-        foreach ($this->buildCollectors($container, $request) as $collector) {
+        foreach ($this->buildCollectors($container, $request, null !== $history) as $collector) {
             $bar->addCollector($collector);
+        }
+        if (null !== $history) {
+            $bar->addCollector(new HistoryCollector(
+                $this->historyOptions->url,
+                $request?->getMethod(),
+                $request?->getURI()
+            ));
         }
 
         Debug::setBar($bar);
@@ -159,9 +188,11 @@ class Provider
                 $bar,
                 new Renderer(),
                 new Injector(),
-                new AccessGate($this->allowedIps, $this->accessCallback),
+                $accessGate,
                 $request,
-                new BarOptions($this->headers, $this->nonce)
+                new BarOptions($this->headers, $this->nonce),
+                $history,
+                null !== $history ? $this->historyOptions : null
             )
         );
     }
@@ -184,8 +215,11 @@ class Provider
      *
      * @return list<Collector>
      */
-    private function buildCollectors(?DiInterface $container, ?RequestInterface $request): array
-    {
+    private function buildCollectors(
+        ?DiInterface $container,
+        ?RequestInterface $request,
+        bool $historyEnabled
+    ): array {
         $collectors = [];
 
         if ($this->isCollectorEnabled(VersionCollector::NAME)) {
@@ -206,6 +240,10 @@ class Provider
 
         if ($this->isCollectorEnabled(TimeCollector::NAME)) {
             $collectors[] = new TimeCollector();
+        }
+
+        if ($historyEnabled && $this->isCollectorEnabled(MemoryCollector::NAME)) {
+            $collectors[] = new MemoryCollector();
         }
 
         if ($this->isCollectorEnabled(DatabaseCollector::NAME)) {
@@ -242,6 +280,56 @@ class Provider
     private function isCollectorEnabled(string $name): bool
     {
         return $this->collectorsConfig[$name] ?? true;
+    }
+
+    /**
+     * Registers the internal history module and its MVC route. History stays
+     * disabled when the app has no compatible container/router.
+     */
+    private function registerHistory(
+        ?DiInterface $container,
+        AccessGate $accessGate,
+        ?RequestInterface $request
+    ): ?FilesystemHistory {
+        if (
+            !$this->historyOptions->enabled
+            || null === $container
+            || null === $request
+            || !$container->has('router')
+            || !$container->has('response')
+        ) {
+            return null;
+        }
+
+        $router   = $container->getShared('router');
+        $response = $container->getShared('response');
+        if (!$router instanceof RouterInterface || !$response instanceof ResponseInterface) {
+            return null;
+        }
+
+        $history = new FilesystemHistory($this->historyOptions);
+        $container->setShared(self::HISTORY_SERVICE, $history);
+        $container->setShared(self::ACCESS_GATE_SERVICE, $accessGate);
+
+        $router->addGet(
+            $this->historyOptions->url,
+            [
+                'namespace'  => 'Phalcon\\DebugBar\\Controllers',
+                'controller' => 'history',
+                'action'     => 'index',
+            ]
+        )->setName('debugbar.history.index');
+
+        $router->addDelete(
+            $this->historyOptions->url,
+            [
+                'namespace'  => 'Phalcon\\DebugBar\\Controllers',
+                'controller' => 'history',
+                'action'     => 'clear',
+            ]
+        )->setName('debugbar.history.clear');
+
+        return $history;
     }
 
     private function resolveConfig(DiInterface $container): ?ConfigInterface
