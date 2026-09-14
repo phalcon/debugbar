@@ -13,9 +13,13 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Collector;
 
+use Phalcon\DebugBar\DebugBarTypes;
+
 /**
  * Enables the inline request-history browser. The browser itself is rendered
  * by the JavaScript client; this collector only carries its internal endpoint.
+ *
+ * @phpstan-import-type widget from DebugBarTypes
  */
 final class HistoryCollector extends AbstractCollector
 {
@@ -53,6 +57,30 @@ final class HistoryCollector extends AbstractCollector
         return [
             'panel' => $panel,
             'badge' => null,
+        ];
+    }
+
+    /**
+     * @return widget
+     */
+    public function getWidget(): array
+    {
+        return [
+            ...parent::getWidget(),
+            'indicators' => [
+                [
+                    'collector' => TimeCollector::NAME,
+                    'icon'      => 'clock',
+                    'label'     => 'Request time',
+                    'path'      => ['badge'],
+                ],
+                [
+                    'collector' => MemoryCollector::NAME,
+                    'icon'      => 'cogs',
+                    'label'     => 'Current memory usage',
+                    'path'      => ['panel', 'Current usage'],
+                ],
+            ],
         ];
     }
 }

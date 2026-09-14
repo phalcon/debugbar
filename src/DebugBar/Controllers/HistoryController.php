@@ -13,13 +13,11 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Controllers;
 
-use Phalcon\DebugBar\History\FilesystemHistory;
-use Phalcon\DebugBar\Provider;
+use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
-use Phalcon\Mvc\Controller;
-use RuntimeException;
+use Phalcon\Mvc\ControllerInterface;
 
 use function is_string;
 use function json_encode;
@@ -31,8 +29,16 @@ use const JSON_UNESCAPED_UNICODE;
  * Internal MVC adapter for /_debugbar/open. GET returns the current session's
  * request list or one stored entry; DELETE clears that session's history.
  */
-final class HistoryController extends Controller
+final class HistoryController implements ControllerInterface
 {
+    public function __construct(
+        private readonly History $history,
+        private readonly AccessGate $accessGate,
+        private readonly RequestInterface $historyRequest,
+        private readonly ResponseInterface $historyResponse
+    ) {
+    }
+
     public function clearAction(): ResponseInterface
     {
         return $this->handle(
@@ -40,7 +46,7 @@ final class HistoryController extends Controller
             fn (
                 RequestInterface $request,
                 ResponseInterface $response,
-                FilesystemHistory $history
+                History $history
             ): ResponseInterface => $this->json($response, ['cleared' => $history->clear()])
         );
     }
@@ -52,7 +58,7 @@ final class HistoryController extends Controller
             function (
                 RequestInterface $request,
                 ResponseInterface $response,
-                FilesystemHistory $history
+                History $history
             ): ResponseInterface {
                 $id = $request->getQuery('id');
                 if (null === $id) {
@@ -72,28 +78,20 @@ final class HistoryController extends Controller
         );
     }
 
+    public function openAction(): ResponseInterface
+    {
+        return 'DELETE' === $this->historyRequest->getMethod() ? $this->clearAction() : $this->indexAction();
+    }
+
     /**
-     * @param callable(RequestInterface, ResponseInterface, FilesystemHistory): ResponseInterface $action
+     * @param callable(RequestInterface, ResponseInterface, History): ResponseInterface $action
      */
     private function handle(string $expectedMethod, callable $action): ResponseInterface
     {
-        $container  = $this->getDI() ?? throw new RuntimeException('The History controller requires a DI container.');
-        $request    = $container->getShared('request');
-        $response   = $container->getShared('response');
-        $history    = $container->getShared(Provider::HISTORY_SERVICE);
-        $accessGate = $container->getShared(Provider::ACCESS_GATE_SERVICE);
-
-        if (!$response instanceof ResponseInterface) {
-            throw new RuntimeException('The response service must implement ResponseInterface.');
-        }
-
-        if (
-            !$request instanceof RequestInterface
-            || !$history instanceof FilesystemHistory
-            || !$accessGate instanceof AccessGate
-        ) {
-            return $this->json($response, ['error' => 'History is unavailable.'], 500);
-        }
+        $request    = $this->historyRequest;
+        $response   = $this->historyResponse;
+        $history    = $this->history;
+        $accessGate = $this->accessGate;
 
         $clientIp = $request->getClientAddress();
         if (!$accessGate->allows(is_string($clientIp) ? $clientIp : null)) {

@@ -13,9 +13,11 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\History;
 
+use InvalidArgumentException;
+
 use function max;
 use function rtrim;
-use function sys_get_temp_dir;
+use function trim;
 
 /**
  * Immutable request-history configuration shared by the provider, response
@@ -36,7 +38,11 @@ final class HistoryOptions
         int $maxRequests = 100,
         int $ttlSeconds = 86400
     ) {
-        $this->path        = rtrim('' !== $path ? $path : sys_get_temp_dir() . '/phalcon-debugbar', '/\\');
+        if ($enabled && '' === trim($path)) {
+            throw new InvalidArgumentException('history.path is required when request history is enabled.');
+        }
+
+        $this->path        = rtrim($path, '/\\');
         $this->maxRequests = max(1, $maxRequests);
         $this->ttlSeconds  = max(1, $ttlSeconds);
     }

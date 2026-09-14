@@ -13,42 +13,13 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Support\DebugBar\History;
 
-use Phalcon\DebugBar\History\HistoryFileOperations;
-
-use function file_get_contents;
-use function file_put_contents;
-use function rename;
-use function rmdir;
 use function str_ends_with;
-use function unlink;
 
-use const LOCK_EX;
-
-final class GarbageCollectionMarkerFailingFileOperations implements HistoryFileOperations
+final class GarbageCollectionMarkerFailingFileOperations extends DelegatingHistoryFileOperations
 {
-    public function move(string $source, string $target): bool
-    {
-        return @rename($source, $target);
-    }
-
-    public function read(string $file): false | string
-    {
-        return @file_get_contents($file);
-    }
-
-    public function remove(string $file): bool
-    {
-        return @unlink($file);
-    }
-
-    public function removeDirectory(string $directory): bool
-    {
-        return @rmdir($directory);
-    }
-
     public function write(string $file, string $contents): bool
     {
         return !str_ends_with($file, '/.gc')
-            && false !== @file_put_contents($file, $contents, LOCK_EX);
+            && $this->delegate->write($file, $contents);
     }
 }

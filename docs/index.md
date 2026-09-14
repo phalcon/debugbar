@@ -35,7 +35,7 @@ The remainder of this document covers the debug bar.
 
 ## Registering the Debug Bar
 
-The bar is booted by `Phalcon\DebugBar\Provider`. It takes the MVC application and an optional configuration array. The application must have an events manager set before the bar boots. Request history additionally requires the application's shared `router`, `request`, and `response` services.
+The bar is booted by `Phalcon\DebugBar\Provider`. It takes the MVC application and an optional configuration array. The application must have an events manager set before the bar boots. Request history additionally requires the application's `request` and shared `response` services. The provider does not add or modify application routes.
 
 ```php
 <?php
@@ -74,8 +74,8 @@ The second argument to `Provider` is a nested array. Every key is optional.
 | `env.var`          | `string`                  | `APP_ENV`                | Environment variable inspected by the gate.                      |
 | `headers`          | `bool`                    | `true`                   | Emit the `X-Debug-Bar` diagnostic header.                        |
 | `history.enabled`  | `bool`                    | `false`                  | Store and browse recent requests for the active session.         |
-| `history.url`      | `string`                  | `/_debugbar/open`        | Internal GET/DELETE endpoint registered by the provider.         |
-| `history.path`     | `string`                  | system temporary path    | Storage directory; keep it outside the document root.            |
+| `history.url`      | `string`                  | `/_debugbar/open`        | Internal GET/DELETE endpoint, relative to the application's base URI. |
+| `history.path`     | `string`                  | required when enabled    | Writable storage directory; keep it outside the document root.   |
 | `history.max_requests` | `int`                 | `100`                    | Maximum stored requests per session.                             |
 | `history.ttl_seconds` | `int`                  | `86400`                  | Lifetime in seconds; active-session entries are checked immediately. |
 | `redact.hidden`    | `list<string>`            | `[]`                     | Keys dropped from the output entirely.                           |
@@ -100,8 +100,14 @@ use Phalcon\DebugBar\Provider;
 ]))->boot();
 ```
 
-When history is enabled, the provider registers `GET /_debugbar/open`,
-`DELETE /_debugbar/open`, and its internal history controller automatically. A GET
+When history is enabled, the provider registers its internal history controller
+in the DI container and selects it on `application:beforeHandleRequest` for
+`GET /_debugbar/open` and `DELETE /_debugbar/open`. The controller receives its
+storage and access gate directly; no separate history services or routes are
+registered. If the application's `url` service has a base URI of `/app1/`, the
+endpoint is `/app1/_debugbar/open`. Without a `url` service, `history.url` is used
+as configured. The endpoint uses the application's normal MVC lifecycle, so
+module initialization and application event listeners still run. A GET
 without an `id` returns the recent request metadata; `?id=<request-id>` returns
 a stored payload. DELETE clears the active session's stored requests.
 
@@ -116,13 +122,14 @@ without navigating away from the page. If request metadata is unavailable, the
 history control uses `History` as its fallback label. An empty history displays
 `No stored requests` and leaves the clear control disabled.
 
-Storage is isolated by a SHA-256 hash of the active PHP session id. Each stored
+`history.path` must be configured explicitly when history is enabled and must be
+writable by the web-server user. Storage is isolated by a SHA-256 hash of the active PHP session id. Each stored
 entry distinguishes the request start time (`requested_at`) from the time it was
 persisted (`stored_at`). If the server does not expose `REQUEST_TIME_FLOAT`, the
 persistence time is used for both values. Each payload has a small metadata sidecar,
-so listing requests does not read the full collector payload. Files created by an
-earlier version without a sidecar remain readable through a legacy fallback. Reads
-clean expired entries only from the active session so opening the browser remains
+so listing requests does not read the full collector payload. If a sidecar is
+missing, the versioned payload is used as a fallback; incompatible stored payloads
+are rejected. Reads clean expired entries only from the active session so opening the browser remains
 fast on network filesystems. A rate-limited collection during request storage
 removes expired entries, abandoned temporary files, and empty directories from all
 sessions at most once per hour (or once per configured TTL when it is shorter). With
@@ -131,8 +138,8 @@ no active session, no request is written or exposed.
 ## Collectors
 
 Collectors contribute data to the bar. Most renderable collectors appear as tabs.
-When request history is enabled, request time, memory usage, and history use the
-compact controls described below.
+When request history is enabled, request time and memory usage also appear in the
+compact controls described below, while their collector tabs remain available.
 A collector reads its data in one of four ways:
 
 - **Snapshot** - reads state when the response is assembled.
@@ -147,7 +154,7 @@ A collector reads its data in one of four ways:
 | `database`   | SQL statements, bindings, timings, and query summary     | streamed          |
 | `exceptions` | Throwables, with stack traces                            | manual + streamed |
 | `logger`     | Log entries captured from a `Phalcon\Logger` adapter     | adapter           |
-| `memory`     | Current and peak memory used by the PHP request (history mode) | snapshot      |
+| `memory`     | Current and peak memory used by the PHP request            | snapshot          |
 | `messages`   | Messages recorded through the facade                     | manual            |
 | `request`    | Request method, URI, query, post, and headers (redacted) | snapshot          |
 | `route`      | Matched module, controller, action, and parameters       | streamed          |
@@ -286,8 +293,8 @@ The bar's CSS and JavaScript are minified and injected inline; the bar has no ex
 The bar sits at the bottom of the page. Interactive collectors appear as tabs on
 the left; a tab shows a badge when the collector reports a count or summary value.
 When request history is enabled, request time and current memory usage remain
-visible as compact indicators on the right instead of appearing as Time and Memory
-tabs. The rightmost control combines
+visible as compact indicators on the right alongside the Time and Memory tabs.
+The rightmost control combines
 a search icon with the current HTTP method and URI; it opens or closes request
 history instead of using a dedicated History tab. The history browser and collector
 panels are mutually exclusive, so opening either closes the other. Selecting a

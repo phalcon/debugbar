@@ -15,8 +15,8 @@ namespace Phalcon\DebugBar;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use Phalcon\DebugBar\History\FilesystemHistory;
-use Phalcon\DebugBar\History\HistoryOptions;
+use Phalcon\DebugBar\Contracts\History;
+use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\RequestMetadata;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Events\EventInterface;
@@ -26,10 +26,7 @@ use Phalcon\Http\ResponseInterface;
 use function count;
 use function is_float;
 use function is_string;
-use function parse_url;
 use function sprintf;
-
-use const PHP_URL_PATH;
 
 /**
  * The `application:beforeSendResponse` listener. On the event it runs the access
@@ -48,8 +45,8 @@ final class ResponseListener
         private readonly AccessGate $accessGate,
         private readonly ?RequestInterface $request,
         private readonly BarOptions $options,
-        private readonly ?FilesystemHistory $history = null,
-        private readonly ?HistoryOptions $historyOptions = null
+        private readonly ?History $history = null,
+        private readonly ?HistoryEndpoint $historyEndpoint = null
     ) {
     }
 
@@ -86,16 +83,15 @@ final class ResponseListener
      */
     private function record(array $collected, ResponseInterface $response, bool $isAjax): void
     {
-        if (null === $this->history || null === $this->historyOptions || null === $this->request) {
+        if (null === $this->history || null === $this->request) {
             return;
         }
 
-        $uri  = $this->request->getURI();
-        $path = parse_url($uri, PHP_URL_PATH);
-        if (is_string($path) && $path === $this->historyOptions->url) {
+        if ($this->historyEndpoint?->matches()) {
             return;
         }
 
+        $uri = $this->request->getURI();
         $this->history->save(
             $collected,
             new RequestMetadata(

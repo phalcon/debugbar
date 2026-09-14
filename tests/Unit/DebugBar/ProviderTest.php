@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar;
 
 use Phalcon\Config\Config;
+use Phalcon\DebugBar\Controllers\HistoryController;
 use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
@@ -26,9 +27,10 @@ use Phalcon\Http\Response;
 use Phalcon\Http\ResponseInterface;
 use Phalcon\Mvc\Application;
 use Phalcon\Mvc\Router;
-use Phalcon\Mvc\Router\RouteInterface;
+use Phalcon\Mvc\Url;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use PHPUnit\Framework\Attributes\BackupGlobals;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use stdClass;
 
@@ -57,6 +59,19 @@ final class ProviderTest extends AbstractUnitTestCase
         Debug::setBar(null);
 
         parent::tearDown();
+    }
+
+    /**
+     * @return array<string, array{string, string, int, string}>
+     */
+    public static function historyEndpointRequests(): array
+    {
+        return [
+            'root GET'         => ['/', 'GET', 200, '{"requests":[]}'],
+            'subfolder GET'    => ['/app1/', 'GET', 200, '{"requests":[]}'],
+            'subfolder DELETE' => ['/app1/', 'DELETE', 200, '{"cleared":0}'],
+            'subfolder POST'   => ['/app1/', 'POST', 405, '{"error":"Method not allowed."}'],
+        ];
     }
 
     public function testAccessAllowListBlocksNonMatchingClient(): void
@@ -172,6 +187,7 @@ final class ProviderTest extends AbstractUnitTestCase
                 'logger',
                 'exceptions',
                 'time',
+                'memory',
                 'database',
                 'view',
                 'route',
@@ -256,26 +272,80 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertFalse($response->getHeaders()->has('X-Debug-Bar'));
     }
 
-    public function testHistoryIgnoresAnIncompatibleRouterService(): void
+    public function testHistoryDoesNotResolveTheRouterService(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
         $app                 = $this->applicationWithServices(
             new Manager(),
-            ['router' => new stdClass()]
+            [
+                'router'   => new stdClass(),
+                'request'  => new Request(),
+                'response' => new Response(),
+                'url'      => new stdClass(),
+            ]
         );
 
         (new Provider($app, [
             'env'     => ['var' => self::ENV_VAR],
-            'history' => ['enabled' => true],
+            'history' => ['enabled' => true, 'path' => 'var/debugbar'],
         ]))->boot();
 
         $container = $app->getDI();
         $this->assertNotNull($container);
-        $this->assertFalse($container->has(Provider::HISTORY_SERVICE));
-        $this->assertFalse($this->bootedBar()->hasCollector('history'));
+        $this->assertTrue($container->has(HistoryController::class));
+        $this->assertTrue($this->bootedBar()->hasCollector('history'));
     }
 
-    public function testHistoryRegistersItsCollectorRouteAndServices(): void
+    #[RunInSeparateProcess]
+    #[DataProvider('historyEndpointRequests')]
+    public function testHistoryEndpointDispatchesWithAGenericRoute(
+        string $baseUri,
+        string $method,
+        int $status,
+        string $expectedBody
+    ): void {
+        $_ENV[self::ENV_VAR]          = 'dev';
+        $_SERVER['REQUEST_METHOD']    = $method;
+        $_SERVER['REQUEST_URI']       = $baseUri . '_debugbar/open';
+        $_SERVER['REMOTE_ADDR']       = '127.0.0.1';
+
+        $container = new FactoryDefault();
+        $url       = new Url();
+        $url->setBaseUri($baseUri);
+        $container->setShared('url', $url);
+        $router = new Router(false);
+        $router->add('/:controller/:action', ['controller' => 1, 'action' => 2]);
+        $container->setShared('router', $router);
+        $routes    = $router->getRoutes();
+        $app       = new Application($container);
+        $app->useImplicitView(false);
+        $app->setEventsManager(new Manager());
+
+        (new Provider($app, [
+            'env'     => ['var' => self::ENV_VAR],
+            'history' => [
+                'enabled' => true,
+                'path'    => sys_get_temp_dir() . '/phalcon-debugbar-routing',
+            ],
+        ]))->boot();
+
+        $this->assertSame($routes, $router->getRoutes());
+        $panel = $this->bootedBar()->collect()['data']['history']['panel'];
+        $this->assertIsArray($panel);
+        $this->assertSame($baseUri . '_debugbar/open', $panel['url']);
+        $response = $app->handle('/_debugbar/open');
+        if (!$response instanceof ResponseInterface) {
+            $this->fail('Expected the history route to return a response.');
+        }
+
+        $body = json_decode($response->getContent(), true);
+
+        $this->assertSame($status, $response->getStatusCode());
+        $this->assertSame(json_decode($expectedBody, true), $body);
+        $this->assertSame('application/json; charset=UTF-8', $response->getHeaders()->get('Content-Type'));
+    }
+
+    public function testHistoryRegistersOnlyItsControllerAndLeavesRoutesUnchanged(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
         $em                  = new Manager();
@@ -293,26 +363,12 @@ final class ProviderTest extends AbstractUnitTestCase
 
         $container = $app->getDI();
         $this->assertNotNull($container);
-        $this->assertTrue($container->has(Provider::HISTORY_SERVICE));
-        $this->assertTrue($container->has(Provider::ACCESS_GATE_SERVICE));
-        $this->assertSame('debugbar.access_gate', Provider::ACCESS_GATE_SERVICE);
+        $this->assertTrue($container->has(HistoryController::class));
         $this->assertTrue($this->bootedBar()->hasCollector('history'));
         $this->assertTrue($this->bootedBar()->hasCollector('memory'));
-        $route = $router->getRouteByName('debugbar.history.index');
-        if (!$route instanceof RouteInterface) {
-            $this->fail('Expected the debugbar.history.index route.');
-        }
-
-        $this->assertSame('/_debugbar/open', $route->getPattern());
-        $this->assertSame('history', $route->getPaths()['controller']);
-
-        $clearRoute = $router->getRouteByName('debugbar.history.clear');
-        if (!$clearRoute instanceof RouteInterface) {
-            $this->fail('Expected the debugbar.history.clear route.');
-        }
-
-        $this->assertSame('/_debugbar/open', $clearRoute->getPattern());
-        $this->assertSame('history', $clearRoute->getPaths()['controller']);
+        $this->assertSame([], $router->getRoutes());
+        $this->assertFalse($container->has('debugbar.history'));
+        $this->assertFalse($container->has('debugbar.access_gate'));
     }
 
     public function testHistoryRequiresCompatibleRequestAndResponseServices(): void
@@ -330,47 +386,29 @@ final class ProviderTest extends AbstractUnitTestCase
 
             (new Provider($app, [
                 'env'     => ['var' => self::ENV_VAR],
-                'history' => ['enabled' => true],
+                'history' => ['enabled' => true, 'path' => 'var/debugbar'],
             ]))->boot();
 
             $container = $app->getDI();
             $this->assertNotNull($container);
-            $this->assertFalse($container->has(Provider::HISTORY_SERVICE));
+            $this->assertFalse($container->has(HistoryController::class));
             $this->assertFalse($this->bootedBar()->hasCollector('history'));
         }
     }
 
-    #[RunInSeparateProcess]
-    public function testHistoryRouteDispatchesTheInternalController(): void
+    public function testHistoryWithoutEventsManagerDoesNotRegisterAnUnreachableEndpoint(): void
     {
-        $_ENV[self::ENV_VAR]          = 'dev';
-        $_SERVER['REQUEST_METHOD']    = 'GET';
-        $_SERVER['REQUEST_URI']       = '/_debugbar/open';
-        $_SERVER['REMOTE_ADDR']       = '127.0.0.1';
-
-        $container = new FactoryDefault();
-        $app       = new Application($container);
-        $app->useImplicitView(false);
-        $app->setEventsManager(new Manager());
+        $_ENV[self::ENV_VAR] = 'dev';
+        $container           = new FactoryDefault();
+        $app                 = new Application($container);
 
         (new Provider($app, [
             'env'     => ['var' => self::ENV_VAR],
-            'history' => [
-                'enabled' => true,
-                'path'    => sys_get_temp_dir() . '/phalcon-debugbar-routing',
-            ],
+            'history' => ['enabled' => true, 'path' => 'var/debugbar'],
         ]))->boot();
 
-        $response = $app->handle('/_debugbar/open');
-        if (!$response instanceof ResponseInterface) {
-            $this->fail('Expected the history route to return a response.');
-        }
-
-        $body = json_decode($response->getContent(), true);
-
-        $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame(['requests' => []], $body);
-        $this->assertSame('application/json; charset=UTF-8', $response->getHeaders()->get('Content-Type'));
+        $this->assertFalse($container->has(HistoryController::class));
+        $this->assertFalse($this->bootedBar()->hasCollector('history'));
     }
 
     public function testIsAllowedTracksTheEnvironment(): void

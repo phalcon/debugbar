@@ -13,11 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Support\DebugBar\History;
 
-use Phalcon\DebugBar\History\HistoryFileOperations;
-
-use function rmdir;
-
-final class RenameFailingHistoryFileOperations implements HistoryFileOperations
+final class RenameFailingHistoryFileOperations extends DelegatingHistoryFileOperations
 {
     public int $removeCalls = 0;
 
@@ -36,11 +32,6 @@ final class RenameFailingHistoryFileOperations implements HistoryFileOperations
         $this->removeCalls++;
 
         return true;
-    }
-
-    public function removeDirectory(string $directory): bool
-    {
-        return @rmdir($directory);
     }
 
     public function write(string $file, string $contents): bool

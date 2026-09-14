@@ -17,6 +17,7 @@
     'use strict';
 
     var STORAGE_KEY = 'phalcon-debugbar-collapsed';
+    var HISTORY_VERSION = 1;
 
     function ready(fn) {
         if (document.readyState !== 'loading') {
@@ -93,21 +94,36 @@
         return indicator;
     }
 
-    function renderIndicators(mount, data, onHistoryToggle, historyOpen, requestMetadata) {
+    function valueAtPath(value, path) {
+        if (!Array.isArray(path)) {
+            return undefined;
+        }
+
+        path.forEach(function (key) {
+            value = value && typeof value === 'object' ? value[key] : undefined;
+        });
+
+        return value;
+    }
+
+    function renderIndicators(mount, data, historyWidget, onHistoryToggle, historyOpen, requestMetadata) {
         mount.innerHTML = '';
         var historyTrigger = null;
 
-        var time = data.time || {};
-        if (hasBadge(time.badge)) {
-            mount.appendChild(metricIndicator('clock', 'Request time', time.badge));
-        }
-
-        var memory = data.memory || {};
-        var memoryPanel = memory.panel || {};
-        var currentMemory = memoryPanel['Current usage'];
-        if (hasBadge(currentMemory)) {
-            mount.appendChild(metricIndicator('cogs', 'Current memory usage', currentMemory));
-        }
+        var indicatorDefinitions = Array.isArray(historyWidget.indicators)
+            ? historyWidget.indicators
+            : [];
+        indicatorDefinitions.forEach(function (definition) {
+            definition = definition || {};
+            var value = valueAtPath(data[definition.collector], definition.path);
+            if (hasBadge(value)) {
+                mount.appendChild(metricIndicator(
+                    scalar(definition.icon),
+                    scalar(definition.label),
+                    value
+                ));
+            }
+        });
 
         var request = data.request || {};
         var requestPanel = request.panel || {};
@@ -481,7 +497,12 @@
                                 return;
                             }
 
-                            if (detail && detail.request && detail.request.payload) {
+                            if (
+                                detail
+                                && detail.request
+                                && detail.request.version === HISTORY_VERSION
+                                && detail.request.payload
+                            ) {
                                 Array.prototype.forEach.call(
                                     list.querySelectorAll('.phalcon-debugbar-history-request'),
                                     function (requestButton) {
@@ -698,7 +719,11 @@
             body.style.display = 'none';
             active = null;
 
-            var historyEntry = data.history || {};
+            var historyName = Object.keys(widgets).find(function (name) {
+                return widgets[name] && widgets[name].panel === 'history';
+            });
+            var historyWidget = historyName ? widgets[historyName] : {};
+            var historyEntry = historyName ? (data[historyName] || {}) : {};
             historyPanel = null;
             if (
                 historyEntry.panel
@@ -713,10 +738,7 @@
             Object.keys(data).forEach(function (name) {
                 var entry = data[name] || {};
                 var widget = widgets[name] || {};
-                if (
-                    name === 'history'
-                    || (historyPanel && (name === 'time' || name === 'memory'))
-                ) {
+                if (widget.panel === 'history') {
                     return;
                 }
                 var label = widget.label || titleize(name);
@@ -753,6 +775,7 @@
                 historyTrigger = renderIndicators(
                     indicators,
                     data,
+                    historyWidget,
                     function () {
                         if (!historyOpen) {
                             closePanel();

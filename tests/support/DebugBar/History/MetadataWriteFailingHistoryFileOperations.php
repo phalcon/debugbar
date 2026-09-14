@@ -13,48 +13,18 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Support\DebugBar\History;
 
-use Phalcon\DebugBar\History\HistoryFileOperations;
-use Phalcon\DebugBar\History\NativeHistoryFileOperations;
-
 use function str_contains;
 
-final class MetadataWriteFailingHistoryFileOperations implements HistoryFileOperations
+final class MetadataWriteFailingHistoryFileOperations extends DelegatingHistoryFileOperations
 {
-    private readonly NativeHistoryFileOperations $native;
-
-    public function __construct()
-    {
-        $this->native = new NativeHistoryFileOperations();
-    }
-
-    public function move(string $source, string $target): bool
-    {
-        return $this->native->move($source, $target);
-    }
-
-    public function read(string $file): false | string
-    {
-        return $this->native->read($file);
-    }
-
-    public function remove(string $file): bool
-    {
-        return $this->native->remove($file);
-    }
-
-    public function removeDirectory(string $directory): bool
-    {
-        return $this->native->removeDirectory($directory);
-    }
-
     public function write(string $file, string $contents): bool
     {
         if (str_contains($file, '.json.meta.tmp-')) {
-            $this->native->write($file, $contents);
+            $this->delegate->write($file, $contents);
 
             return false;
         }
 
-        return $this->native->write($file, $contents);
+        return $this->delegate->write($file, $contents);
     }
 }

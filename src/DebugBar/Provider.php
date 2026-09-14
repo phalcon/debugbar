@@ -30,9 +30,12 @@ use Phalcon\DebugBar\Collector\TimeCollector;
 use Phalcon\DebugBar\Collector\VersionCollector;
 use Phalcon\DebugBar\Collector\ViewCollector;
 use Phalcon\DebugBar\Contracts\Collector;
+use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\Contracts\Subscriber;
+use Phalcon\DebugBar\Controllers\HistoryController;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\DebugBar\History\FilesystemHistory;
+use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\HistoryOptions;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\DebugBar\Security\Redactor;
@@ -40,27 +43,25 @@ use Phalcon\Di\DiInterface;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
 use Phalcon\Mvc\Application;
-use Phalcon\Mvc\RouterInterface;
+use Phalcon\Mvc\Url\UrlInterface;
 
 use function getenv;
 use function in_array;
 use function is_string;
+use function ltrim;
 use function mb_strtolower;
+use function rtrim;
 
 /**
  * Boots the debug bar against an MVC application. Its whole coupling to the app
  * is: hold the `Application`, reach its EventsManager, and attach listeners.
- * When request history is enabled it additionally registers an internal route
- * and two private DI services used by its controller.
+ * When request history is enabled it registers its controller in the DI and
+ * selects it through an application listener, leaving the router unchanged.
  *
  * @phpstan-import-type provider_config from DebugBarTypes
  */
 class Provider
 {
-    public const ACCESS_GATE_SERVICE = 'debugbar.access_gate';
-
-    public const HISTORY_SERVICE     = 'debugbar.history';
-
     /**
      * @var (Closure(): bool)|null
      */
@@ -86,6 +87,8 @@ class Provider
     private string $envVar;
 
     private bool $headers;
+
+    private ?HistoryEndpoint $historyEndpoint = null;
 
     private HistoryOptions $historyOptions;
 
@@ -158,12 +161,12 @@ class Provider
         $history    = $this->registerHistory($container, $accessGate, $request);
 
         $bar = new DebugBar();
-        foreach ($this->buildCollectors($container, $request, null !== $history) as $collector) {
+        foreach ($this->buildCollectors($container, $request) as $collector) {
             $bar->addCollector($collector);
         }
         if (null !== $history) {
             $bar->addCollector(new HistoryCollector(
-                $this->historyOptions->url,
+                $this->historyEndpoint->url ?? $this->historyOptions->url,
                 $request?->getMethod(),
                 $request?->getURI()
             ));
@@ -192,7 +195,7 @@ class Provider
                 $request,
                 new BarOptions($this->headers, $this->nonce),
                 $history,
-                null !== $history ? $this->historyOptions : null
+                $this->historyEndpoint
             )
         );
     }
@@ -215,11 +218,8 @@ class Provider
      *
      * @return list<Collector>
      */
-    private function buildCollectors(
-        ?DiInterface $container,
-        ?RequestInterface $request,
-        bool $historyEnabled
-    ): array {
+    private function buildCollectors(?DiInterface $container, ?RequestInterface $request): array
+    {
         $collectors = [];
 
         if ($this->isCollectorEnabled(VersionCollector::NAME)) {
@@ -242,7 +242,7 @@ class Provider
             $collectors[] = new TimeCollector();
         }
 
-        if ($historyEnabled && $this->isCollectorEnabled(MemoryCollector::NAME)) {
+        if ($this->isCollectorEnabled(MemoryCollector::NAME)) {
             $collectors[] = new MemoryCollector();
         }
 
@@ -283,51 +283,44 @@ class Provider
     }
 
     /**
-     * Registers the internal history module and its MVC route. History stays
-     * disabled when the app has no compatible container/router.
+     * Wires the internal endpoint without reading or mutating the app router.
      */
     private function registerHistory(
         ?DiInterface $container,
         AccessGate $accessGate,
         ?RequestInterface $request
-    ): ?FilesystemHistory {
+    ): ?History {
+        $eventsManager = $this->app->getEventsManager();
         if (
             !$this->historyOptions->enabled
             || null === $container
             || null === $request
-            || !$container->has('router')
+            || null === $eventsManager
             || !$container->has('response')
         ) {
             return null;
         }
 
-        $router   = $container->getShared('router');
         $response = $container->getShared('response');
-        if (!$router instanceof RouterInterface || !$response instanceof ResponseInterface) {
+        if (!$response instanceof ResponseInterface) {
             return null;
         }
 
-        $history = new FilesystemHistory($this->historyOptions);
-        $container->setShared(self::HISTORY_SERVICE, $history);
-        $container->setShared(self::ACCESS_GATE_SERVICE, $accessGate);
+        $url = $this->historyOptions->url;
+        if ($container->has('url')) {
+            $urlService = $container->getShared('url');
+            if ($urlService instanceof UrlInterface) {
+                $url = rtrim($urlService->getBaseUri(), '/') . '/' . ltrim($url, '/');
+            }
+        }
 
-        $router->addGet(
-            $this->historyOptions->url,
-            [
-                'namespace'  => 'Phalcon\\DebugBar\\Controllers',
-                'controller' => 'history',
-                'action'     => 'index',
-            ]
-        )->setName('debugbar.history.index');
-
-        $router->addDelete(
-            $this->historyOptions->url,
-            [
-                'namespace'  => 'Phalcon\\DebugBar\\Controllers',
-                'controller' => 'history',
-                'action'     => 'clear',
-            ]
-        )->setName('debugbar.history.clear');
+        $history               = new FilesystemHistory($this->historyOptions);
+        $this->historyEndpoint = new HistoryEndpoint($url, $request);
+        $container->setShared(
+            HistoryController::class,
+            new HistoryController($history, $accessGate, $request, $response)
+        );
+        $eventsManager->attach('application:beforeHandleRequest', $this->historyEndpoint);
 
         return $history;
     }

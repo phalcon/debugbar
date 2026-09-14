@@ -13,26 +13,11 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Support\DebugBar\History;
 
-use Phalcon\DebugBar\History\HistoryFileOperations;
-use Phalcon\DebugBar\History\NativeHistoryFileOperations;
-
 use function str_ends_with;
 
-final class PayloadReadTrackingHistoryFileOperations implements HistoryFileOperations
+final class PayloadReadTrackingHistoryFileOperations extends DelegatingHistoryFileOperations
 {
     public int $payloadReads = 0;
-
-    private readonly NativeHistoryFileOperations $native;
-
-    public function __construct()
-    {
-        $this->native = new NativeHistoryFileOperations();
-    }
-
-    public function move(string $source, string $target): bool
-    {
-        return $this->native->move($source, $target);
-    }
 
     public function read(string $file): false | string
     {
@@ -40,21 +25,6 @@ final class PayloadReadTrackingHistoryFileOperations implements HistoryFileOpera
             $this->payloadReads++;
         }
 
-        return $this->native->read($file);
-    }
-
-    public function remove(string $file): bool
-    {
-        return $this->native->remove($file);
-    }
-
-    public function removeDirectory(string $directory): bool
-    {
-        return $this->native->removeDirectory($directory);
-    }
-
-    public function write(string $file, string $contents): bool
-    {
-        return $this->native->write($file, $contents);
+        return $this->delegate->read($file);
     }
 }

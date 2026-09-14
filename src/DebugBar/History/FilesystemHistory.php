@@ -15,23 +15,20 @@ namespace Phalcon\DebugBar\History;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use Phalcon\DebugBar\Contracts\History;
 
 use function array_slice;
 use function basename;
 use function bin2hex;
 use function count;
-use function glob;
 use function hash;
 use function is_array;
 use function is_bool;
-use function is_dir;
-use function is_file;
 use function is_int;
 use function is_string;
 use function json_decode;
 use function json_encode;
 use function min;
-use function mkdir;
 use function preg_match;
 use function random_bytes;
 use function rsort;
@@ -41,7 +38,6 @@ use function str_ends_with;
 use function time;
 
 use const GLOB_ONLYDIR;
-use const JSON_PRETTY_PRINT;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 use const PHP_SESSION_ACTIVE;
@@ -62,7 +58,7 @@ use const PHP_SESSION_ACTIVE;
  *     stored_at: string
  * }
  */
-final class FilesystemHistory
+final class FilesystemHistory implements History
 {
     private const GARBAGE_COLLECTION_MARKER               = '.gc';
 
@@ -187,25 +183,16 @@ final class FilesystemHistory
         }
 
         $storedAt    = new DateTimeImmutable('now', new DateTimeZone('UTC'));
-        $requestedAt = $request->requestedAt ?? $storedAt;
         $id          = $storedAt->format('YmdHis-u-') . bin2hex(random_bytes(4));
+        $entry       = HistoryEntry::create($payload, $request, $id, $storedAt);
+        $storedEntry = $entry->toArray();
 
-        $entry = [
-            'meta' => [
-                'requested_at' => $requestedAt->format(DATE_ATOM),
-                'method'       => $request->method,
-                'uri'          => $request->uri,
-                'status'       => $request->status,
-                'ajax'         => $request->ajax,
-                'id'           => $id,
-                'stored_at'    => $storedAt->format(DATE_ATOM),
-            ],
-            'payload' => $payload,
-        ];
-
-        $flags        = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
-        $json         = json_encode($entry, $flags);
-        $metadataJson = json_encode($entry['meta'], $flags);
+        $flags        = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+        $json         = json_encode($storedEntry, $flags);
+        $metadataJson = json_encode([
+            'version' => HistoryEntry::VERSION,
+            'meta'    => $entry->metadata(),
+        ], $flags);
         if (false === $json || false === $metadataJson) {
             $this->removeDirectoryIfEmpty($directory);
 
@@ -230,7 +217,7 @@ final class FilesystemHistory
      */
     private function files(string $directory): array
     {
-        return @glob($directory . '/*.json') ?: [];
+        return $this->fileOperations->matching($directory . '/*.json');
     }
 
     private function garbageCollect(): void
@@ -241,7 +228,7 @@ final class FilesystemHistory
 
         $this->garbageCollectionAttempted = true;
         $marker                           = $this->options->path . '/' . self::GARBAGE_COLLECTION_MARKER;
-        $modified                         = @filemtime($marker);
+        $modified                         = $this->fileOperations->modifiedAt($marker);
         $interval                         = min(
             $this->options->ttlSeconds,
             self::GARBAGE_COLLECTION_MAX_INTERVAL_SECONDS
@@ -276,7 +263,7 @@ final class FilesystemHistory
 
     private function isExpired(string $file): bool
     {
-        $modified = @filemtime($file);
+        $modified = $this->fileOperations->modifiedAt($file);
 
         return false !== $modified && $modified < time() - $this->options->ttlSeconds;
     }
@@ -291,7 +278,7 @@ final class FilesystemHistory
      */
     private function metadataFiles(string $directory): array
     {
-        return @glob($directory . '/*.json' . self::METADATA_SUFFIX) ?: [];
+        return $this->fileOperations->matching($directory . '/*.json' . self::METADATA_SUFFIX);
     }
 
     /**
@@ -319,11 +306,11 @@ final class FilesystemHistory
     }
 
     /**
-     * @return array{meta: array<string, mixed>, payload: array<string, mixed>}|null
+     * @return array{version: int, meta: array<string, mixed>, payload: array<string, mixed>}|null
      */
     private function read(string $file): ?array
     {
-        if (!is_file($file)) {
+        if (!$this->fileOperations->fileExists($file)) {
             return null;
         }
 
@@ -332,20 +319,15 @@ final class FilesystemHistory
             return null;
         }
 
-        $entry = json_decode($json, true);
-        if (!is_array($entry) || !is_array($entry['meta'] ?? null) || !is_array($entry['payload'] ?? null)) {
+        $decoded = json_decode($json, true);
+        if (!is_array($decoded)) {
             return null;
         }
 
-        /** @var array<string, mixed> $meta */
-        $meta = $entry['meta'];
-        /** @var array<string, mixed> $payload */
-        $payload = $entry['payload'];
+        /** @var array<string, mixed> $decoded */
+        $entry = HistoryEntry::fromArray($decoded);
 
-        return [
-            'meta'    => $meta,
-            'payload' => $payload,
-        ];
+        return $entry?->toArray();
     }
 
     /**
@@ -354,12 +336,17 @@ final class FilesystemHistory
     private function readMetadata(string $file): ?array
     {
         $metadataFile = $this->metadataFile($file);
-        if (is_file($metadataFile)) {
+        if ($this->fileOperations->fileExists($metadataFile)) {
             $json = $this->fileOperations->read($metadataFile);
             if (false !== $json) {
-                $metadata = json_decode($json, true);
-                if (is_array($metadata)) {
+                $metadataEntry = json_decode($json, true);
+                if (
+                    is_array($metadataEntry)
+                    && HistoryEntry::VERSION === ($metadataEntry['version'] ?? null)
+                    && is_array($metadataEntry['meta'] ?? null)
+                ) {
                     /** @var array<string, mixed> $metadata */
+                    $metadata = $metadataEntry['meta'];
                     if ($this->metadataIsValid($metadata, $file)) {
                         return $metadata;
                     }
@@ -377,7 +364,7 @@ final class FilesystemHistory
 
     private function removeDirectoryIfEmpty(string $directory): void
     {
-        if ([] === (@glob($directory . '/*') ?: [])) {
+        if ([] === $this->fileOperations->matching($directory . '/*')) {
             $this->fileOperations->removeDirectory($directory);
         }
     }
@@ -445,7 +432,7 @@ final class FilesystemHistory
      */
     private function sessionDirectories(): array
     {
-        $directories        = @glob($this->options->path . '/*', GLOB_ONLYDIR) ?: [];
+        $directories        = $this->fileOperations->matching($this->options->path . '/*', GLOB_ONLYDIR);
         $sessionDirectories = [];
         foreach ($directories as $directory) {
             if (1 === preg_match('/^[a-f0-9]{64}$/D', basename($directory))) {
@@ -459,11 +446,17 @@ final class FilesystemHistory
     private function sessionDirectory(bool $create): ?string
     {
         $directory = $this->options->path . '/' . hash('sha256', (string) session_id());
-        if (is_dir($directory)) {
+        if ($this->fileOperations->directoryExists($directory)) {
             return $directory;
         }
 
-        if (!$create || (!@mkdir($directory, 0700, true) && !is_dir($directory))) {
+        if (
+            !$create
+            || (
+                !$this->fileOperations->createDirectory($directory, 0700, true)
+                && !$this->fileOperations->directoryExists($directory)
+            )
+        ) {
             return null;
         }
 
@@ -475,6 +468,6 @@ final class FilesystemHistory
      */
     private function temporaryFiles(string $directory): array
     {
-        return @glob($directory . '/*.tmp-*') ?: [];
+        return $this->fileOperations->matching($directory . '/*.tmp-*');
     }
 }

@@ -185,7 +185,7 @@ test('selecting a request loads and exposes its stored payload', async function 
             }
 
             return Promise.resolve(response({
-                request: {payload: {data: {route: {panel: '/orders/42'}}}}
+                request: {version: 1, payload: {data: {route: {panel: '/orders/42'}}}}
             }));
         }
     };
@@ -208,6 +208,40 @@ test('selecting a request loads and exposes its stored payload', async function 
         id: 'request/one'
     });
     assert.equal(request.classList.contains('is-selected'), true);
+    assert.equal(request.disabled, false);
+});
+
+test('selecting a request rejects an incompatible stored payload version', async function () {
+    var selected = false;
+    global.document = dom.createDocument();
+    global.window = {
+        fetch: function (url) {
+            if (url.includes('?id=')) {
+                return Promise.resolve(response({
+                    request: {version: 2, payload: {data: {}, meta: {}}}
+                }));
+            }
+
+            return Promise.resolve(response({
+                requests: [{id: 'stale', method: 'GET', uri: '/stale', status: 200}]
+            }));
+        }
+    };
+    var mount = new dom.TestElement('div');
+
+    renderHistoryBrowser(mount, {url: '/_debugbar/open'}, '', function () {
+        selected = true;
+    }, function () {}, function () {
+        return true;
+    });
+    await dom.flushPromises();
+
+    var request = dom.findByClass(mount, 'phalcon-debugbar-history-request');
+    request.click();
+    await dom.flushPromises();
+
+    assert.equal(selected, false);
+    assert.equal(request.classList.contains('is-selected'), false);
     assert.equal(request.disabled, false);
 });
 
@@ -386,7 +420,7 @@ test('request history reports clear failures and restores controls', async funct
     );
 });
 
-test('request metrics render on the right instead of time and memory tabs', function () {
+test('request metrics render on the right alongside time and memory tabs', function () {
     var dataNode = new dom.TestElement('script');
     var mount = new dom.TestElement('div');
     dataNode.textContent = JSON.stringify({
@@ -405,7 +439,20 @@ test('request metrics render on the right instead of time and memory tabs', func
                 messages: {label: 'Messages', panel: 'list'},
                 time: {label: 'Time', panel: 'list'},
                 memory: {label: 'Memory', panel: 'grid'},
-                request: {label: 'Request', panel: 'grid'}
+                request: {label: 'Request', panel: 'grid'},
+                history: {
+                    label: 'History',
+                    panel: 'history',
+                    indicators: [
+                        {collector: 'time', icon: 'clock', label: 'Request time', path: ['badge']},
+                        {
+                            collector: 'memory',
+                            icon: 'cogs',
+                            label: 'Current memory usage',
+                            path: ['panel', 'Current usage']
+                        }
+                    ]
+                }
             }
         }
     });
@@ -428,7 +475,7 @@ test('request metrics render on the right instead of time and memory tabs', func
         return label.textContent;
     });
     var indicators = dom.findByClass(mount, 'phalcon-debugbar-indicators');
-    assert.deepEqual(labels, ['Messages', 'Request']);
+    assert.deepEqual(labels, ['Messages', 'Time', 'Memory', 'Request']);
     assert.ok(indicators);
     assert.equal(indicators.textContent, '12.34ms7.5MBGET/orders');
 });
@@ -483,7 +530,8 @@ test('request control replaces the History tab and opens request history', async
         meta: {
             widgets: {
                 messages: {label: 'Messages', panel: 'list'},
-                request: {label: 'Request', panel: 'grid'}
+                request: {label: 'Request', panel: 'grid'},
+                history: {label: 'History', panel: 'history'}
             }
         }
     });
@@ -563,6 +611,7 @@ test('selecting stored data closes history and uses metadata without a request c
 
             return Promise.resolve(response({
                 request: {
+                    version: 1,
                     meta: {method: 'POST', uri: '/stored'},
                     payload: {
                         data: {

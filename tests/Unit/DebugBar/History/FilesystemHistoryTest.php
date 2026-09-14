@@ -15,6 +15,7 @@ namespace Phalcon\Tests\Unit\DebugBar\History;
 
 use DateTimeImmutable;
 use Phalcon\DebugBar\History\FilesystemHistory;
+use Phalcon\DebugBar\History\HistoryEntry;
 use Phalcon\DebugBar\History\HistoryOptions;
 use Phalcon\DebugBar\History\RequestMetadata;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
@@ -33,6 +34,7 @@ use function glob;
 use function hash;
 use function is_dir;
 use function is_file;
+use function json_encode;
 use function mkdir;
 use function random_bytes;
 use function rmdir;
@@ -130,6 +132,45 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     }
 
     #[RunInSeparateProcess]
+    public function testIncompatibleStoredEntryIsRejected(): void
+    {
+        [$path, $sessionId] = $this->startSession();
+        $directory          = $path . '/' . hash('sha256', $sessionId);
+        $id                 = '20260903120000-123456-deadbeef';
+        $metadata           = [
+            'requested_at' => '2026-09-03T12:00:00+00:00',
+            'method'       => 'GET',
+            'uri'          => '/stale',
+            'status'       => 200,
+            'ajax'         => false,
+            'id'           => $id,
+            'stored_at'    => '2026-09-03T12:00:00+00:00',
+        ];
+
+        try {
+            $this->assertTrue(mkdir($directory, 0777, true));
+            $payload = json_encode([
+                'version' => 2,
+                'meta'    => $metadata,
+                'payload' => ['data' => [], 'meta' => []],
+            ]);
+            $sidecar = json_encode($metadata);
+            $this->assertIsString($payload);
+            $this->assertIsString($sidecar);
+            $this->assertIsInt(file_put_contents($directory . '/' . $id . '.json', $payload));
+            $this->assertIsInt(file_put_contents($directory . '/' . $id . '.json.meta', $sidecar));
+
+            $history = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path));
+
+            $this->assertNull($history->get($id));
+            $this->assertSame([], $history->find());
+        } finally {
+            session_write_close();
+            $this->removeHistory($path, $sessionId);
+        }
+    }
+
+    #[RunInSeparateProcess]
     public function testInvalidPayloadCannotBeEncoded(): void
     {
         [$path, $sessionId] = $this->startSession();
@@ -142,35 +183,6 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
                 new RequestMetadata('GET', '/', 200, false)
             ));
             $this->assertFalse(is_dir($path . '/' . hash('sha256', $sessionId)));
-        } finally {
-            session_write_close();
-            $this->removeHistory($path, $sessionId);
-        }
-    }
-
-    #[RunInSeparateProcess]
-    public function testLegacyEntriesWithoutMetadataSidecarRemainReadable(): void
-    {
-        [$path, $sessionId] = $this->startSession();
-        $directory          = $path . '/' . hash('sha256', $sessionId);
-        $fileOperations     = new PayloadReadTrackingHistoryFileOperations();
-        $history            = new FilesystemHistory(
-            new HistoryOptions(true, '/_debugbar/open', $path),
-            $fileOperations
-        );
-
-        try {
-            $id = $history->save(
-                ['data' => [], 'meta' => []],
-                new RequestMetadata('GET', '/legacy', 200, false)
-            );
-            $this->assertIsString($id);
-            $this->assertTrue(unlink($directory . '/' . $id . '.json.meta'));
-
-            $requests = $history->find();
-            $this->assertCount(1, $requests);
-            $this->assertSame('/legacy', $requests[0]['uri']);
-            $this->assertSame(1, $fileOperations->payloadReads);
         } finally {
             session_write_close();
             $this->removeHistory($path, $sessionId);
@@ -446,6 +458,7 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
 
             $entry = $history->get($id);
             $this->assertIsArray($entry);
+            $this->assertSame(HistoryEntry::VERSION, $entry['version']);
             $payload = $entry['payload'];
             $this->assertIsArray($payload);
             $meta = $payload['meta'];
@@ -551,6 +564,35 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
         } finally {
             session_write_close();
             stream_wrapper_unregister($scheme);
+        }
+    }
+
+    #[RunInSeparateProcess]
+    public function testVersionedEntriesWithoutMetadataSidecarRemainReadable(): void
+    {
+        [$path, $sessionId] = $this->startSession();
+        $directory          = $path . '/' . hash('sha256', $sessionId);
+        $fileOperations     = new PayloadReadTrackingHistoryFileOperations();
+        $history            = new FilesystemHistory(
+            new HistoryOptions(true, '/_debugbar/open', $path),
+            $fileOperations
+        );
+
+        try {
+            $id = $history->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/without-sidecar', 200, false)
+            );
+            $this->assertIsString($id);
+            $this->assertTrue(unlink($directory . '/' . $id . '.json.meta'));
+
+            $requests = $history->find();
+            $this->assertCount(1, $requests);
+            $this->assertSame('/without-sidecar', $requests[0]['uri']);
+            $this->assertSame(1, $fileOperations->payloadReads);
+        } finally {
+            session_write_close();
+            $this->removeHistory($path, $sessionId);
         }
     }
 

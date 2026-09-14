@@ -16,6 +16,7 @@ namespace Phalcon\Tests\Unit\DebugBar;
 use Phalcon\DebugBar\BarOptions;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\History\FilesystemHistory;
+use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\HistoryOptions;
 use Phalcon\DebugBar\Injector;
 use Phalcon\DebugBar\Renderer;
@@ -89,7 +90,7 @@ final class ResponseListenerTest extends AbstractUnitTestCase
             $request = $this->createMock(RequestInterface::class);
             $request->method('getClientAddress')->willReturn('127.0.0.1');
             $request->method('isAjax')->willReturn(true);
-            $request->method('getURI')->willReturn('/_debugbar/open?id=20260909000000-000000-deadbeef');
+            $request->method('getURI')->willReturn('/app1/_debugbar/open?id=20260909000000-000000-deadbeef');
             $request->method('getMethod')->willReturn('GET');
 
             $options  = new HistoryOptions(true, '/_debugbar/open', $path);
@@ -102,7 +103,7 @@ final class ResponseListenerTest extends AbstractUnitTestCase
                 $request,
                 new BarOptions(false, null),
                 $history,
-                $options
+                new HistoryEndpoint('/app1/_debugbar/open', $request)
             );
             $response = new Response();
             $response->setContent('{}');
@@ -150,7 +151,7 @@ final class ResponseListenerTest extends AbstractUnitTestCase
                 new Request(),
                 new BarOptions(false, null),
                 $history,
-                $options
+                new HistoryEndpoint($options->url, new Request())
             );
             $response = new Response();
             $response->setStatusCode(202);
@@ -203,7 +204,7 @@ final class ResponseListenerTest extends AbstractUnitTestCase
                 $request,
                 new BarOptions(false, null),
                 $history,
-                $options
+                new HistoryEndpoint('/app1/_debugbar/open', $request)
             );
             $response = new Response();
             $response->setStatusCode(202);

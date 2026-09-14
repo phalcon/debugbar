@@ -13,20 +13,18 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Unit\DebugBar\Controllers;
 
+use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\Controllers\HistoryController;
 use Phalcon\DebugBar\History\FilesystemHistory;
 use Phalcon\DebugBar\History\HistoryOptions;
 use Phalcon\DebugBar\History\RequestMetadata;
-use Phalcon\DebugBar\Provider;
 use Phalcon\DebugBar\Security\AccessGate;
-use Phalcon\Di\Di;
 use Phalcon\Http\Request;
+use Phalcon\Http\RequestInterface;
 use Phalcon\Http\Response;
+use Phalcon\Http\ResponseInterface;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
-use RuntimeException;
-use stdClass;
-use Throwable;
 
 use function bin2hex;
 use function glob;
@@ -77,55 +75,20 @@ final class HistoryControllerTest extends AbstractUnitTestCase
         }
     }
 
-    public function testActionsReportUnavailableHistoryServices(): void
+    public function testControllerUsesTheStorageContract(): void
     {
-        foreach (['indexAction', 'clearAction'] as $action) {
-            $response = $this->executeWithServices(
-                $action,
-                new stdClass(),
-                new Response(),
-                new stdClass(),
-                new stdClass()
-            );
+        $history = $this->createMock(History::class);
+        $history->expects($this->once())->method('find')->willReturn([['id' => 'stored-request']]);
+        $history->expects($this->once())->method('get')->with('stored-request')->willReturn(['payload' => []]);
+        $history->expects($this->once())->method('clear')->willReturn(3);
+        $request = $this->createMock(RequestInterface::class);
+        $request->method('getMethod')->willReturnOnConsecutiveCalls('GET', 'GET', 'GET', 'GET', 'DELETE', 'DELETE');
+        $request->method('getQuery')->with('id')->willReturnOnConsecutiveCalls(null, 'stored-request');
+        $controller = new HistoryController($history, new AccessGate([], null), $request, new Response());
 
-            $this->assertJsonResponse($response, 500, ['error' => 'History is unavailable.']);
-        }
-    }
-
-    #[RunInSeparateProcess]
-    public function testActionsRequireADiContainer(): void
-    {
-        Di::reset();
-        $controller = new HistoryController();
-
-        foreach (['indexAction', 'clearAction'] as $action) {
-            try {
-                $controller->{$action}();
-                $this->fail('Expected the controller to require a DI container.');
-            } catch (Throwable $exception) {
-                $this->assertContains($exception->getMessage(), [
-                    'The History controller requires a DI container.',
-                    'A dependency injection container is required to access internal services',
-                ]);
-            }
-        }
-    }
-
-    public function testActionsRequireAResponseService(): void
-    {
-        $history = new FilesystemHistory(new HistoryOptions());
-
-        foreach (['indexAction', 'clearAction'] as $action) {
-            try {
-                $this->executeWithServices($action, new Request(), new stdClass(), $history, new AccessGate([], null));
-                $this->fail('Expected the controller to require a response service.');
-            } catch (RuntimeException $exception) {
-                $this->assertSame(
-                    'The response service must implement ResponseInterface.',
-                    $exception->getMessage()
-                );
-            }
-        }
+        $this->assertJsonResponse($controller->openAction(), 200, ['requests' => [['id' => 'stored-request']]]);
+        $this->assertJsonResponse($controller->openAction(), 200, ['request' => ['payload' => []]]);
+        $this->assertJsonResponse($controller->openAction(), 200, ['cleared' => 3]);
     }
 
     public function testInvalidStoredRequestIdentifierReturnsNotFound(): void
@@ -227,13 +190,13 @@ final class HistoryControllerTest extends AbstractUnitTestCase
     /**
      * @param array<string, mixed> $expectedBody
      */
-    private function assertJsonResponse(Response $response, int $status, array $expectedBody): void
+    private function assertJsonResponse(ResponseInterface $response, int $status, array $expectedBody): void
     {
         $this->assertSame($status, $response->getStatusCode());
         $this->assertSame($expectedBody, json_decode($response->getContent(), true));
     }
 
-    private function execute(FilesystemHistory $history, string $action = 'index'): Response
+    private function execute(History $history, string $action = 'index'): Response
     {
         $response  = new Response();
 
@@ -248,20 +211,13 @@ final class HistoryControllerTest extends AbstractUnitTestCase
 
     private function executeWithServices(
         string $action,
-        object $request,
-        object $response,
-        object $history,
-        object $access
+        RequestInterface $request,
+        Response $response,
+        History $history,
+        AccessGate $access
     ): Response {
-        $container = new Di();
-        $container->setShared('request', $request);
-        $container->setShared('response', $response);
-        $container->setShared(Provider::HISTORY_SERVICE, $history);
-        $container->setShared(Provider::ACCESS_GATE_SERVICE, $access);
-
-        $controller = new HistoryController();
-        $controller->setDI($container);
-        $result = $controller->{$action}();
+        $controller = new HistoryController($history, $access, $request, $response);
+        $result     = $controller->{$action}();
 
         $this->assertInstanceOf(Response::class, $result);
 
