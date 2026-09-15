@@ -39,6 +39,13 @@ trait PanelContractTrait
                 Assert::assertIsScalar($metric['value']);
             }
         }
+        if (isset($collected['metrics'])) {
+            Assert::assertIsArray($collected['metrics']);
+            foreach ($collected['metrics'] as $key => $value) {
+                Assert::assertIsString($key);
+                Assert::assertIsScalar($value);
+            }
+        }
         switch ($panel) {
             case 'grid':
                 Assert::assertIsArray($data);

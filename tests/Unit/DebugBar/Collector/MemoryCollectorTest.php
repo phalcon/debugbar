@@ -43,6 +43,13 @@ final class MemoryCollectorTest extends AbstractUnitTestCase
             $peak
         );
         $this->assertSame($peak, $collected['badge']);
+        if (!isset($collected['metrics'])) {
+            $this->fail('Expected stable collector metrics.');
+        }
+        $this->assertSame(
+            $current,
+            $collected['metrics'][MemoryCollector::METRIC_CURRENT_USAGE]
+        );
     }
 
     public function testCurrentUsageTracksMemoryUsedInsideReservedAllocation(): void

@@ -27,6 +27,8 @@ use function round;
  */
 final class MemoryCollector extends AbstractCollector
 {
+    public const METRIC_CURRENT_USAGE = 'current_usage';
+
     public const NAME = 'memory';
 
     protected string $icon = 'icon-memory';
@@ -48,7 +50,8 @@ final class MemoryCollector extends AbstractCollector
                 'Current usage' => $current,
                 'Peak usage'    => $peak,
             ],
-            'badge' => $peak,
+            'badge'   => $peak,
+            'metrics' => [self::METRIC_CURRENT_USAGE => $current],
         ];
     }
 

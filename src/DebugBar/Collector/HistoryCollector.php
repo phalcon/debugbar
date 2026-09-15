@@ -78,7 +78,7 @@ final class HistoryCollector extends AbstractCollector
                     'collector' => MemoryCollector::NAME,
                     'icon'      => 'cogs',
                     'label'     => 'Current memory usage',
-                    'path'      => ['panel', 'Current usage'],
+                    'path'      => ['metrics', MemoryCollector::METRIC_CURRENT_USAGE],
                 ],
             ],
         ];

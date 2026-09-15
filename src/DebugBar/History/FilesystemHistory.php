@@ -23,9 +23,6 @@ use function bin2hex;
 use function count;
 use function hash;
 use function is_array;
-use function is_bool;
-use function is_int;
-use function is_string;
 use function json_decode;
 use function json_encode;
 use function min;
@@ -48,15 +45,8 @@ use const PHP_SESSION_ACTIVE;
  * inside the module.
  *
  * @phpstan-import-type payload from \Phalcon\DebugBar\DebugBarTypes
- * @phpstan-type history_meta array{
- *     requested_at: string,
- *     method: string,
- *     uri: string,
- *     status: int,
- *     ajax: bool,
- *     id: string,
- *     stored_at: string
- * }
+ * @phpstan-import-type history_meta from HistoryEntry
+ * @phpstan-import-type stored_entry from HistoryEntry
  */
 final class FilesystemHistory implements History
 {
@@ -282,18 +272,11 @@ final class FilesystemHistory implements History
     }
 
     /**
-     * @param array<string, mixed> $metadata
+     * @param history_meta $metadata
      */
-    private function metadataIsValid(array $metadata, string $file): bool
+    private function metadataMatchesFile(array $metadata, string $file): bool
     {
-        return is_string($metadata['requested_at'] ?? null)
-            && is_string($metadata['method'] ?? null)
-            && is_string($metadata['uri'] ?? null)
-            && is_int($metadata['status'] ?? null)
-            && is_bool($metadata['ajax'] ?? null)
-            && is_string($metadata['id'] ?? null)
-            && basename($file, '.json') === $metadata['id']
-            && is_string($metadata['stored_at'] ?? null);
+        return basename($file, '.json') === $metadata['id'];
     }
 
     private function prune(string $directory): void
@@ -306,7 +289,7 @@ final class FilesystemHistory implements History
     }
 
     /**
-     * @return array{version: int, meta: array<string, mixed>, payload: array<string, mixed>}|null
+     * @return stored_entry|null
      */
     private function read(string $file): ?array
     {
@@ -331,7 +314,7 @@ final class FilesystemHistory implements History
     }
 
     /**
-     * @return array<string, mixed>|null
+     * @return history_meta|null
      */
     private function readMetadata(string $file): ?array
     {
@@ -345,9 +328,10 @@ final class FilesystemHistory implements History
                     && HistoryEntry::VERSION === ($metadataEntry['version'] ?? null)
                     && is_array($metadataEntry['meta'] ?? null)
                 ) {
-                    /** @var array<string, mixed> $metadata */
-                    $metadata = $metadataEntry['meta'];
-                    if ($this->metadataIsValid($metadata, $file)) {
+                    /** @var array<string, mixed> $metadataEntryData */
+                    $metadataEntryData = $metadataEntry['meta'];
+                    $metadata          = HistoryEntry::metadataFromArray($metadataEntryData);
+                    if (null !== $metadata && $this->metadataMatchesFile($metadata, $file)) {
                         return $metadata;
                     }
                 }
@@ -355,7 +339,7 @@ final class FilesystemHistory implements History
         }
 
         $entry = $this->read($file);
-        if (null === $entry || !$this->metadataIsValid($entry['meta'], $file)) {
+        if (null === $entry || !$this->metadataMatchesFile($entry['meta'], $file)) {
             return null;
         }
 

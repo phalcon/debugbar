@@ -18,6 +18,41 @@ use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
 final class HistoryEntryTest extends AbstractUnitTestCase
 {
+    public function testMetadataBoundaryValidatesEveryDocumentedField(): void
+    {
+        $metadata = [
+            'requested_at' => '2026-09-14T10:00:00+00:00',
+            'method'       => 'GET',
+            'uri'          => '/',
+            'status'       => 200,
+            'ajax'         => false,
+            'id'           => '20260914100000-000000-deadbeef',
+            'stored_at'    => '2026-09-14T10:00:00+00:00',
+        ];
+
+        $this->assertSame($metadata, HistoryEntry::metadataFromArray($metadata));
+
+        $invalidValues = [
+            'requested_at' => false,
+            'method'       => false,
+            'uri'          => false,
+            'status'       => '200',
+            'ajax'         => 0,
+            'id'           => false,
+            'stored_at'    => false,
+        ];
+
+        foreach ($invalidValues as $field => $invalidValue) {
+            $invalidMetadata         = $metadata;
+            $invalidMetadata[$field] = $invalidValue;
+
+            $this->assertNull(
+                HistoryEntry::metadataFromArray($invalidMetadata),
+                'Expected invalid metadata field: ' . $field,
+            );
+        }
+    }
+
     public function testRejectsAnInvalidPayloadShape(): void
     {
         $entry = [

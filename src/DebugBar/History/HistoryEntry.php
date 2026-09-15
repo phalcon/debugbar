@@ -80,16 +80,21 @@ final class HistoryEntry
      */
     public static function fromArray(array $entry): ?self
     {
-        $metadata = $entry['meta'] ?? null;
-        $payload  = $entry['payload'] ?? null;
-        if (self::VERSION !== ($entry['version'] ?? null) || !is_array($metadata) || !is_array($payload)) {
+        $metadataEntry = $entry['meta'] ?? null;
+        $payload       = $entry['payload'] ?? null;
+        if (
+            self::VERSION !== ($entry['version'] ?? null)
+            || !is_array($metadataEntry)
+            || !is_array($payload)
+        ) {
             return null;
         }
 
-        /** @var array<string, mixed> $metadata */
+        /** @var array<string, mixed> $metadataEntry */
         /** @var array<string, mixed> $payload */
+        $metadata = self::metadataFromArray($metadataEntry);
         if (
-            !self::metadataIsValid($metadata)
+            null === $metadata
             || !is_array($payload['data'] ?? null)
             || !is_array($payload['meta'] ?? null)
         ) {
@@ -103,16 +108,25 @@ final class HistoryEntry
 
     /**
      * @param array<string, mixed> $metadata
+     *
+     * @return history_meta|null
      */
-    private static function metadataIsValid(array $metadata): bool
+    public static function metadataFromArray(array $metadata): ?array
     {
-        return is_string($metadata['requested_at'] ?? null)
-            && is_string($metadata['method'] ?? null)
-            && is_string($metadata['uri'] ?? null)
-            && is_int($metadata['status'] ?? null)
-            && is_bool($metadata['ajax'] ?? null)
-            && is_string($metadata['id'] ?? null)
-            && is_string($metadata['stored_at'] ?? null);
+        if (
+            !is_string($metadata['requested_at'] ?? null)
+            || !is_string($metadata['method'] ?? null)
+            || !is_string($metadata['uri'] ?? null)
+            || !is_int($metadata['status'] ?? null)
+            || !is_bool($metadata['ajax'] ?? null)
+            || !is_string($metadata['id'] ?? null)
+            || !is_string($metadata['stored_at'] ?? null)
+        ) {
+            return null;
+        }
+
+        /** @var history_meta $metadata */
+        return $metadata;
     }
 
     /**

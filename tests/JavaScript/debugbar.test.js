@@ -428,8 +428,9 @@ test('request metrics render on the right alongside time and memory tabs', funct
             messages: {panel: []},
             time: {panel: [], badge: '12.34ms'},
             memory: {
-                panel: {'Current usage': '7.5MB', 'Peak usage': '8MB'},
-                badge: '8MB'
+                panel: {'Translated current usage': 'panel-value', 'Peak usage': '8MB'},
+                badge: '8MB',
+                metrics: {current_usage: '7.5MB'}
             },
             request: {panel: {Method: 'GET', URI: '/orders'}},
             history: {panel: {url: '/_debugbar/open'}}
@@ -449,7 +450,7 @@ test('request metrics render on the right alongside time and memory tabs', funct
                             collector: 'memory',
                             icon: 'cogs',
                             label: 'Current memory usage',
-                            path: ['panel', 'Current usage']
+                            path: ['metrics', 'current_usage']
                         }
                     ]
                 }

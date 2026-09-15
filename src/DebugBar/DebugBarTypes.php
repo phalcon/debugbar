@@ -28,9 +28,20 @@ namespace Phalcon\DebugBar;
  * @phpstan-type widget array{label: string, icon: string, panel: string, indicators?: list<indicator>}
  * @phpstan-type summary_row array{label: string, value: scalar}
  * @phpstan-type collector_summary list<summary_row>
- * @phpstan-type envelope array{panel: mixed, badge: scalar|null, summary?: collector_summary}
+ * @phpstan-type collector_metrics array<string, scalar>
+ * @phpstan-type envelope array{
+ *     panel: mixed,
+ *     badge: scalar|null,
+ *     summary?: collector_summary,
+ *     metrics?: collector_metrics
+ * }
  * @phpstan-type list_envelope array{panel: list_panel, badge: scalar|null, summary?: collector_summary}
- * @phpstan-type grid_envelope array{panel: grid_panel, badge: scalar|null, summary?: collector_summary}
+ * @phpstan-type grid_envelope array{
+ *     panel: grid_panel,
+ *     badge: scalar|null,
+ *     summary?: collector_summary,
+ *     metrics?: collector_metrics
+ * }
  * @phpstan-type exception_envelope array{panel: exception_panel, badge: scalar|null, summary?: collector_summary}
  * @phpstan-type log_envelope array{panel: log_panel, badge: scalar|null, summary?: collector_summary}
  * @phpstan-type payload array{data: array<string, envelope>, meta: array<string, mixed>}

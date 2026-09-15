@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar\Collector;
 
 use Phalcon\DebugBar\Collector\HistoryCollector;
+use Phalcon\DebugBar\Collector\MemoryCollector;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
 
@@ -49,5 +50,20 @@ final class HistoryCollectorTest extends AbstractUnitTestCase
             $collector->collect()
         );
         $this->assertPanelContract($collector);
+    }
+
+    public function testMemoryIndicatorUsesAStableSemanticMetric(): void
+    {
+        $widget = (new HistoryCollector('/_debugbar/open'))->getWidget();
+        if (!isset($widget['indicators'])) {
+            $this->fail('Expected history indicator definitions.');
+        }
+        $indicators = $widget['indicators'];
+
+        $this->assertSame(
+            ['metrics', MemoryCollector::METRIC_CURRENT_USAGE],
+            $indicators[1]['path']
+        );
+        $this->assertNotContains('Current usage', $indicators[1]['path']);
     }
 }

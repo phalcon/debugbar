@@ -19,7 +19,8 @@ use Phalcon\DebugBar\DebugBarTypes;
  * The data contract every collector implements. `collect()` returns an
  * envelope: `panel` holds the data shaped for the declared panel renderer,
  * `badge` is the optional scalar tab count, and `summary` is an optional list
- * of label/value metrics rendered above the panel.
+ * of label/value metrics rendered above the panel. `metrics` optionally exposes
+ * stable semantic values for widgets without coupling them to display labels.
  *
  * @phpstan-import-type envelope from DebugBarTypes
  */
