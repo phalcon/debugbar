@@ -166,9 +166,7 @@ class Provider
         }
         if (null !== $history) {
             $bar->addCollector(new HistoryCollector(
-                $this->historyEndpoint->url ?? $this->historyOptions->url,
-                $request?->getMethod(),
-                $request?->getURI()
+                $this->historyEndpoint->url ?? $this->historyOptions->url
             ));
         }
 
@@ -290,10 +288,18 @@ class Provider
         AccessGate $accessGate,
         ?RequestInterface $request
     ): ?History {
-        $eventsManager = $this->app->getEventsManager();
         if (
             !$this->historyOptions->enabled
-            || null === $container
+            || !$this->isCollectorEnabled(HistoryCollector::NAME)
+        ) {
+            return null;
+        }
+
+        $this->historyOptions->validate();
+
+        $eventsManager = $this->app->getEventsManager();
+        if (
+            null === $container
             || null === $request
             || null === $eventsManager
             || !$container->has('response')

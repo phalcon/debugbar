@@ -27,6 +27,7 @@ use function json_decode;
 use function json_encode;
 use function min;
 use function preg_match;
+use function preg_replace;
 use function random_bytes;
 use function rsort;
 use function session_id;
@@ -207,7 +208,7 @@ final class FilesystemHistory implements History
      */
     private function files(string $directory): array
     {
-        return $this->fileOperations->matching($directory . '/*.json');
+        return $this->matching($directory, '*.json');
     }
 
     private function garbageCollect(): void
@@ -258,6 +259,19 @@ final class FilesystemHistory implements History
         return false !== $modified && $modified < time() - $this->options->ttlSeconds;
     }
 
+    /**
+     * @return list<string>
+     */
+    private function matching(string $directory, string $pattern, int $flags = 0): array
+    {
+        $escapedDirectory = preg_replace('/([*?\[\]\\\\])/', '\\\\$1', $directory);
+        if (null === $escapedDirectory) {
+            return [];
+        }
+
+        return $this->fileOperations->matching($escapedDirectory . '/' . $pattern, $flags);
+    }
+
     private function metadataFile(string $file): string
     {
         return $file . self::METADATA_SUFFIX;
@@ -268,7 +282,7 @@ final class FilesystemHistory implements History
      */
     private function metadataFiles(string $directory): array
     {
-        return $this->fileOperations->matching($directory . '/*.json' . self::METADATA_SUFFIX);
+        return $this->matching($directory, '*.json' . self::METADATA_SUFFIX);
     }
 
     /**
@@ -348,7 +362,7 @@ final class FilesystemHistory implements History
 
     private function removeDirectoryIfEmpty(string $directory): void
     {
-        if ([] === $this->fileOperations->matching($directory . '/*')) {
+        if ([] === $this->matching($directory, '*')) {
             $this->fileOperations->removeDirectory($directory);
         }
     }
@@ -395,15 +409,15 @@ final class FilesystemHistory implements History
 
             return false;
         }
-        if (!$this->fileOperations->move($metadataTemporary, $metadataTarget)) {
-            $this->fileOperations->remove($metadataTemporary);
+        if (!$this->fileOperations->move($temporary, $target)) {
             $this->fileOperations->remove($temporary);
+            $this->fileOperations->remove($metadataTemporary);
 
             return false;
         }
-        if (!$this->fileOperations->move($temporary, $target)) {
-            $this->fileOperations->remove($temporary);
-            $this->fileOperations->remove($metadataTarget);
+        if (!$this->fileOperations->move($metadataTemporary, $metadataTarget)) {
+            $this->fileOperations->remove($metadataTemporary);
+            $this->fileOperations->remove($target);
 
             return false;
         }
@@ -416,7 +430,7 @@ final class FilesystemHistory implements History
      */
     private function sessionDirectories(): array
     {
-        $directories        = $this->fileOperations->matching($this->options->path . '/*', GLOB_ONLYDIR);
+        $directories        = $this->matching($this->options->path, '*', GLOB_ONLYDIR);
         $sessionDirectories = [];
         foreach ($directories as $directory) {
             if (1 === preg_match('/^[a-f0-9]{64}$/D', basename($directory))) {
@@ -431,7 +445,7 @@ final class FilesystemHistory implements History
     {
         $directory = $this->options->path . '/' . hash('sha256', (string) session_id());
         if ($this->fileOperations->directoryExists($directory)) {
-            return $directory;
+            return $this->fileOperations->isWritable($directory) ? $directory : null;
         }
 
         if (
@@ -444,7 +458,7 @@ final class FilesystemHistory implements History
             return null;
         }
 
-        return $directory;
+        return $this->fileOperations->isWritable($directory) ? $directory : null;
     }
 
     /**
@@ -452,6 +466,6 @@ final class FilesystemHistory implements History
      */
     private function temporaryFiles(string $directory): array
     {
-        return $this->fileOperations->matching($directory . '/*.tmp-*');
+        return $this->matching($directory, '*.tmp-*');
     }
 }

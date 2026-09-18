@@ -26,11 +26,30 @@ final class HistoryOptionsTest extends AbstractUnitTestCase
         $this->assertSame('', $options->path);
     }
 
+    public function testEnabledHistoryAcceptsAbsoluteStoragePaths(): void
+    {
+        $unix = new HistoryOptions(true, '/_debugbar/open', '/var/debugbar/');
+        $unix->validate();
+        $this->assertSame('/var/debugbar', $unix->path);
+
+        $windows = new HistoryOptions(true, '/_debugbar/open', 'C:\\var\\debugbar\\');
+        $windows->validate();
+        $this->assertSame('C:\\var\\debugbar', $windows->path);
+    }
+
+    public function testEnabledHistoryRequiresAnAbsoluteStoragePath(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('history.path must be an absolute path');
+
+        (new HistoryOptions(true, '/_debugbar/open', 'var/debugbar'))->validate();
+    }
+
     public function testEnabledHistoryRequiresAnExplicitStoragePath(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('history.path is required');
 
-        new HistoryOptions(true);
+        (new HistoryOptions(true))->validate();
     }
 }

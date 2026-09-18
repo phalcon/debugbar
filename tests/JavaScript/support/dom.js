@@ -75,6 +75,7 @@ Object.defineProperty(TestElement.prototype, 'innerHTML', {
     }
 });
 
+// Keep textContent as plain text: production rendering relies on it to avoid interpreting history data as HTML.
 Object.defineProperty(TestElement.prototype, 'textContent', {
     get: function () {
         return this._textContent + this.children.map(function (child) {

@@ -36,6 +36,12 @@ final class TimeCollector extends AbstractCollector implements TimeAware
 
     protected string $icon = 'icon-time';
 
+    protected ?array $indicator = [
+        'icon'  => 'clock',
+        'label' => 'Request time',
+        'path'  => ['badge'],
+    ];
+
     protected string $label = 'Time';
 
     protected string $panel = 'list';

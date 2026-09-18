@@ -16,7 +16,9 @@ namespace Phalcon\DebugBar\History;
 use InvalidArgumentException;
 
 use function max;
+use function preg_match;
 use function rtrim;
+use function str_starts_with;
 use function trim;
 
 /**
@@ -38,12 +40,40 @@ final class HistoryOptions
         int $maxRequests = 100,
         int $ttlSeconds = 86400
     ) {
-        if ($enabled && '' === trim($path)) {
+        $path              = trim($path);
+        $this->path        = $this->trimTrailingSeparators($path);
+        $this->maxRequests = max(1, $maxRequests);
+        $this->ttlSeconds  = max(1, $ttlSeconds);
+    }
+
+    public function validate(): void
+    {
+        if (!$this->enabled) {
+            return;
+        }
+
+        if ('' === $this->path) {
             throw new InvalidArgumentException('history.path is required when request history is enabled.');
         }
 
-        $this->path        = rtrim($path, '/\\');
-        $this->maxRequests = max(1, $maxRequests);
-        $this->ttlSeconds  = max(1, $ttlSeconds);
+        if (!$this->isAbsolutePath($this->path)) {
+            throw new InvalidArgumentException('history.path must be an absolute path.');
+        }
+    }
+
+    private function isAbsolutePath(string $path): bool
+    {
+        return str_starts_with($path, '/')
+            || str_starts_with($path, '\\\\')
+            || 1 === preg_match('/^[a-zA-Z]:[\\\\\/]/D', $path);
+    }
+
+    private function trimTrailingSeparators(string $path): string
+    {
+        if ('/' === $path || 1 === preg_match('/^[a-zA-Z]:[\\\\\/]$/D', $path)) {
+            return $path;
+        }
+
+        return rtrim($path, '/\\');
     }
 }

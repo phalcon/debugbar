@@ -14,30 +14,12 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar\Collector;
 
 use Phalcon\DebugBar\Collector\HistoryCollector;
-use Phalcon\DebugBar\Collector\MemoryCollector;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
 
 final class HistoryCollectorTest extends AbstractUnitTestCase
 {
     use PanelContractTrait;
-
-    public function testCollectCarriesCurrentRequestMetadata(): void
-    {
-        $collector = new HistoryCollector('/_debugbar/open', 'POST', '/orders');
-
-        $this->assertSame(
-            [
-                'panel' => [
-                    'url'    => '/_debugbar/open',
-                    'method' => 'POST',
-                    'uri'    => '/orders',
-                ],
-                'badge' => null,
-            ],
-            $collector->collect()
-        );
-    }
 
     public function testCollectCarriesTheInternalEndpoint(): void
     {
@@ -52,18 +34,11 @@ final class HistoryCollectorTest extends AbstractUnitTestCase
         $this->assertPanelContract($collector);
     }
 
-    public function testMemoryIndicatorUsesAStableSemanticMetric(): void
+    public function testWidgetDoesNotDefineOtherCollectors(): void
     {
         $widget = (new HistoryCollector('/_debugbar/open'))->getWidget();
-        if (!isset($widget['indicators'])) {
-            $this->fail('Expected history indicator definitions.');
-        }
-        $indicators = $widget['indicators'];
 
-        $this->assertSame(
-            ['metrics', MemoryCollector::METRIC_CURRENT_USAGE],
-            $indicators[1]['path']
-        );
-        $this->assertNotContains('Current usage', $indicators[1]['path']);
+        $this->assertArrayNotHasKey('indicator', $widget);
+        $this->assertArrayNotHasKey('indicators', $widget);
     }
 }

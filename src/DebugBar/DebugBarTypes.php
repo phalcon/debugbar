@@ -24,8 +24,8 @@ namespace Phalcon\DebugBar;
  * @phpstan-type exception_panel list<exception_row>
  * @phpstan-type log_row array{label: string, message: string, context: string}
  * @phpstan-type log_panel list<log_row>
- * @phpstan-type indicator array{collector: string, icon: string, label: string, path: list<string>}
- * @phpstan-type widget array{label: string, icon: string, panel: string, indicators?: list<indicator>}
+ * @phpstan-type indicator array{icon: string, label: string, path: list<string>}
+ * @phpstan-type widget array{label: string, icon: string, panel: string, indicator?: indicator}
  * @phpstan-type summary_row array{label: string, value: scalar}
  * @phpstan-type collector_summary list<summary_row>
  * @phpstan-type collector_metrics array<string, scalar>

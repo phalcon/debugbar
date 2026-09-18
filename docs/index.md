@@ -75,7 +75,7 @@ The second argument to `Provider` is a nested array. Every key is optional.
 | `headers`          | `bool`                    | `true`                   | Emit the `X-Debug-Bar` diagnostic header.                        |
 | `history.enabled`  | `bool`                    | `false`                  | Store and browse recent requests for the active session.         |
 | `history.url`      | `string`                  | `/_debugbar/open`        | Internal GET/DELETE endpoint, relative to the application's base URI. |
-| `history.path`     | `string`                  | required when enabled    | Writable storage directory; keep it outside the document root.   |
+| `history.path`     | `string`                  | required when enabled    | Absolute writable storage directory; keep it outside the document root. |
 | `history.max_requests` | `int`                 | `100`                    | Maximum stored requests per session.                             |
 | `history.ttl_seconds` | `int`                  | `86400`                  | Lifetime in seconds; active-session entries are checked immediately. |
 | `redact.hidden`    | `list<string>`            | `[]`                     | Keys dropped from the output entirely.                           |
@@ -110,6 +110,8 @@ as configured. The endpoint uses the application's normal MVC lifecycle, so
 module initialization and application event listeners still run. A GET
 without an `id` returns the recent request metadata; `?id=<request-id>` returns
 a stored payload. DELETE clears the active session's stored requests.
+Only an actual HTTP `DELETE` is accepted for clearing; request method overrides
+such as `_method=DELETE` are rejected.
 
 The request indicator on the right (search icon, HTTP method, and URI) replaces a
 dedicated History tab. It initially identifies the current request. Clicking it
@@ -122,8 +124,11 @@ without navigating away from the page. If request metadata is unavailable, the
 history control uses `History` as its fallback label. An empty history displays
 `No stored requests` and leaves the clear control disabled.
 
-`history.path` must be configured explicitly when history is enabled and must be
-writable by the web-server user. Storage is isolated by a SHA-256 hash of the active PHP session id. Each stored
+Request history is disabled by default. When enabled, it can still be switched
+off through `collectors.history = false`; in that case no endpoint or storage is
+registered. `history.path` must be an absolute path, configured explicitly, and
+writable by the web-server user. Its validation happens only after the environment
+and collector gates allow History to boot. Storage is isolated by a SHA-256 hash of the active PHP session id. Each stored
 entry distinguishes the request start time (`requested_at`) from the time it was
 persisted (`stored_at`). If the server does not expose `REQUEST_TIME_FLOAT`, the
 persistence time is used for both values. Each payload has a small metadata sidecar,
@@ -294,6 +299,8 @@ The bar sits at the bottom of the page. Interactive collectors appear as tabs on
 the left; a tab shows a badge when the collector reports a count or summary value.
 When request history is enabled, request time and current memory usage remain
 visible as compact indicators on the right alongside the Time and Memory tabs.
+Each participating collector declares its own indicator and semantic value path;
+the History collector does not depend on the Time or Memory payload shape.
 The rightmost control combines
 a search icon with the current HTTP method and URI; it opens or closes request
 history instead of using a dedicated History tab. The history browser and collector

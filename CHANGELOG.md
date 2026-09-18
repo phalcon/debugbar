@@ -21,8 +21,9 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
   cleanup covers abandoned session directories without delaying history reads and
   distinguishes request-start and persistence timestamps. Metadata sidecars keep
   request listings independent of collector payload size. Stored payloads carry a
-  format version and incompatible entries are rejected. An explicit writable
-  storage path is required. The provider selects its injected history controller without
+  format version and incompatible entries are rejected. An explicit absolute,
+  writable storage path is required when History passes the environment and
+  collector gates. The provider selects its injected history controller without
   changing application routes and respects the URL service's base URI. Storage
   consumers depend on a session-scoped history contract.
 

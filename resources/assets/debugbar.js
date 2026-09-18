@@ -106,16 +106,16 @@
         return value;
     }
 
-    function renderIndicators(mount, data, historyWidget, onHistoryToggle, historyOpen, requestMetadata) {
+    function renderIndicators(mount, data, widgets, onHistoryToggle, historyOpen, requestMetadata) {
         mount.innerHTML = '';
         var historyTrigger = null;
 
-        var indicatorDefinitions = Array.isArray(historyWidget.indicators)
-            ? historyWidget.indicators
-            : [];
-        indicatorDefinitions.forEach(function (definition) {
-            definition = definition || {};
-            var value = valueAtPath(data[definition.collector], definition.path);
+        Object.keys(widgets).forEach(function (collector) {
+            var definition = (widgets[collector] || {}).indicator;
+            if (!definition) {
+                return;
+            }
+            var value = valueAtPath(data[collector], definition.path);
             if (hasBadge(value)) {
                 mount.appendChild(metricIndicator(
                     scalar(definition.icon),
@@ -126,13 +126,12 @@
         });
 
         var request = data.request || {};
-        var requestPanel = request.panel || {};
-        var method = scalar(requestPanel.Method);
-        var uri = scalar(requestPanel.URI);
-        var historyPanel = (data.history && data.history.panel) || {};
+        var requestMetrics = request.metrics || {};
+        var method = scalar(requestMetrics.method);
+        var uri = scalar(requestMetrics.uri);
         requestMetadata = requestMetadata || {};
-        method = method || scalar(historyPanel.method) || scalar(requestMetadata.method);
-        uri = uri || scalar(historyPanel.uri) || scalar(requestMetadata.uri);
+        method = method || scalar(requestMetadata.method);
+        uri = uri || scalar(requestMetadata.uri);
         if (method || uri || onHistoryToggle) {
             var requestControl = el(
                 onHistoryToggle ? 'button' : 'span',
@@ -722,7 +721,6 @@
             var historyName = Object.keys(widgets).find(function (name) {
                 return widgets[name] && widgets[name].panel === 'history';
             });
-            var historyWidget = historyName ? widgets[historyName] : {};
             var historyEntry = historyName ? (data[historyName] || {}) : {};
             historyPanel = null;
             if (
@@ -775,7 +773,7 @@
                 historyTrigger = renderIndicators(
                     indicators,
                     data,
-                    historyWidget,
+                    widgets,
                     function () {
                         if (!historyOpen) {
                             closePanel();

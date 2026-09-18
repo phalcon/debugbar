@@ -21,6 +21,7 @@ use Phalcon\Mvc\ControllerInterface;
 
 use function is_string;
 use function json_encode;
+use function strtoupper;
 
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
@@ -80,7 +81,7 @@ final class HistoryController implements ControllerInterface
 
     public function openAction(): ResponseInterface
     {
-        return 'DELETE' === $this->historyRequest->getMethod() ? $this->clearAction() : $this->indexAction();
+        return 'DELETE' === $this->transportMethod() ? $this->clearAction() : $this->indexAction();
     }
 
     /**
@@ -98,7 +99,7 @@ final class HistoryController implements ControllerInterface
             return $this->json($response, ['error' => 'Not found.'], 404);
         }
 
-        if ($expectedMethod !== $request->getMethod()) {
+        if ($expectedMethod !== $this->transportMethod()) {
             return $this->json($response, ['error' => 'Method not allowed.'], 405);
         }
 
@@ -118,5 +119,10 @@ final class HistoryController implements ControllerInterface
         $response->setContent(false === $json ? '{}' : $json);
 
         return $response;
+    }
+
+    private function transportMethod(): string
+    {
+        return strtoupper($this->historyRequest->getServer('REQUEST_METHOD') ?? '');
     }
 }

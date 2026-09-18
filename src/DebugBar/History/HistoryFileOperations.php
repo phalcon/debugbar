@@ -29,6 +29,8 @@ interface HistoryFileOperations
 
     public function fileExists(string $file): bool;
 
+    public function isWritable(string $path): bool;
+
     /**
      * @return list<string>
      */

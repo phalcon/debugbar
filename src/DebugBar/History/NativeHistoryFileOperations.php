@@ -22,6 +22,7 @@ use function filemtime;
 use function glob;
 use function is_dir;
 use function is_file;
+use function is_writable;
 use function mkdir;
 use function rename;
 use function restore_error_handler;
@@ -49,6 +50,11 @@ final class NativeHistoryFileOperations implements HistoryFileOperations
     public function fileExists(string $file): bool
     {
         return is_file($file);
+    }
+
+    public function isWritable(string $path): bool
+    {
+        return is_writable($path);
     }
 
     public function matching(string $pattern, int $flags = 0): array

@@ -82,7 +82,14 @@ final class HistoryControllerTest extends AbstractUnitTestCase
         $history->expects($this->once())->method('get')->with('stored-request')->willReturn(['payload' => []]);
         $history->expects($this->once())->method('clear')->willReturn(3);
         $request = $this->createMock(RequestInterface::class);
-        $request->method('getMethod')->willReturnOnConsecutiveCalls('GET', 'GET', 'GET', 'GET', 'DELETE', 'DELETE');
+        $request->method('getServer')->with('REQUEST_METHOD')->willReturnOnConsecutiveCalls(
+            'GET',
+            'GET',
+            'GET',
+            'GET',
+            'DELETE',
+            'DELETE'
+        );
         $request->method('getQuery')->with('id')->willReturnOnConsecutiveCalls(null, 'stored-request');
         $controller = new HistoryController($history, new AccessGate([], null), $request, new Response());
 
@@ -169,6 +176,27 @@ final class HistoryControllerTest extends AbstractUnitTestCase
             @unlink($path . '/.gc');
             @rmdir($path);
         }
+    }
+
+    public function testMethodOverrideCannotClearHistory(): void
+    {
+        $history = $this->createMock(History::class);
+        $history->expects($this->never())->method('clear');
+        $request = $this->createMock(RequestInterface::class);
+        $request->method('getMethod')->willReturn('DELETE');
+        $request->method('getServer')->with('REQUEST_METHOD')->willReturn('POST');
+        $controller = new HistoryController(
+            $history,
+            new AccessGate([], null),
+            $request,
+            new Response()
+        );
+
+        $this->assertJsonResponse(
+            $controller->openAction(),
+            405,
+            ['error' => 'Method not allowed.']
+        );
     }
 
     public function testMissingStoredRequestReturnsNotFound(): void

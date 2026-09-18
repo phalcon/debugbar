@@ -21,10 +21,12 @@ use Phalcon\DebugBar\History\RequestMetadata;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\History\FailingStreamWrapper;
 use Phalcon\Tests\Support\DebugBar\History\GarbageCollectionMarkerFailingFileOperations;
+use Phalcon\Tests\Support\DebugBar\History\MetadataMoveFailingHistoryFileOperations;
 use Phalcon\Tests\Support\DebugBar\History\MetadataWriteFailingHistoryFileOperations;
 use Phalcon\Tests\Support\DebugBar\History\PayloadMoveFailingHistoryFileOperations;
 use Phalcon\Tests\Support\DebugBar\History\PayloadReadTrackingHistoryFileOperations;
 use Phalcon\Tests\Support\DebugBar\History\RenameFailingHistoryFileOperations;
+use Phalcon\Tests\Support\DebugBar\History\UnwritableHistoryFileOperations;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 
 use function bin2hex;
@@ -36,6 +38,7 @@ use function is_dir;
 use function is_file;
 use function json_encode;
 use function mkdir;
+use function preg_replace;
 use function random_bytes;
 use function rmdir;
 use function session_id;
@@ -90,6 +93,36 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             $this->assertFalse(file_exists($temporary));
             $this->assertFalse(file_exists($metadata));
             $this->assertFalse(is_dir($directory));
+            $this->assertSame([], $history->find());
+            $this->assertSame(0, $history->clear());
+        } finally {
+            session_write_close();
+            $this->removeHistory($path, $sessionId);
+        }
+    }
+
+    #[RunInSeparateProcess]
+    public function testExistingSessionDirectoryMustRemainWritable(): void
+    {
+        [$path, $sessionId] = $this->startSession();
+        $fileOperations     = new UnwritableHistoryFileOperations();
+        $history            = new FilesystemHistory(
+            new HistoryOptions(true, '/_debugbar/open', $path),
+            $fileOperations
+        );
+
+        try {
+            $this->assertIsString($history->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/', 200, false)
+            ));
+
+            $fileOperations->writable = false;
+
+            $this->assertNull($history->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/blocked', 200, false)
+            ));
             $this->assertSame([], $history->find());
             $this->assertSame(0, $history->clear());
         } finally {
@@ -351,6 +384,27 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     }
 
     #[RunInSeparateProcess]
+    public function testMetadataMoveFailureRollsBackPublishedPayload(): void
+    {
+        [$path, $sessionId] = $this->startSession();
+        $history            = new FilesystemHistory(
+            new HistoryOptions(true, '/_debugbar/open', $path),
+            new MetadataMoveFailingHistoryFileOperations()
+        );
+
+        try {
+            $this->assertNull($history->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/', 200, false)
+            ));
+            $this->assertFalse(is_dir($path . '/' . hash('sha256', $sessionId)));
+        } finally {
+            session_write_close();
+            $this->removeHistory($path, $sessionId);
+        }
+    }
+
+    #[RunInSeparateProcess]
     public function testMetadataWriteFailureRemovesTemporaryFilesAndReturnsNull(): void
     {
         [$path, $sessionId] = $this->startSession();
@@ -387,7 +441,7 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     }
 
     #[RunInSeparateProcess]
-    public function testPayloadMoveFailureRollsBackPublishedMetadata(): void
+    public function testPayloadMoveFailureRemovesStagedFiles(): void
     {
         [$path, $sessionId] = $this->startSession();
         $history            = new FilesystemHistory(
@@ -568,6 +622,29 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     }
 
     #[RunInSeparateProcess]
+    public function testStoragePathWithGlobCharactersStillListsAndPrunes(): void
+    {
+        $path               = $this->temporaryPath() . '[history]';
+        [$path, $sessionId] = $this->startSession($path);
+
+        try {
+            $history = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path, 2, 60));
+            for ($index = 0; $index < 3; $index++) {
+                $history->save(
+                    ['data' => [], 'meta' => ['index' => $index]],
+                    new RequestMetadata('GET', '/' . $index, 200, false)
+                );
+            }
+
+            $this->assertCount(2, $history->find());
+            $this->assertSame(2, $history->clear());
+        } finally {
+            session_write_close();
+            $this->removeHistory($path, $sessionId);
+        }
+    }
+
+    #[RunInSeparateProcess]
     public function testVersionedEntriesWithoutMetadataSidecarRemainReadable(): void
     {
         [$path, $sessionId] = $this->startSession();
@@ -599,7 +676,8 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     private function removeHistory(string $path, string $sessionId): void
     {
         $directory = $path . '/' . hash('sha256', $sessionId);
-        $files     = glob($directory . '/*');
+        $pattern   = preg_replace('/([*?\[\]\\\\])/', '\\\\$1', $directory);
+        $files     = null === $pattern ? false : glob($pattern . '/*');
         if (false !== $files) {
             foreach ($files as $file) {
                 unlink($file);
@@ -614,13 +692,13 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     /**
      * @return array{0: string, 1: string}
      */
-    private function startSession(): array
+    private function startSession(?string $path = null): array
     {
         $sessionId = 'debugbar-' . bin2hex(random_bytes(8));
         session_id($sessionId);
         session_start();
 
-        return [$this->temporaryPath(), $sessionId];
+        return [$path ?? $this->temporaryPath(), $sessionId];
     }
 
     private function temporaryPath(): string

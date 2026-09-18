@@ -33,6 +33,12 @@ final class MemoryCollector extends AbstractCollector
 
     protected string $icon = 'icon-memory';
 
+    protected ?array $indicator = [
+        'icon'  => 'cogs',
+        'label' => 'Current memory usage',
+        'path'  => ['metrics', self::METRIC_CURRENT_USAGE],
+    ];
+
     protected string $label = 'Memory';
 
     protected string $panel = 'grid';

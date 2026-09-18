@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Unit\DebugBar;
 
+use InvalidArgumentException;
 use Phalcon\Config\Config;
 use Phalcon\DebugBar\Controllers\HistoryController;
 use Phalcon\DebugBar\Debug;
@@ -90,6 +91,31 @@ final class ProviderTest extends AbstractUnitTestCase
         $em->fire('application:beforeSendResponse', $app, $response);
 
         $this->assertStringNotContainsString('phalcon-debugbar-data', $response->getContent());
+    }
+
+    public function testAllowedEnvironmentValidatesHistoryStorage(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('history.path is required');
+
+        (new Provider($this->application(new Manager()), [
+            'env'     => ['var' => self::ENV_VAR],
+            'history' => ['enabled' => true],
+        ]))->boot();
+    }
+
+    public function testBlockedEnvironmentDoesNotValidateHistoryStorage(): void
+    {
+        $_ENV[self::ENV_VAR] = 'production';
+
+        (new Provider($this->application(new Manager()), [
+            'env'     => ['var' => self::ENV_VAR],
+            'history' => ['enabled' => true],
+        ]))->boot();
+
+        $this->assertNull(Debug::getBar());
     }
 
     public function testBlockedEnvironmentIsSilentByDefault(): void
@@ -225,6 +251,26 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertNull(Debug::getBar());
     }
 
+    public function testDisabledHistoryCollectorDoesNotValidateOrRegisterStorage(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $app                 = $this->applicationWithServices(new Manager(), [
+            'request'  => new Request(),
+            'response' => new Response(),
+        ]);
+
+        (new Provider($app, [
+            'env'        => ['var' => self::ENV_VAR],
+            'collectors' => ['history' => false],
+            'history'    => ['enabled' => true],
+        ]))->boot();
+
+        $container = $app->getDI();
+        $this->assertNotNull($container);
+        $this->assertFalse($container->has(HistoryController::class));
+        $this->assertFalse($this->bootedBar()->hasCollector('history'));
+    }
+
     public function testDisablingCollectorsRemovesThem(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
@@ -287,7 +333,7 @@ final class ProviderTest extends AbstractUnitTestCase
 
         (new Provider($app, [
             'env'     => ['var' => self::ENV_VAR],
-            'history' => ['enabled' => true, 'path' => 'var/debugbar'],
+            'history' => ['enabled' => true, 'path' => sys_get_temp_dir() . '/debugbar'],
         ]))->boot();
 
         $container = $app->getDI();
@@ -358,7 +404,7 @@ final class ProviderTest extends AbstractUnitTestCase
 
         (new Provider($app, [
             'env'     => ['var' => self::ENV_VAR],
-            'history' => ['enabled' => true, 'path' => 'var/debugbar'],
+            'history' => ['enabled' => true, 'path' => sys_get_temp_dir() . '/debugbar'],
         ]))->boot();
 
         $container = $app->getDI();
@@ -386,7 +432,7 @@ final class ProviderTest extends AbstractUnitTestCase
 
             (new Provider($app, [
                 'env'     => ['var' => self::ENV_VAR],
-                'history' => ['enabled' => true, 'path' => 'var/debugbar'],
+                'history' => ['enabled' => true, 'path' => sys_get_temp_dir() . '/debugbar'],
             ]))->boot();
 
             $container = $app->getDI();
@@ -404,7 +450,7 @@ final class ProviderTest extends AbstractUnitTestCase
 
         (new Provider($app, [
             'env'     => ['var' => self::ENV_VAR],
-            'history' => ['enabled' => true, 'path' => 'var/debugbar'],
+            'history' => ['enabled' => true, 'path' => sys_get_temp_dir() . '/debugbar'],
         ]))->boot();
 
         $this->assertFalse($container->has(HistoryController::class));

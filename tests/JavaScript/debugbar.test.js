@@ -432,28 +432,31 @@ test('request metrics render on the right alongside time and memory tabs', funct
                 badge: '8MB',
                 metrics: {current_usage: '7.5MB'}
             },
-            request: {panel: {Method: 'GET', URI: '/orders'}},
+            request: {
+                panel: {Method: 'GET', URI: '/orders'},
+                metrics: {method: 'GET', uri: '/orders'}
+            },
             history: {panel: {url: '/_debugbar/open'}}
         },
         meta: {
             widgets: {
                 messages: {label: 'Messages', panel: 'list'},
-                time: {label: 'Time', panel: 'list'},
-                memory: {label: 'Memory', panel: 'grid'},
+                time: {
+                    label: 'Time',
+                    panel: 'list',
+                    indicator: {icon: 'clock', label: 'Request time', path: ['badge']}
+                },
+                memory: {
+                    label: 'Memory',
+                    panel: 'grid',
+                    indicator: {
+                        icon: 'cogs',
+                        label: 'Current memory usage',
+                        path: ['metrics', 'current_usage']
+                    }
+                },
                 request: {label: 'Request', panel: 'grid'},
-                history: {
-                    label: 'History',
-                    panel: 'history',
-                    indicators: [
-                        {collector: 'time', icon: 'clock', label: 'Request time', path: ['badge']},
-                        {
-                            collector: 'memory',
-                            icon: 'cogs',
-                            label: 'Current memory usage',
-                            path: ['metrics', 'current_usage']
-                        }
-                    ]
-                }
+                history: {label: 'History', panel: 'history'}
             }
         }
     });
@@ -487,7 +490,10 @@ test('history-disabled payload retains the existing collector tabs', function ()
     dataNode.textContent = JSON.stringify({
         data: {
             time: {panel: [], badge: '12.34ms'},
-            request: {panel: {Method: 'GET', URI: '/orders'}}
+            request: {
+                panel: {Method: 'GET', URI: '/orders'},
+                metrics: {method: 'GET', uri: '/orders'}
+            }
         },
         meta: {
             widgets: {
@@ -525,7 +531,10 @@ test('request control replaces the History tab and opens request history', async
     dataNode.textContent = JSON.stringify({
         data: {
             messages: {panel: []},
-            request: {panel: {Method: 'GET', URI: '/orders'}},
+            request: {
+                panel: {Method: 'GET', URI: '/orders'},
+                metrics: {method: 'GET', uri: '/orders'}
+            },
             history: {panel: {url: '/_debugbar/open'}}
         },
         meta: {
@@ -592,7 +601,10 @@ test('selecting stored data closes history and uses metadata without a request c
     dataNode.textContent = JSON.stringify({
         data: {
             history: {panel: historyPanel},
-            request: {panel: {Method: 'GET', URI: '/current'}}
+            request: {
+                panel: {Method: 'GET', URI: '/current'},
+                metrics: {method: 'GET', uri: '/current'}
+            }
         },
         meta: {widgets: widgets}
     });

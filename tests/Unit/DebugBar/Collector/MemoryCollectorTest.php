@@ -73,8 +73,20 @@ final class MemoryCollectorTest extends AbstractUnitTestCase
         $collector = new MemoryCollector();
 
         $this->assertSame('memory', $collector->getName());
-        $this->assertSame('Memory', $collector->getWidget()['label']);
-        $this->assertSame('grid', $collector->getWidget()['panel']);
+        $widget = $collector->getWidget();
+        $this->assertSame('Memory', $widget['label']);
+        $this->assertSame('grid', $widget['panel']);
+        if (!isset($widget['indicator'])) {
+            $this->fail('Expected the memory indicator definition.');
+        }
+        $this->assertSame(
+            [
+                'icon'  => 'cogs',
+                'label' => 'Current memory usage',
+                'path'  => ['metrics', MemoryCollector::METRIC_CURRENT_USAGE],
+            ],
+            $widget['indicator']
+        );
         $this->assertPanelContract($collector);
     }
 }

@@ -40,6 +40,11 @@ abstract class DelegatingHistoryFileOperations implements HistoryFileOperations
         return $this->delegate->fileExists($file);
     }
 
+    public function isWritable(string $path): bool
+    {
+        return $this->delegate->isWritable($path);
+    }
+
     public function matching(string $pattern, int $flags = 0): array
     {
         return $this->delegate->matching($pattern, $flags);
