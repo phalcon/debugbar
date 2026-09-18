@@ -264,10 +264,7 @@ final class FilesystemHistory implements History
      */
     private function matching(string $directory, string $pattern, int $flags = 0): array
     {
-        $escapedDirectory = preg_replace('/([*?\[\]\\\\])/', '\\\\$1', $directory);
-        if (null === $escapedDirectory) {
-            return [];
-        }
+        $escapedDirectory = (string) preg_replace('/([*?\[\]\\\\])/', '\\\\$1', $directory);
 
         return $this->fileOperations->matching($escapedDirectory . '/' . $pattern, $flags);
     }

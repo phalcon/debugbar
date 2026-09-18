@@ -22,6 +22,7 @@ final class HistoryOptionsTest extends AbstractUnitTestCase
     public function testDisabledHistoryAllowsAnEmptyStoragePath(): void
     {
         $options = new HistoryOptions();
+        $options->validate();
 
         $this->assertSame('', $options->path);
     }
@@ -35,6 +36,14 @@ final class HistoryOptionsTest extends AbstractUnitTestCase
         $windows = new HistoryOptions(true, '/_debugbar/open', 'C:\\var\\debugbar\\');
         $windows->validate();
         $this->assertSame('C:\\var\\debugbar', $windows->path);
+
+        $unc = new HistoryOptions(true, '/_debugbar/open', '\\\\server\\debugbar\\');
+        $unc->validate();
+        $this->assertSame('\\\\server\\debugbar', $unc->path);
+
+        $root = new HistoryOptions(true, '/_debugbar/open', '/');
+        $root->validate();
+        $this->assertSame('/', $root->path);
     }
 
     public function testEnabledHistoryRequiresAnAbsoluteStoragePath(): void
