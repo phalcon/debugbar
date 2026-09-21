@@ -30,18 +30,16 @@ use function preg_match;
 use function preg_replace;
 use function random_bytes;
 use function rsort;
-use function session_id;
-use function session_status;
 use function str_ends_with;
 use function time;
 
 use const GLOB_ONLYDIR;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
-use const PHP_SESSION_ACTIVE;
+use const SORT_STRING;
 
 /**
- * Persists request payloads in a session-scoped directory. Callers only learn
+ * Persists request payloads in a browser-scoped directory. Callers only learn
  * save/find/get/clear; atomic writes, pruning, path validation, and JSON failures stay
  * inside the module.
  *
@@ -57,29 +55,29 @@ final class FilesystemHistory implements History
 
     private const METADATA_SUFFIX                         = '.meta';
 
+    private readonly HistoryCookie $cookie;
+
     private readonly HistoryFileOperations $fileOperations;
 
     private bool $garbageCollectionAttempted = false;
 
     public function __construct(
         private readonly HistoryOptions $options,
-        ?HistoryFileOperations $fileOperations = null
+        ?HistoryFileOperations $fileOperations = null,
+        ?HistoryCookie $cookie = null
     ) {
         $this->fileOperations = $fileOperations ?? new NativeHistoryFileOperations();
+        $this->cookie         = $cookie ?? HistoryCookie::fromGlobals();
     }
 
     /**
-     * Removes every stored request belonging to the active PHP session.
+     * Removes every stored request belonging to the active debug bar browser.
      *
      * @return int Number of files successfully removed.
      */
     public function clear(): int
     {
-        if (PHP_SESSION_ACTIVE !== session_status()) {
-            return 0;
-        }
-
-        $directory = $this->sessionDirectory(false);
+        $directory = $this->browserDirectory(false);
         if (null === $directory) {
             return 0;
         }
@@ -106,11 +104,7 @@ final class FilesystemHistory implements History
      */
     public function find(): array
     {
-        if (PHP_SESSION_ACTIVE !== session_status()) {
-            return [];
-        }
-
-        $directory = $this->sessionDirectory(false);
+        $directory = $this->browserDirectory(false);
         if (null === $directory) {
             return [];
         }
@@ -140,11 +134,7 @@ final class FilesystemHistory implements History
             return null;
         }
 
-        if (PHP_SESSION_ACTIVE !== session_status()) {
-            return null;
-        }
-
-        $directory = $this->sessionDirectory(false);
+        $directory = $this->browserDirectory(false);
         if (null === $directory) {
             return null;
         }
@@ -164,11 +154,7 @@ final class FilesystemHistory implements History
      */
     public function save(array $payload, RequestMetadata $request): ?string
     {
-        if (PHP_SESSION_ACTIVE !== session_status()) {
-            return null;
-        }
-
-        $directory = $this->sessionDirectory(true);
+        $directory = $this->browserDirectory(true);
         if (null === $directory) {
             return null;
         }
@@ -206,6 +192,47 @@ final class FilesystemHistory implements History
     /**
      * @return list<string>
      */
+    private function browserDirectories(): array
+    {
+        $directories        = $this->matching($this->options->path, '*', GLOB_ONLYDIR);
+        $browserDirectories = [];
+        foreach ($directories as $directory) {
+            if (1 === preg_match('/^[a-f0-9]{64}$/D', basename($directory))) {
+                $browserDirectories[] = $directory;
+            }
+        }
+
+        return $browserDirectories;
+    }
+
+    private function browserDirectory(bool $create): ?string
+    {
+        $browserId = $this->cookie->id();
+        if (null === $browserId) {
+            return null;
+        }
+
+        $directory = $this->options->path . '/' . hash('sha256', $browserId);
+        if ($this->fileOperations->directoryExists($directory)) {
+            return $this->fileOperations->isWritable($directory) ? $directory : null;
+        }
+
+        if (
+            !$create
+            || (
+                !$this->fileOperations->createDirectory($directory, 0700, true)
+                && !$this->fileOperations->directoryExists($directory)
+            )
+        ) {
+            return null;
+        }
+
+        return $this->fileOperations->isWritable($directory) ? $directory : null;
+    }
+
+    /**
+     * @return list<string>
+     */
     private function files(string $directory): array
     {
         return $this->matching($directory, '*.json');
@@ -232,7 +259,7 @@ final class FilesystemHistory implements History
             return;
         }
 
-        foreach ($this->sessionDirectories() as $directory) {
+        foreach ($this->browserDirectories() as $directory) {
             $storedFiles = [
                 ...$this->files($directory),
                 ...$this->metadataFiles($directory),
@@ -420,42 +447,6 @@ final class FilesystemHistory implements History
         }
 
         return true;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function sessionDirectories(): array
-    {
-        $directories        = $this->matching($this->options->path, '*', GLOB_ONLYDIR);
-        $sessionDirectories = [];
-        foreach ($directories as $directory) {
-            if (1 === preg_match('/^[a-f0-9]{64}$/D', basename($directory))) {
-                $sessionDirectories[] = $directory;
-            }
-        }
-
-        return $sessionDirectories;
-    }
-
-    private function sessionDirectory(bool $create): ?string
-    {
-        $directory = $this->options->path . '/' . hash('sha256', (string) session_id());
-        if ($this->fileOperations->directoryExists($directory)) {
-            return $this->fileOperations->isWritable($directory) ? $directory : null;
-        }
-
-        if (
-            !$create
-            || (
-                !$this->fileOperations->createDirectory($directory, 0700, true)
-                && !$this->fileOperations->directoryExists($directory)
-            )
-        ) {
-            return null;
-        }
-
-        return $this->fileOperations->isWritable($directory) ? $directory : null;
     }
 
     /**

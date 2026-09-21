@@ -27,8 +27,8 @@ use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 
 /**
- * Internal MVC adapter for /_debugbar/open. GET returns the current session's
- * request list or one stored entry; DELETE clears that session's history.
+ * Internal MVC adapter for /_debugbar/open. GET returns the current browser's
+ * request list or one stored entry; DELETE clears that browser's history.
  */
 final class HistoryController implements ControllerInterface
 {
@@ -44,11 +44,10 @@ final class HistoryController implements ControllerInterface
     {
         return $this->handle(
             'DELETE',
-            fn (
-                RequestInterface $request,
-                ResponseInterface $response,
-                History $history
-            ): ResponseInterface => $this->json($response, ['cleared' => $history->clear()])
+            fn (): ResponseInterface => $this->json(
+                $this->historyResponse,
+                ['cleared' => $this->history->clear()]
+            )
         );
     }
 
@@ -56,25 +55,21 @@ final class HistoryController implements ControllerInterface
     {
         return $this->handle(
             'GET',
-            function (
-                RequestInterface $request,
-                ResponseInterface $response,
-                History $history
-            ): ResponseInterface {
-                $id = $request->getQuery('id');
+            function (): ResponseInterface {
+                $id = $this->historyRequest->getQuery('id');
                 if (null === $id) {
-                    return $this->json($response, ['requests' => $history->find()]);
+                    return $this->json($this->historyResponse, ['requests' => $this->history->find()]);
                 }
                 if (!is_string($id)) {
-                    return $this->json($response, ['error' => 'Request not found.'], 404);
+                    return $this->json($this->historyResponse, ['error' => 'Request not found.'], 404);
                 }
 
-                $entry = $history->get($id);
+                $entry = $this->history->get($id);
                 if (null === $entry) {
-                    return $this->json($response, ['error' => 'Request not found.'], 404);
+                    return $this->json($this->historyResponse, ['error' => 'Request not found.'], 404);
                 }
 
-                return $this->json($response, ['request' => $entry]);
+                return $this->json($this->historyResponse, ['request' => $entry]);
             }
         );
     }
@@ -85,25 +80,20 @@ final class HistoryController implements ControllerInterface
     }
 
     /**
-     * @param callable(RequestInterface, ResponseInterface, History): ResponseInterface $action
+     * @param callable(): ResponseInterface $action
      */
     private function handle(string $expectedMethod, callable $action): ResponseInterface
     {
-        $request    = $this->historyRequest;
-        $response   = $this->historyResponse;
-        $history    = $this->history;
-        $accessGate = $this->accessGate;
-
-        $clientIp = $request->getClientAddress();
-        if (!$accessGate->allows(is_string($clientIp) ? $clientIp : null)) {
-            return $this->json($response, ['error' => 'Not found.'], 404);
+        $clientIp = $this->historyRequest->getClientAddress();
+        if (!$this->accessGate->allows(is_string($clientIp) ? $clientIp : null)) {
+            return $this->json($this->historyResponse, ['error' => 'Not found.'], 404);
         }
 
         if ($expectedMethod !== $this->transportMethod()) {
-            return $this->json($response, ['error' => 'Method not allowed.'], 405);
+            return $this->json($this->historyResponse, ['error' => 'Method not allowed.'], 405);
         }
 
-        return $action($request, $response, $history);
+        return $action();
     }
 
     /**

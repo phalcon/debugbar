@@ -41,8 +41,6 @@ final class MemoryCollector extends AbstractCollector
 
     protected string $label = 'Memory';
 
-    protected string $panel = 'grid';
-
     /**
      * @return grid_envelope
      */

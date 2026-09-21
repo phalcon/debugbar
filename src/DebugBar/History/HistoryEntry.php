@@ -21,6 +21,8 @@ use function is_bool;
 use function is_int;
 use function is_string;
 
+use const DATE_ATOM;
+
 /**
  * Versioned storage boundary for request-history payloads.
  *

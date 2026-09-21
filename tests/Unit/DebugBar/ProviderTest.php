@@ -38,8 +38,11 @@ use stdClass;
 use function array_keys;
 use function is_array;
 use function json_decode;
+use function parse_url;
 use function putenv;
 use function sys_get_temp_dir;
+
+use const PHP_URL_PATH;
 
 #[BackupGlobals(true)]
 final class ProviderTest extends AbstractUnitTestCase
@@ -69,6 +72,7 @@ final class ProviderTest extends AbstractUnitTestCase
     {
         return [
             'root GET'         => ['/', 'GET', 200, '{"requests":[]}'],
+            'absolute base'    => ['http://localhost:8080/', 'GET', 200, '{"requests":[]}'],
             'subfolder GET'    => ['/app1/', 'GET', 200, '{"requests":[]}'],
             'subfolder DELETE' => ['/app1/', 'DELETE', 200, '{"cleared":0}'],
             'subfolder POST'   => ['/app1/', 'POST', 405, '{"error":"Method not allowed."}'],
@@ -318,6 +322,31 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertFalse($response->getHeaders()->has('X-Debug-Bar'));
     }
 
+    public function testHistoryDoesNotResolveResponseServicesAtBoot(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $serviceSets = [
+            ['request' => new stdClass(), 'response' => new Response(), 'router' => new Router(false)],
+            ['request' => new Request(), 'response' => new stdClass(), 'router' => new Router(false)],
+            ['request' => new Request(), 'router' => new Router(false)],
+        ];
+
+        foreach ($serviceSets as $services) {
+            $app = $this->applicationWithServices(new Manager(), $services);
+
+            (new Provider($app, [
+                'env'     => ['var' => self::ENV_VAR],
+                'history' => ['enabled' => true, 'path' => sys_get_temp_dir() . '/debugbar'],
+            ]))->boot();
+
+            $container = $app->getDI();
+            $this->assertNotNull($container);
+            $this->assertTrue($container->has(HistoryController::class));
+            $this->assertTrue($this->bootedBar()->hasCollector('history'));
+        }
+    }
+
     public function testHistoryDoesNotResolveTheRouterService(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
@@ -366,6 +395,7 @@ final class ProviderTest extends AbstractUnitTestCase
         $app       = new Application($container);
         $app->useImplicitView(false);
         $app->setEventsManager(new Manager());
+        $applicationResponse = $container->getShared('response');
 
         (new Provider($app, [
             'env'     => ['var' => self::ENV_VAR],
@@ -378,7 +408,9 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertSame($routes, $router->getRoutes());
         $panel = $this->bootedBar()->collect()['data']['history']['panel'];
         $this->assertIsArray($panel);
-        $this->assertSame($baseUri . '_debugbar/open', $panel['url']);
+        $basePath = parse_url($baseUri, PHP_URL_PATH);
+        $this->assertIsString($basePath);
+        $this->assertSame($basePath . '_debugbar/open', $panel['url']);
         $response = $app->handle('/_debugbar/open');
         if (!$response instanceof ResponseInterface) {
             $this->fail('Expected the history route to return a response.');
@@ -387,6 +419,7 @@ final class ProviderTest extends AbstractUnitTestCase
         $body = json_decode($response->getContent(), true);
 
         $this->assertSame($status, $response->getStatusCode());
+        $this->assertNotSame($applicationResponse, $response);
         $this->assertSame(json_decode($expectedBody, true), $body);
         $this->assertSame('application/json; charset=UTF-8', $response->getHeaders()->get('Content-Type'));
     }
@@ -417,29 +450,28 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertFalse($container->has('debugbar.access_gate'));
     }
 
-    public function testHistoryRequiresCompatibleRequestAndResponseServices(): void
+    public function testHistoryUsesTheFinalUrlServiceRegisteredAfterBoot(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
+        $container           = new FactoryDefault();
+        $initialUrl          = new Url();
+        $initialUrl->setBaseUri('/initial/');
+        $container->setShared('url', $initialUrl);
+        $app = new Application($container);
+        $app->setEventsManager(new Manager());
 
-        $serviceSets = [
-            ['request' => new stdClass(), 'response' => new Response(), 'router' => new Router(false)],
-            ['request' => new Request(), 'response' => new stdClass(), 'router' => new Router(false)],
-            ['request' => new Request(), 'router' => new Router(false)],
-        ];
+        (new Provider($app, [
+            'env'     => ['var' => self::ENV_VAR],
+            'history' => ['enabled' => true, 'path' => sys_get_temp_dir() . '/debugbar'],
+        ]))->boot();
 
-        foreach ($serviceSets as $services) {
-            $app = $this->applicationWithServices(new Manager(), $services);
+        $finalUrl = new Url();
+        $finalUrl->setBaseUri('http://localhost:8080/final/');
+        $container->setShared('url', $finalUrl);
+        $panel = $this->bootedBar()->collect()['data']['history']['panel'];
 
-            (new Provider($app, [
-                'env'     => ['var' => self::ENV_VAR],
-                'history' => ['enabled' => true, 'path' => sys_get_temp_dir() . '/debugbar'],
-            ]))->boot();
-
-            $container = $app->getDI();
-            $this->assertNotNull($container);
-            $this->assertFalse($container->has(HistoryController::class));
-            $this->assertFalse($this->bootedBar()->hasCollector('history'));
-        }
+        $this->assertIsArray($panel);
+        $this->assertSame('/final/_debugbar/open', $panel['url']);
     }
 
     public function testHistoryWithoutEventsManagerDoesNotRegisterAnUnreachableEndpoint(): void

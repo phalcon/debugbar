@@ -16,14 +16,20 @@ namespace Phalcon\DebugBar\History;
 use InvalidArgumentException;
 
 use function max;
+use function parse_url;
 use function preg_match;
 use function rtrim;
 use function str_starts_with;
 use function trim;
 
+use const PHP_URL_FRAGMENT;
+use const PHP_URL_HOST;
+use const PHP_URL_PATH;
+use const PHP_URL_QUERY;
+use const PHP_URL_SCHEME;
+
 /**
- * Immutable request-history configuration shared by the provider, response
- * listener, collector, and controller.
+ * Immutable request-history configuration shared by the provider and storage.
  */
 final class HistoryOptions
 {
@@ -59,6 +65,12 @@ final class HistoryOptions
         if (!$this->isAbsolutePath($this->path)) {
             throw new InvalidArgumentException('history.path must be an absolute path.');
         }
+
+        if (!$this->isInternalUrl($this->url)) {
+            throw new InvalidArgumentException(
+                'history.url must be an absolute path without a scheme, host, query, or fragment.'
+            );
+        }
     }
 
     private function isAbsolutePath(string $path): bool
@@ -66,6 +78,16 @@ final class HistoryOptions
         return str_starts_with($path, '/')
             || str_starts_with($path, '\\\\')
             || 1 === preg_match('/^[a-zA-Z]:[\\\\\/]/D', $path);
+    }
+
+    private function isInternalUrl(string $url): bool
+    {
+        return str_starts_with($url, '/')
+            && $url === parse_url($url, PHP_URL_PATH)
+            && null === parse_url($url, PHP_URL_SCHEME)
+            && null === parse_url($url, PHP_URL_HOST)
+            && null === parse_url($url, PHP_URL_QUERY)
+            && null === parse_url($url, PHP_URL_FRAGMENT);
     }
 
     private function trimTrailingSeparators(string $path): string

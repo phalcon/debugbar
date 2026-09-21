@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Collector;
 
+use Phalcon\DebugBar\History\HistoryEndpoint;
+
 /**
  * Enables the inline request-history browser. The browser itself is rendered
  * by the JavaScript client; this collector only carries its internal endpoint.
@@ -27,7 +29,7 @@ final class HistoryCollector extends AbstractCollector
 
     protected string $panel = 'history';
 
-    public function __construct(private readonly string $url)
+    public function __construct(private readonly HistoryEndpoint $endpoint)
     {
     }
 
@@ -37,7 +39,7 @@ final class HistoryCollector extends AbstractCollector
     public function collect(): array
     {
         return [
-            'panel' => ['url' => $this->url],
+            'panel' => ['url' => $this->endpoint->url()],
             'badge' => null,
         ];
     }

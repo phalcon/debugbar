@@ -14,6 +14,11 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar\Collector;
 
 use Phalcon\DebugBar\Collector\HistoryCollector;
+use Phalcon\DebugBar\History\HistoryEndpoint;
+use Phalcon\DebugBar\History\HistoryOptions;
+use Phalcon\Di\FactoryDefault;
+use Phalcon\Http\Request;
+use Phalcon\Mvc\Url;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
 
@@ -23,7 +28,7 @@ final class HistoryCollectorTest extends AbstractUnitTestCase
 
     public function testCollectCarriesTheInternalEndpoint(): void
     {
-        $collector = new HistoryCollector('/_debugbar/open');
+        $collector = $this->collector();
 
         $this->assertSame('history', $collector->getName());
         $this->assertSame('history', $collector->getWidget()['panel']);
@@ -36,9 +41,20 @@ final class HistoryCollectorTest extends AbstractUnitTestCase
 
     public function testWidgetDoesNotDefineOtherCollectors(): void
     {
-        $widget = (new HistoryCollector('/_debugbar/open'))->getWidget();
+        $widget = $this->collector()->getWidget();
 
         $this->assertArrayNotHasKey('indicator', $widget);
         $this->assertArrayNotHasKey('indicators', $widget);
+    }
+
+    private function collector(): HistoryCollector
+    {
+        $container = new FactoryDefault();
+        $url       = new Url();
+        $url->setBaseUri('/');
+        $container->setShared('request', new Request());
+        $container->setShared('url', $url);
+
+        return new HistoryCollector(new HistoryEndpoint(new HistoryOptions(true), $container));
     }
 }

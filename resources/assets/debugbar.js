@@ -87,7 +87,8 @@
     }
 
     function metricIndicator(icon, label, value) {
-        var indicator = el('span', 'phalcon-debugbar-indicator');
+        var indicator = el('button', 'phalcon-debugbar-indicator phalcon-debugbar-metric');
+        indicator.type = 'button';
         indicator.title = label;
         indicator.appendChild(indicatorIcon(icon));
         indicator.appendChild(el('span', 'phalcon-debugbar-indicator-value', scalar(value)));
@@ -106,23 +107,23 @@
         return value;
     }
 
-    function renderIndicators(mount, data, widgets, onHistoryToggle, historyOpen, requestMetadata) {
+    function renderIndicators(mount, data, widgets, onHistoryToggle, historyOpen, requestMetadata, bindPanel) {
         mount.innerHTML = '';
         var historyTrigger = null;
 
         Object.keys(widgets).forEach(function (collector) {
             var definition = (widgets[collector] || {}).indicator;
-            if (!definition) {
+            if (!definition || !data[collector]) {
                 return;
             }
             var value = valueAtPath(data[collector], definition.path);
-            if (hasBadge(value)) {
-                mount.appendChild(metricIndicator(
-                    scalar(definition.icon),
-                    scalar(definition.label),
-                    value
-                ));
-            }
+            var indicator = metricIndicator(
+                scalar(definition.icon),
+                scalar(definition.label),
+                value
+            );
+            bindPanel(collector, indicator);
+            mount.appendChild(indicator);
         });
 
         var request = data.request || {};
@@ -627,11 +628,12 @@
         var historyPanel = null;
         var historyRenderGeneration = 0;
         var historyTrigger = null;
+        var activeBeforeHistory = null;
 
         function closePanel() {
             body.style.display = 'none';
             active = null;
-            Array.prototype.forEach.call(tabs.querySelectorAll('[data-panel-tab]'), function (child) {
+            Array.prototype.forEach.call(row.querySelectorAll('[data-panel-tab]'), function (child) {
                 child.classList.remove('is-active');
             });
         }
@@ -648,10 +650,11 @@
                 historyPanel,
                 selectedHistoryId,
                 function (storedPayload, storedMetadata, id) {
-                    var activeBeforeSelection = active;
+                    var preferredActive = activeBeforeHistory;
                     selectedHistoryId = id;
                     setHistoryOpen(false);
-                    renderData(storedPayload, activeBeforeSelection, storedMetadata);
+                    activeBeforeHistory = null;
+                    renderData(storedPayload, preferredActive, storedMetadata);
                 },
                 function () {
                     selectedHistoryId = '';
@@ -733,59 +736,62 @@
             }
 
             var preferred = null;
-            Object.keys(data).forEach(function (name) {
+            function bindPanel(name, node) {
                 var entry = data[name] || {};
                 var widget = widgets[name] || {};
-                if (widget.panel === 'history') {
-                    return;
-                }
-                var label = widget.label || titleize(name);
                 var type = widget.panel || inferType(entry.panel);
 
-                var tab = el('button', 'phalcon-debugbar-tab');
-                tab.type = 'button';
-                tab.setAttribute('data-panel-tab', name);
-                tab.appendChild(el('span', 'phalcon-debugbar-tab-label', label));
-                if (hasBadge(entry.badge)) {
-                    tab.appendChild(el('span', 'phalcon-debugbar-badge', scalar(entry.badge)));
-                }
-
-                tab.addEventListener('click', function () {
+                node.setAttribute('data-panel-tab', name);
+                node.addEventListener('click', function () {
                     setHistoryOpen(false);
                     if (active === name) {
                         closePanel();
                         return;
                     }
-                    activate(name, tab, entry, type);
+                    activate(name, node, entry, type);
                 });
-
-                tabs.appendChild(tab);
                 if (name === preferredActive) {
-                    preferred = [name, tab, entry, type];
+                    preferred = [name, node, entry, type];
                 }
+            }
+
+            Object.keys(data).forEach(function (name) {
+                var entry = data[name] || {};
+                var widget = widgets[name] || {};
+                if (widget.panel === 'history' || widget.indicator) {
+                    return;
+                }
+                var label = widget.label || titleize(name);
+
+                var tab = el('button', 'phalcon-debugbar-tab');
+                tab.type = 'button';
+                tab.appendChild(el('span', 'phalcon-debugbar-tab-label', label));
+                if (hasBadge(entry.badge)) {
+                    tab.appendChild(el('span', 'phalcon-debugbar-badge', scalar(entry.badge)));
+                }
+
+                bindPanel(name, tab);
+                tabs.appendChild(tab);
             });
+
+            historyTrigger = renderIndicators(
+                indicators,
+                data,
+                widgets,
+                historyPanel ? function () {
+                    if (!historyOpen) {
+                        activeBeforeHistory = active;
+                        closePanel();
+                    }
+                    setHistoryOpen(!historyOpen);
+                } : null,
+                historyOpen,
+                requestMetadata,
+                bindPanel
+            );
 
             if (preferred) {
                 activate(preferred[0], preferred[1], preferred[2], preferred[3]);
-            }
-
-            if (historyPanel) {
-                historyTrigger = renderIndicators(
-                    indicators,
-                    data,
-                    widgets,
-                    function () {
-                        if (!historyOpen) {
-                            closePanel();
-                        }
-                        setHistoryOpen(!historyOpen);
-                    },
-                    historyOpen,
-                    requestMetadata
-                );
-            } else {
-                indicators.innerHTML = '';
-                historyTrigger = null;
             }
             setHistoryOpen(historyOpen);
         }

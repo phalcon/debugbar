@@ -35,7 +35,7 @@ The remainder of this document covers the debug bar.
 
 ## Registering the Debug Bar
 
-The bar is booted by `Phalcon\DebugBar\Provider`. It takes the MVC application and an optional configuration array. The application must have an events manager set before the bar boots. Request history additionally requires the application's `request` and shared `response` services. The provider does not add or modify application routes.
+The bar is booted by `Phalcon\DebugBar\Provider`. It takes the MVC application and an optional configuration array. The application must have an events manager set before the bar boots. The provider does not add or modify application routes.
 
 ```php
 <?php
@@ -73,11 +73,11 @@ The second argument to `Provider` is a nested array. Every key is optional.
 | `env.strict`       | `bool`                    | `false`                  | When `true`, `boot()` throws in a blocked/undefined environment instead of returning silently. |
 | `env.var`          | `string`                  | `APP_ENV`                | Environment variable inspected by the gate.                      |
 | `headers`          | `bool`                    | `true`                   | Emit the `X-Debug-Bar` diagnostic header.                        |
-| `history.enabled`  | `bool`                    | `false`                  | Store and browse recent requests for the active session.         |
-| `history.url`      | `string`                  | `/_debugbar/open`        | Internal GET/DELETE endpoint, relative to the application's base URI. |
+| `history.enabled`  | `bool`                    | `false`                  | Store and browse recent requests for the active browser.         |
+| `history.url`      | `string`                  | `/_debugbar/open`        | Internal GET/DELETE endpoint path, relative to the application's base URI. |
 | `history.path`     | `string`                  | required when enabled    | Absolute writable storage directory; keep it outside the document root. |
-| `history.max_requests` | `int`                 | `100`                    | Maximum stored requests per session.                             |
-| `history.ttl_seconds` | `int`                  | `86400`                  | Lifetime in seconds; active-session entries are checked immediately. |
+| `history.max_requests` | `int`                 | `100`                    | Maximum stored requests per browser.                             |
+| `history.ttl_seconds` | `int`                  | `86400`                  | Lifetime in seconds; active-browser entries are checked immediately. |
 | `redact.hidden`    | `list<string>`            | `[]`                     | Keys dropped from the output entirely.                           |
 | `redact.mask`      | `list<string>`            | `[]`                     | Extra keys whose values are masked (added to the defaults).      |
 
@@ -104,14 +104,34 @@ When history is enabled, the provider registers its internal history controller
 in the DI container and selects it on `application:beforeHandleRequest` for
 `GET /_debugbar/open` and `DELETE /_debugbar/open`. The controller receives its
 storage and access gate directly; no separate history services or routes are
-registered. If the application's `url` service has a base URI of `/app1/`, the
-endpoint is `/app1/_debugbar/open`. Without a `url` service, `history.url` is used
-as configured. The endpoint uses the application's normal MVC lifecycle, so
+registered. The `url` service is read only when a request is handled, after app
+providers and module services have registered their final definitions. If its
+base URI is `/app1/` or `https://example.test/app1/`, the endpoint path is
+`/app1/_debugbar/open`. The internal controller creates its own response instead
+of resolving the application's shared `response` during boot. `history.url` must
+start with `/` and cannot contain a scheme, host, query, or fragment.
+The endpoint uses the application's normal MVC lifecycle, so
 module initialization and application event listeners still run. A GET
 without an `id` returns the recent request metadata; `?id=<request-id>` returns
-a stored payload. DELETE clears the active session's stored requests.
+a stored payload. DELETE clears the active browser's stored requests.
 Only an actual HTTP `DELETE` is accepted for clearing; request method overrides
 such as `_method=DELETE` are rejected.
+
+Dispatcher ACL plugins also see the internal controller. Allow its namespace
+before applying application controller rules:
+
+```php
+<?php
+
+use Phalcon\DebugBar\History\HistoryEndpoint;
+
+if (HistoryEndpoint::CONTROLLER_NAMESPACE === $dispatcher->getNamespaceName()) {
+    return true;
+}
+```
+
+History endpoint responses are excluded from collection, diagnostic headers,
+HTML injection, and persistence.
 
 The request indicator on the right (search icon, HTTP method, and URI) replaces a
 dedicated History tab. It initially identifies the current request. Clicking it
@@ -119,32 +139,40 @@ closes any open collector panel and opens the history browser; clicking it again
 closes the browser. Opening a collector panel also closes history, so only one
 panel is visible at a time. The browser provides refresh and clear controls.
 Selecting a stored request closes history, replaces the complete collector payload,
-and updates the tabs plus the request time, current memory usage, method, and URI
-without navigating away from the page. If request metadata is unavailable, the
+and updates the controls, request time, current memory usage, method, and URI
+without navigating away from the page. The collector panel that was open before
+History is reopened with the selected request's data. If request metadata is unavailable, the
 history control uses `History` as its fallback label. An empty history displays
 `No stored requests` and leaves the clear control disabled.
 
 Request history is disabled by default. When enabled, it can still be switched
-off through `collectors.history = false`; in that case no endpoint or storage is
+off through `collectors => ['history' => false]`; in that case no endpoint or storage is
 registered. `history.path` must be an absolute path, configured explicitly, and
 writable by the web-server user. Its validation happens only after the environment
-and collector gates allow History to boot. Storage is isolated by a SHA-256 hash of the active PHP session id. Each stored
+and collector gates allow History to boot. Storage is isolated by a SHA-256 hash
+of a random, HttpOnly, SameSite=Lax debug bar cookie. The bar never reads, starts,
+or changes the application's PHP session, so session ID regeneration does not hide
+earlier requests. The first allowed response for a browser sets the cookie but is
+not stored; storage begins with the next request carrying that cookie. Clients
+that do not retain cookies never create storage directories. Each stored
 entry distinguishes the request start time (`requested_at`) from the time it was
 persisted (`stored_at`). If the server does not expose `REQUEST_TIME_FLOAT`, the
 persistence time is used for both values. Each payload has a small metadata sidecar,
 so listing requests does not read the full collector payload. If a sidecar is
 missing, the versioned payload is used as a fallback; incompatible stored payloads
-are rejected. Reads clean expired entries only from the active session so opening the browser remains
+are rejected. Reads clean expired entries only from the active browser so opening the browser remains
 fast on network filesystems. A rate-limited collection during request storage
 removes expired entries, abandoned temporary files, and empty directories from all
-sessions at most once per hour (or once per configured TTL when it is shorter). With
-no active session, no request is written or exposed.
+browsers at most once per hour (or once per configured TTL when it is shorter).
+For a debug host reachable by other users, restrict History with
+`access.allow_ips` and/or `access.callback`.
 
 ## Collectors
 
 Collectors contribute data to the bar. Most renderable collectors appear as tabs.
-When request history is enabled, request time and memory usage also appear in the
-compact controls described below, while their collector tabs remain available.
+Time and Memory are enabled by default and appear once as compact indicators on
+the right; clicking an indicator opens or closes its collector panel. Their
+placement does not depend on request history.
 A collector reads its data in one of four ways:
 
 - **Snapshot** - reads state when the response is assembled.
@@ -230,7 +258,7 @@ The `exceptions` collector also captures throwables automatically. It subscribes
 
 ## Capturing Logs
 
-`Phalcon\DebugBar\Logger\Adapter` is a `Phalcon\Logger` adapter. Attach it to the application logger and every logged item is captured in the bar's `logger` collector, shown in the "Logs" tab. This is separate from the `messages` collector: `logger` is the automatic application log, while `messages` is what the code records by hand through the `Debug` facade.
+`Phalcon\DebugBar\Logger\Adapter` is a `Phalcon\Logger` adapter. Attach it to the application logger and every logged item is captured in the bar's `logger` collector, shown in the `Logs` panel. This is separate from the `messages` collector: `logger` is the automatic application log, while `messages` is what the code records by hand through the `Debug` facade.
 
 - Phalcon 5 (the C extension) exposes the `Phalcon\Logger` adapter contract the adapter builds on.
 - Phalcon 6 (`phalcon/phalcon`) exposes the same contract. The adapter attaches the same way on either runtime.
@@ -297,8 +325,8 @@ The bar's CSS and JavaScript are minified and injected inline; the bar has no ex
 
 The bar sits at the bottom of the page. Interactive collectors appear as tabs on
 the left; a tab shows a badge when the collector reports a count or summary value.
-When request history is enabled, request time and current memory usage remain
-visible as compact indicators on the right alongside the Time and Memory tabs.
+Time and Memory appear as compact indicators on the right instead of duplicate tabs.
+Their indicators remain available whether History is enabled or disabled.
 Each participating collector declares its own indicator and semantic value path;
 the History collector does not depend on the Time or Memory payload shape.
 The rightmost control combines
@@ -309,10 +337,12 @@ stored request closes history and updates the entire bar with that request's dat
 
 Interactive tabs use the following panel types:
 
-- **grid** panels (version, request, config, session, route) render a key and value table.
-- **list** panels (messages, database, view, cache) render labelled rows.
+- **grid** panels (version, request, config, session, route, memory) render a key and value table.
+- **list** panels (time, messages, database, view, cache) render labelled rows.
 - **exceptions** panels render one collapsible entry per throwable; the summary line stays visible and expands to the stack trace.
 - **logs** panels (logger) render one entry per logged item; an entry with context is collapsible - the level and message stay visible and expand to the context.
+
+Time and Memory open their panels from the indicators on the right.
 
 Collectors may expose a summary above their panel. The database collector reports the total query count, duplicate runs, and accumulated SQL time. A duplicate run is each execution of a normalized statement after its first execution: running the same statement three times contributes two duplicate runs. These metrics remain visible with zero values when no queries are executed. Duplicate detection deliberately ignores binding values; repeated statements are highlighted and show their total execution count.
 

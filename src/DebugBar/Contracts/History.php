@@ -17,16 +17,16 @@ use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\DebugBar\History\RequestMetadata;
 
 /**
- * Request storage isolated to the active session. With no active session,
- * reads return empty results and writes do nothing. Unavailable storage and
- * missing or expired entries are represented by empty results, not exceptions.
+ * Request storage isolated by the debug bar's browser cookie. Without a valid
+ * cookie, reads return empty results and writes do nothing. Unavailable storage
+ * and missing or expired entries are represented by empty results, not exceptions.
  *
  * @phpstan-import-type payload from DebugBarTypes
  */
 interface History
 {
     /**
-     * Removes the current session's entries and returns the number removed.
+     * Removes the current browser's entries and returns the number removed.
      */
     public function clear(): int;
 

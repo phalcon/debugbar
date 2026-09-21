@@ -16,6 +16,7 @@ namespace Phalcon\DebugBar;
 use DateTimeImmutable;
 use DateTimeZone;
 use Phalcon\DebugBar\Contracts\History;
+use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\RequestMetadata;
 use Phalcon\DebugBar\Security\AccessGate;
@@ -46,13 +47,18 @@ final class ResponseListener
         private readonly ?RequestInterface $request,
         private readonly BarOptions $options,
         private readonly ?History $history = null,
-        private readonly ?HistoryEndpoint $historyEndpoint = null
+        private readonly ?HistoryEndpoint $historyEndpoint = null,
+        private readonly ?HistoryCookie $historyCookie = null
     ) {
     }
 
     public function __invoke(EventInterface $event, mixed $source, mixed $response): void
     {
         if (!$response instanceof ResponseInterface) {
+            return;
+        }
+
+        if ($this->historyEndpoint?->matches()) {
             return;
         }
 
@@ -64,6 +70,9 @@ final class ResponseListener
         $collected = $this->bar->collect();
 
         $this->record($collected, $response, $isAjax);
+        if (null !== $this->history) {
+            $this->historyCookie?->queue($response, $this->historyEndpoint?->cookiePath() ?? '/');
+        }
 
         if (true === $this->options->headers) {
             $response->setHeader('X-Debug-Bar', (string) count($collected['data']));
@@ -84,10 +93,6 @@ final class ResponseListener
     private function record(array $collected, ResponseInterface $response, bool $isAjax): void
     {
         if (null === $this->history || null === $this->request) {
-            return;
-        }
-
-        if ($this->historyEndpoint?->matches()) {
             return;
         }
 

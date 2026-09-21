@@ -124,17 +124,17 @@
     stroke-linejoin: round;
 }
 
-#phalcon-debugbar .phalcon-debugbar-indicator-value,
-#phalcon-debugbar .phalcon-debugbar-request-method {
+#phalcon-debugbar .phalcon-debugbar-indicator-value {
     color: #ffffff;
     font-weight: 700;
 }
 
 #phalcon-debugbar .phalcon-debugbar-request-control {
-    max-width: 40vw;
+    max-width: 25vw;
 }
 
-#phalcon-debugbar button.phalcon-debugbar-request-control {
+#phalcon-debugbar button.phalcon-debugbar-request-control,
+#phalcon-debugbar button.phalcon-debugbar-metric {
     background: transparent;
     border: 0;
     border-left: 1px solid #2b2b40;
@@ -143,12 +143,22 @@
 }
 
 #phalcon-debugbar button.phalcon-debugbar-request-control:hover,
-#phalcon-debugbar button.phalcon-debugbar-request-control.is-active {
+#phalcon-debugbar button.phalcon-debugbar-request-control.is-active,
+#phalcon-debugbar button.phalcon-debugbar-metric:hover {
     background: #26263a;
+}
+
+#phalcon-debugbar button.phalcon-debugbar-metric.is-active {
+    background: #7c3aed;
+}
+
+#phalcon-debugbar button.phalcon-debugbar-metric.is-active .phalcon-debugbar-indicator-icon {
+    stroke: #ffffff;
 }
 
 #phalcon-debugbar .phalcon-debugbar-request-method {
     color: #a78bfa;
+    font-weight: 700;
 }
 
 #phalcon-debugbar .phalcon-debugbar-request-uri {
@@ -288,13 +298,14 @@
     cursor: pointer;
 }
 
-#phalcon-debugbar .phalcon-debugbar-history-request:hover,
-#phalcon-debugbar .phalcon-debugbar-history-request.is-selected {
+#phalcon-debugbar .phalcon-debugbar-history-request:hover {
     background: #26263a;
     color: #ffffff;
 }
 
 #phalcon-debugbar .phalcon-debugbar-history-request.is-selected {
+    background: #26263a;
+    color: #ffffff;
     box-shadow: inset 3px 0 #7c3aed;
 }
 
@@ -315,13 +326,13 @@
 }
 
 #phalcon-debugbar .phalcon-debugbar-history-loading,
-#phalcon-debugbar .phalcon-debugbar-history-empty,
-#phalcon-debugbar .phalcon-debugbar-history-error {
+#phalcon-debugbar .phalcon-debugbar-history-empty {
     padding: 8px 14px;
     color: #8f8faa;
 }
 
 #phalcon-debugbar .phalcon-debugbar-history-error {
+    padding: 8px 14px;
     color: #ff6b81;
 }
 

@@ -16,6 +16,7 @@ namespace Phalcon\Tests\Unit\DebugBar\Controllers;
 use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\Controllers\HistoryController;
 use Phalcon\DebugBar\History\FilesystemHistory;
+use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryOptions;
 use Phalcon\DebugBar\History\RequestMetadata;
 use Phalcon\DebugBar\Security\AccessGate;
@@ -27,10 +28,13 @@ use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 
 use function bin2hex;
+use function file_exists;
 use function glob;
 use function hash;
+use function is_dir;
 use function json_decode;
 use function random_bytes;
+use function rmdir;
 use function session_id;
 use function session_start;
 use function session_write_close;
@@ -117,10 +121,12 @@ final class HistoryControllerTest extends AbstractUnitTestCase
     }
 
     #[RunInSeparateProcess]
-    public function testListsAndLoadsRequestsFromTheCurrentSession(): void
+    public function testListsAndLoadsRequestsFromTheCurrentBrowser(): void
     {
-        $sessionId = 'debugbar-' . bin2hex(random_bytes(8));
-        $path      = sys_get_temp_dir() . '/phalcon-debugbar-controller-' . bin2hex(random_bytes(8));
+        $sessionId                    = 'debugbar-' . bin2hex(random_bytes(8));
+        $browserId                    = bin2hex(random_bytes(32));
+        $_COOKIE[HistoryCookie::NAME] = $browserId;
+        $path                         = sys_get_temp_dir() . '/phalcon-debugbar-controller-' . bin2hex(random_bytes(8));
         session_id($sessionId);
         session_start();
 
@@ -164,7 +170,7 @@ final class HistoryControllerTest extends AbstractUnitTestCase
             $this->assertSame([], $history->find());
         } finally {
             session_write_close();
-            $directory = $path . '/' . hash('sha256', $sessionId);
+            $directory = $path . '/' . hash('sha256', $browserId);
             $files     = glob($directory . '/*');
             if (false !== $files) {
                 foreach ($files as $file) {
@@ -172,9 +178,15 @@ final class HistoryControllerTest extends AbstractUnitTestCase
                 }
             }
 
-            @rmdir($directory);
-            @unlink($path . '/.gc');
-            @rmdir($path);
+            if (is_dir($directory)) {
+                rmdir($directory);
+            }
+            if (file_exists($path . '/.gc')) {
+                unlink($path . '/.gc');
+            }
+            if (is_dir($path)) {
+                rmdir($path);
+            }
         }
     }
 

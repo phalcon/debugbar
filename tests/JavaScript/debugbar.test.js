@@ -420,7 +420,7 @@ test('request history reports clear failures and restores controls', async funct
     );
 });
 
-test('request metrics render on the right alongside time and memory tabs', function () {
+test('indicator collectors render once on the right and open their panels', function () {
     var dataNode = new dom.TestElement('script');
     var mount = new dom.TestElement('div');
     dataNode.textContent = JSON.stringify({
@@ -479,12 +479,21 @@ test('request metrics render on the right alongside time and memory tabs', funct
         return label.textContent;
     });
     var indicators = dom.findByClass(mount, 'phalcon-debugbar-indicators');
-    assert.deepEqual(labels, ['Messages', 'Time', 'Memory', 'Request']);
+    assert.deepEqual(labels, ['Messages', 'Request']);
     assert.ok(indicators);
     assert.equal(indicators.textContent, '12.34ms7.5MBGET/orders');
+    var metrics = indicators.querySelectorAll('.phalcon-debugbar-metric');
+    assert.equal(metrics.length, 2);
+    assert.equal(metrics[0].tagName, 'BUTTON');
+    metrics[0].click();
+    assert.equal(metrics[0].classList.contains('is-active'), true);
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-body').style.display, 'block');
+    metrics[0].click();
+    assert.equal(metrics[0].classList.contains('is-active'), false);
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-body').style.display, 'none');
 });
 
-test('history-disabled payload retains the existing collector tabs', function () {
+test('indicators and request metrics render when history is disabled', function () {
     var dataNode = new dom.TestElement('script');
     var mount = new dom.TestElement('div');
     dataNode.textContent = JSON.stringify({
@@ -497,7 +506,11 @@ test('history-disabled payload retains the existing collector tabs', function ()
         },
         meta: {
             widgets: {
-                time: {label: 'Time', panel: 'list'},
+                time: {
+                    label: 'Time',
+                    panel: 'list',
+                    indicator: {icon: 'clock', label: 'Request time', path: ['badge']}
+                },
                 request: {label: 'Request', panel: 'grid'}
             }
         }
@@ -521,8 +534,10 @@ test('history-disabled payload retains the existing collector tabs', function ()
         return label.textContent;
     });
     var indicators = dom.findByClass(mount, 'phalcon-debugbar-indicators');
-    assert.deepEqual(labels, ['Time', 'Request']);
-    assert.equal(indicators.textContent, '');
+    assert.deepEqual(labels, ['Request']);
+    assert.equal(indicators.textContent, '12.34msGET/orders');
+    assert.equal(dom.findByClass(indicators, 'phalcon-debugbar-metric').tagName, 'BUTTON');
+    assert.equal(dom.findByClass(indicators, 'phalcon-debugbar-request-control').tagName, 'SPAN');
 });
 
 test('request control replaces the History tab and opens request history', async function () {
@@ -596,11 +611,17 @@ test('selecting stored data closes history and uses metadata without a request c
     var historyPanel = {url: '/_debugbar/open'};
     var widgets = {
         history: {label: 'History', panel: 'history'},
+        time: {
+            label: 'Time',
+            panel: 'list',
+            indicator: {icon: 'clock', label: 'Request time', path: ['badge']}
+        },
         request: {label: 'Request', panel: 'grid'}
     };
     dataNode.textContent = JSON.stringify({
         data: {
             history: {panel: historyPanel},
+            time: {panel: [{label: 'Request', message: '10ms'}], badge: '10ms'},
             request: {
                 panel: {Method: 'GET', URI: '/current'},
                 metrics: {method: 'GET', uri: '/current'}
@@ -628,7 +649,8 @@ test('selecting stored data closes history and uses metadata without a request c
                     meta: {method: 'POST', uri: '/stored'},
                     payload: {
                         data: {
-                            history: {panel: historyPanel}
+                            history: {panel: historyPanel},
+                            time: {panel: [{label: 'Request', message: '20ms'}], badge: '20ms'}
                         },
                         meta: {widgets: widgets}
                     }
@@ -638,6 +660,9 @@ test('selecting stored data closes history and uses metadata without a request c
     };
 
     require(debugbarPath);
+    var timeIndicator = dom.findByClass(mount, 'phalcon-debugbar-metric');
+    timeIndicator.click();
+    assert.equal(timeIndicator.classList.contains('is-active'), true);
     var requestControl = dom.findByClass(mount, 'phalcon-debugbar-request-control');
     requestControl.click();
     await dom.flushPromises();
@@ -652,4 +677,73 @@ test('selecting stored data closes history and uses metadata without a request c
     assert.equal(historyBrowser.style.display, 'none');
     assert.equal(request.classList.contains('is-selected'), true);
     assert.equal(dom.findByClass(mount, 'phalcon-debugbar-request-control').textContent, 'POST/stored');
+    var storedTimeIndicator = dom.findByClass(mount, 'phalcon-debugbar-metric');
+    assert.equal(storedTimeIndicator.textContent, '20ms');
+    assert.equal(storedTimeIndicator.classList.contains('is-active'), true);
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-body').style.display, 'block');
+});
+
+test('selecting stored data reopens the collector tab active before history', async function () {
+    var dataNode = new dom.TestElement('script');
+    var mount = new dom.TestElement('div');
+    var historyPanel = {url: '/_debugbar/open'};
+    var widgets = {
+        database: {label: 'Database', panel: 'list'},
+        history: {label: 'History', panel: 'history'},
+        request: {label: 'Request', panel: 'grid'}
+    };
+    dataNode.textContent = JSON.stringify({
+        data: {
+            database: {panel: [{label: 'Current', message: 'SELECT 1'}]},
+            history: {panel: historyPanel},
+            request: {metrics: {method: 'GET', uri: '/current'}, panel: {}}
+        },
+        meta: {widgets: widgets}
+    });
+    global.document = dom.createDocument({
+        'phalcon-debugbar': mount,
+        'phalcon-debugbar-data': dataNode
+    });
+    var calls = 0;
+    global.window = {
+        fetch: function () {
+            calls++;
+            if (calls === 1) {
+                return Promise.resolve(response({
+                    requests: [{id: 'stored', method: 'GET', uri: '/stored', status: 200}]
+                }));
+            }
+
+            return Promise.resolve(response({
+                request: {
+                    version: 1,
+                    meta: {method: 'GET', uri: '/stored'},
+                    payload: {
+                        data: {
+                            database: {panel: [{label: 'Stored', message: 'SELECT 2'}]},
+                            history: {panel: historyPanel},
+                            request: {metrics: {method: 'GET', uri: '/stored'}, panel: {}}
+                        },
+                        meta: {widgets: widgets}
+                    }
+                }
+            }));
+        }
+    };
+
+    require(debugbarPath);
+    var databaseTab = mount.querySelectorAll('.phalcon-debugbar-tab').filter(function (tab) {
+        return tab.textContent === 'Database';
+    })[0];
+    databaseTab.click();
+    dom.findByClass(mount, 'phalcon-debugbar-request-control').click();
+    await dom.flushPromises();
+    dom.findByClass(mount, 'phalcon-debugbar-history-request').click();
+    await dom.flushPromises();
+
+    var storedDatabaseTab = mount.querySelectorAll('.phalcon-debugbar-tab').filter(function (tab) {
+        return tab.textContent === 'Database';
+    })[0];
+    assert.equal(storedDatabaseTab.classList.contains('is-active'), true);
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-body').textContent, 'StoredSELECT 2');
 });

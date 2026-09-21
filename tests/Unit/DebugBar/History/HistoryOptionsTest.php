@@ -16,9 +16,24 @@ namespace Phalcon\Tests\Unit\DebugBar\History;
 use InvalidArgumentException;
 use Phalcon\DebugBar\History\HistoryOptions;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class HistoryOptionsTest extends AbstractUnitTestCase
 {
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function invalidHistoryUrls(): array
+    {
+        return [
+            'relative' => ['_debugbar/open'],
+            'scheme'   => ['https://example.com/_debugbar/open'],
+            'host'     => ['//example.com/_debugbar/open'],
+            'query'    => ['/_debugbar/open?request=1'],
+            'fragment' => ['/_debugbar/open#history'],
+        ];
+    }
+
     public function testDisabledHistoryAllowsAnEmptyStoragePath(): void
     {
         $options = new HistoryOptions();
@@ -60,5 +75,14 @@ final class HistoryOptionsTest extends AbstractUnitTestCase
         $this->expectExceptionMessage('history.path is required');
 
         (new HistoryOptions(true))->validate();
+    }
+
+    #[DataProvider('invalidHistoryUrls')]
+    public function testEnabledHistoryRequiresAnInternalPathUrl(string $url): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('history.url must be an absolute path');
+
+        (new HistoryOptions(true, $url, '/var/debugbar'))->validate();
     }
 }

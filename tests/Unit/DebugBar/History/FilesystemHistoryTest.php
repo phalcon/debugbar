@@ -15,6 +15,7 @@ namespace Phalcon\Tests\Unit\DebugBar\History;
 
 use DateTimeImmutable;
 use Phalcon\DebugBar\History\FilesystemHistory;
+use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEntry;
 use Phalcon\DebugBar\History\HistoryOptions;
 use Phalcon\DebugBar\History\RequestMetadata;
@@ -42,6 +43,7 @@ use function preg_replace;
 use function random_bytes;
 use function rmdir;
 use function session_id;
+use function session_regenerate_id;
 use function session_start;
 use function session_write_close;
 use function str_repeat;
@@ -55,7 +57,7 @@ use function usleep;
 final class FilesystemHistoryTest extends AbstractUnitTestCase
 {
     #[RunInSeparateProcess]
-    public function testActiveSessionWithoutStorageHasNoRequests(): void
+    public function testActiveBrowserWithoutStorageHasNoRequests(): void
     {
         [$path, $sessionId] = $this->startSession();
 
@@ -71,7 +73,30 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     }
 
     #[RunInSeparateProcess]
-    public function testClearRemovesTheCurrentSessionsRequests(): void
+    public function testChangingTheApplicationSessionIdKeepsBrowserHistory(): void
+    {
+        [$path, $browserId] = $this->startSession();
+
+        try {
+            $history = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path));
+            $id      = $history->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/before-login', 200, false)
+            );
+            $this->assertIsString($id);
+            $this->assertTrue(session_regenerate_id());
+
+            $afterLogin = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path));
+            $this->assertCount(1, $afterLogin->find());
+            $this->assertIsArray($afterLogin->get($id));
+        } finally {
+            session_write_close();
+            $this->removeHistory($path, $browserId);
+        }
+    }
+
+    #[RunInSeparateProcess]
+    public function testClearRemovesTheCurrentBrowsersRequests(): void
     {
         [$path, $sessionId] = $this->startSession();
         $directory          = $path . '/' . hash('sha256', $sessionId);
@@ -102,7 +127,7 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     }
 
     #[RunInSeparateProcess]
-    public function testExistingSessionDirectoryMustRemainWritable(): void
+    public function testExistingBrowserDirectoryMustRemainWritable(): void
     {
         [$path, $sessionId] = $this->startSession();
         $fileOperations     = new UnwritableHistoryFileOperations();
@@ -223,11 +248,11 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     }
 
     #[RunInSeparateProcess]
-    public function testListingOnlyCollectsTheActiveSession(): void
+    public function testListingOnlyCollectsTheActiveBrowser(): void
     {
         [$path, $firstSessionId] = $this->startSession();
         $firstDirectory          = $path . '/' . hash('sha256', $firstSessionId);
-        $secondSessionId         = 'debugbar-' . bin2hex(random_bytes(8));
+        $secondSessionId         = bin2hex(random_bytes(32));
         $unrelatedDirectory      = $path . '/application-cache';
         $unrelatedFile           = $unrelatedDirectory . '/response.json';
 
@@ -249,6 +274,7 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             session_write_close();
             session_id($secondSessionId);
             session_start();
+            $_COOKIE[HistoryCookie::NAME] = $secondSessionId;
 
             $nextRequestHistory = new FilesystemHistory(
                 new HistoryOptions(true, '/_debugbar/open', $path, 10, 1)
@@ -282,9 +308,15 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             session_write_close();
             $this->removeHistory($path, $firstSessionId);
             $this->removeHistory($path, $secondSessionId);
-            @unlink($unrelatedFile);
-            @rmdir($unrelatedDirectory);
-            @rmdir($path);
+            if (file_exists($unrelatedFile)) {
+                unlink($unrelatedFile);
+            }
+            if (is_dir($unrelatedDirectory)) {
+                rmdir($unrelatedDirectory);
+            }
+            if (is_dir($path)) {
+                rmdir($path);
+            }
         }
     }
 
@@ -426,8 +458,9 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     }
 
     #[RunInSeparateProcess]
-    public function testNoActiveSessionStoresNothing(): void
+    public function testMissingBrowserCookieStoresNothing(): void
     {
+        unset($_COOKIE[HistoryCookie::NAME]);
         $path    = $this->temporaryPath();
         $history = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path));
 
@@ -480,15 +513,17 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             $this->assertFalse(is_dir($path . '/' . hash('sha256', $sessionId)));
         } finally {
             session_write_close();
-            @rmdir($path);
+            if (is_dir($path)) {
+                rmdir($path);
+            }
         }
     }
 
     #[RunInSeparateProcess]
-    public function testSaveFindAndGetAreSessionScoped(): void
+    public function testSaveFindAndGetAreBrowserScoped(): void
     {
         [$path, $firstSessionId] = $this->startSession();
-        $secondSessionId         = 'debugbar-' . bin2hex(random_bytes(8));
+        $secondSessionId         = bin2hex(random_bytes(32));
 
         try {
             $history     = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path, 10, 60));
@@ -523,11 +558,15 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             session_write_close();
             session_id($secondSessionId);
             session_start();
+            $_COOKIE[HistoryCookie::NAME] = $secondSessionId;
 
-            $this->assertSame([], $history->find());
-            $this->assertNull($history->get($id));
+            $secondBrowserHistory = new FilesystemHistory(
+                new HistoryOptions(true, '/_debugbar/open', $path, 10, 60)
+            );
+            $this->assertSame([], $secondBrowserHistory->find());
+            $this->assertNull($secondBrowserHistory->get($id));
 
-            $secondId = $history->save(
+            $secondId = $secondBrowserHistory->save(
                 ['data' => [], 'meta' => ['collectors' => 1]],
                 new RequestMetadata('GET', '/customers', 200, false)
             );
@@ -536,6 +575,7 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             session_write_close();
             session_id($firstSessionId);
             session_start();
+            $_COOKIE[HistoryCookie::NAME] = $firstSessionId;
 
             $firstSessionHistory = new FilesystemHistory(
                 new HistoryOptions(true, '/_debugbar/open', $path, 10, 60)
@@ -593,7 +633,9 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             ));
         } finally {
             session_write_close();
-            @unlink($blockedPath);
+            if (file_exists($blockedPath)) {
+                unlink($blockedPath);
+            }
             $this->removeHistory($path, $sessionId);
         }
     }
@@ -684,9 +726,17 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             }
         }
 
-        @rmdir($directory);
-        @unlink($path . '/.gc');
-        @rmdir($path);
+        if (is_dir($directory)) {
+            rmdir($directory);
+        }
+        if (file_exists($path . '/.gc')) {
+            unlink($path . '/.gc');
+        }
+        $pathPattern = preg_replace('/([*?\[\]\\\\])/', '\\\\$1', $path);
+        $remaining   = null === $pathPattern ? false : glob($pathPattern . '/*');
+        if ([] === $remaining && is_dir($path)) {
+            rmdir($path);
+        }
     }
 
     /**
@@ -694,7 +744,8 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
      */
     private function startSession(?string $path = null): array
     {
-        $sessionId = 'debugbar-' . bin2hex(random_bytes(8));
+        $sessionId                    = bin2hex(random_bytes(32));
+        $_COOKIE[HistoryCookie::NAME] = $sessionId;
         session_id($sessionId);
         session_start();
 

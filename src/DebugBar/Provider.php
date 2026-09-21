@@ -35,22 +35,21 @@ use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\Controllers\HistoryController;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\DebugBar\History\FilesystemHistory;
+use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\HistoryOptions;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Di\DiInterface;
+use Phalcon\Http\Request;
 use Phalcon\Http\RequestInterface;
-use Phalcon\Http\ResponseInterface;
+use Phalcon\Http\Response;
 use Phalcon\Mvc\Application;
-use Phalcon\Mvc\Url\UrlInterface;
 
 use function getenv;
 use function in_array;
 use function is_string;
-use function ltrim;
 use function mb_strtolower;
-use function rtrim;
 
 /**
  * Boots the debug bar against an MVC application. Its whole coupling to the app
@@ -87,6 +86,8 @@ class Provider
     private string $envVar;
 
     private bool $headers;
+
+    private ?HistoryCookie $historyCookie = null;
 
     private ?HistoryEndpoint $historyEndpoint = null;
 
@@ -158,16 +159,14 @@ class Provider
         $container  = $this->app->getDI();
         $request    = $this->resolveRequest($container);
         $accessGate = new AccessGate($this->allowedIps, $this->accessCallback);
-        $history    = $this->registerHistory($container, $accessGate, $request);
+        $history    = $this->registerHistory($container, $accessGate);
 
         $bar = new DebugBar();
         foreach ($this->buildCollectors($container, $request) as $collector) {
             $bar->addCollector($collector);
         }
-        if (null !== $history) {
-            $bar->addCollector(new HistoryCollector(
-                $this->historyEndpoint->url ?? $this->historyOptions->url
-            ));
+        if (null !== $history && null !== $this->historyEndpoint) {
+            $bar->addCollector(new HistoryCollector($this->historyEndpoint));
         }
 
         Debug::setBar($bar);
@@ -193,7 +192,8 @@ class Provider
                 $request,
                 new BarOptions($this->headers, $this->nonce),
                 $history,
-                $this->historyEndpoint
+                $this->historyEndpoint,
+                $this->historyCookie
             )
         );
     }
@@ -285,8 +285,7 @@ class Provider
      */
     private function registerHistory(
         ?DiInterface $container,
-        AccessGate $accessGate,
-        ?RequestInterface $request
+        AccessGate $accessGate
     ): ?History {
         if (
             !$this->historyOptions->enabled
@@ -300,31 +299,26 @@ class Provider
         $eventsManager = $this->app->getEventsManager();
         if (
             null === $container
-            || null === $request
             || null === $eventsManager
-            || !$container->has('response')
         ) {
             return null;
         }
 
-        $response = $container->getShared('response');
-        if (!$response instanceof ResponseInterface) {
-            return null;
-        }
-
-        $url = $this->historyOptions->url;
-        if ($container->has('url')) {
-            $urlService = $container->getShared('url');
-            if ($urlService instanceof UrlInterface) {
-                $url = rtrim($urlService->getBaseUri(), '/') . '/' . ltrim($url, '/');
-            }
-        }
-
-        $history               = new FilesystemHistory($this->historyOptions);
-        $this->historyEndpoint = new HistoryEndpoint($url, $request);
+        $this->historyCookie   = HistoryCookie::fromGlobals();
+        $history               = new FilesystemHistory($this->historyOptions, null, $this->historyCookie);
+        $this->historyEndpoint = new HistoryEndpoint($this->historyOptions, $container);
         $container->setShared(
             HistoryController::class,
-            new HistoryController($history, $accessGate, $request, $response)
+            function () use ($accessGate, $container, $history): HistoryController {
+                $request = $container->has('request') ? $container->getShared('request') : null;
+
+                return new HistoryController(
+                    $history,
+                    $accessGate,
+                    $request instanceof RequestInterface ? $request : new Request(),
+                    new Response()
+                );
+            }
         );
         $eventsManager->attach('application:beforeHandleRequest', $this->historyEndpoint);
 
