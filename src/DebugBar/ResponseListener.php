@@ -71,7 +71,10 @@ final class ResponseListener
 
         $this->record($collected, $response, $isAjax);
         if (null !== $this->history) {
-            $this->historyCookie?->queue($response, $this->historyEndpoint?->cookiePath() ?? '/');
+            $this->historyCookie?->queue(
+                $this->historyEndpoint?->cookiePath() ?? '/',
+                $this->request?->isSecure() ?? false
+            );
         }
 
         if (true === $this->options->headers) {

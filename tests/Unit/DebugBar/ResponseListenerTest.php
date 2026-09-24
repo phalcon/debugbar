@@ -28,20 +28,17 @@ use Phalcon\Events\Event;
 use Phalcon\Http\Request;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\Response;
-use Phalcon\Http\Response\Headers;
 use Phalcon\Mvc\Url;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\Fixtures\GridCollector;
 use Phalcon\Tests\Support\DebugBar\Fixtures\ListCollector;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 
-use function array_key_first;
 use function bin2hex;
 use function file_exists;
 use function glob;
 use function hash;
 use function is_dir;
-use function iterator_to_array;
 use function random_bytes;
 use function rmdir;
 use function session_id;
@@ -70,7 +67,15 @@ final class ResponseListenerTest extends AbstractUnitTestCase
         $request = $this->createMock(RequestInterface::class);
         $request->method('getClientAddress')->willReturn('203.0.113.10');
         $options  = new HistoryOptions(true, '/_debugbar/open', sys_get_temp_dir() . '/unused');
-        $cookie   = HistoryCookie::fromGlobals();
+        $called   = false;
+        $cookie   = new HistoryCookie(
+            null,
+            function () use (&$called): bool {
+                $called = true;
+
+                return true;
+            }
+        );
         $listener = new ResponseListener(
             new DebugBar(),
             new Renderer(),
@@ -86,9 +91,7 @@ final class ResponseListenerTest extends AbstractUnitTestCase
 
         $listener($this->event(), null, $response);
 
-        $responseHeaders = $response->getHeaders();
-        $this->assertInstanceOf(Headers::class, $responseHeaders);
-        $this->assertSame([], iterator_to_array($responseHeaders->getIterator()));
+        $this->assertFalse($called);
     }
 
     public function testFirstAllowedResponseQueuesCookieWithoutCreatingHistory(): void
@@ -100,8 +103,17 @@ final class ResponseListenerTest extends AbstractUnitTestCase
         $request->method('isAjax')->willReturn(false);
         $request->method('getURI')->willReturn('/orders');
         $request->method('getMethod')->willReturn('GET');
+        $request->method('isSecure')->willReturn(true);
         $options  = new HistoryOptions(true, '/_debugbar/open', $path);
-        $cookie   = HistoryCookie::fromGlobals();
+        $call     = [];
+        $cookie   = new HistoryCookie(
+            null,
+            function (string $name, string $value, array $options) use (&$call): bool {
+                $call = [$name, $value, $options];
+
+                return true;
+            }
+        );
         $history  = new FilesystemHistory($options, null, $cookie);
         $listener = new ResponseListener(
             new DebugBar(),
@@ -120,14 +132,17 @@ final class ResponseListenerTest extends AbstractUnitTestCase
         $listener($this->event(), null, $response);
 
         $this->assertSame([], $history->find());
-        $responseHeaders = $response->getHeaders();
-        $this->assertInstanceOf(Headers::class, $responseHeaders);
-        $headers = iterator_to_array($responseHeaders->getIterator());
-        $header  = array_key_first($headers);
-        $this->assertIsString($header);
-        $this->assertMatchesRegularExpression(
-            '/^Set-Cookie: phalcon-debugbar-history=[a-f0-9]{64}; Path=\/app1\/; HttpOnly; SameSite=Lax$/',
-            $header
+        $this->assertSame(HistoryCookie::NAME, $call[0]);
+        $this->assertIsString($call[1]);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/D', $call[1]);
+        $this->assertSame(
+            [
+                'path'     => '/app1/',
+                'secure'   => true,
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ],
+            $call[2]
         );
         $this->assertFalse(is_dir($path));
     }

@@ -11,13 +11,15 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
   duplicate tabs; the indicators remain available when History is disabled.
 - Optional, extensible collector summaries rendered as headline metrics above a panel. The database collector uses them to report total queries, duplicate runs (executions after the first), and accumulated SQL time, and marks repeated statements with their execution count.
 - Optional browser-isolated request history with filesystem retention and an
-  internal `GET/DELETE /_debugbar/open` endpoint. A dedicated HttpOnly cookie keeps
-  History independent from the application's PHP session; clients that do not
-  return it create no storage. The endpoint resolves the final base URI at request
-  time, leaves application routes and shared responses untouched, and is excluded
-  from debug-bar collection and injection. Stored payloads are versioned, bounded,
-  expired automatically, and listed through metadata sidecars. History requires an
-  explicit absolute writable path and is disabled by default.
+  internal `GET/DELETE /_debugbar/open` endpoint. A dedicated HttpOnly, SameSite=Lax
+  browser-session cookie keeps History independent from the application's PHP
+  session, is marked Secure on HTTPS, and is appended without replacing application
+  cookies; clients that do not return it create no storage. The endpoint resolves
+  the final base URI at request time, leaves application routes and shared responses
+  untouched, and is excluded from debug-bar collection and injection. Stored
+  payloads are versioned, bounded, expired automatically, and listed through
+  metadata sidecars. History requires an explicit absolute writable path and is
+  disabled by default.
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 

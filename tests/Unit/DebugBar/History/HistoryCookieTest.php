@@ -14,43 +14,56 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar\History;
 
 use Phalcon\DebugBar\History\HistoryCookie;
-use Phalcon\Http\Response;
-use Phalcon\Http\Response\Headers;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
-use function array_key_first;
-use function iterator_to_array;
 use function str_repeat;
 
 final class HistoryCookieTest extends AbstractUnitTestCase
 {
-    public function testInvalidOrMissingCookieQueuesANewBrowserIdentity(): void
+    public function testInvalidOrMissingCookieQueuesASecureBrowserIdentity(): void
     {
-        $response = new Response();
-        (new HistoryCookie('invalid'))->queue($response, '/app/');
+        $call   = [];
+        $cookie = new HistoryCookie(
+            'invalid',
+            function (string $name, string $value, array $options) use (&$call): bool {
+                $call = [$name, $value, $options];
 
-        $responseHeaders = $response->getHeaders();
-        $this->assertInstanceOf(Headers::class, $responseHeaders);
-        $headers = iterator_to_array($responseHeaders->getIterator());
-        $header  = array_key_first($headers);
-        $this->assertIsString($header);
-        $this->assertMatchesRegularExpression(
-            '/^Set-Cookie: phalcon-debugbar-history=[a-f0-9]{64}; Path=\/app\/; HttpOnly; SameSite=Lax$/',
-            $header
+                return true;
+            }
+        );
+
+        $cookie->queue('/app/', true);
+
+        $this->assertSame(HistoryCookie::NAME, $call[0]);
+        $this->assertIsString($call[1]);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/D', $call[1]);
+        $this->assertSame(
+            [
+                'path'     => '/app/',
+                'secure'   => true,
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ],
+            $call[2]
         );
     }
 
-    public function testValidCookieIsReusedWithoutQueuingAResponseCookie(): void
+    public function testValidCookieIsReusedWithoutCallingTheCookieWriter(): void
     {
-        $id       = str_repeat('a', 64);
-        $cookie   = new HistoryCookie($id);
-        $response = new Response();
+        $id     = str_repeat('a', 64);
+        $called = false;
+        $cookie = new HistoryCookie(
+            $id,
+            function () use (&$called): bool {
+                $called = true;
 
-        $cookie->queue($response, '/');
+                return true;
+            }
+        );
+
+        $cookie->queue('/', false);
 
         $this->assertSame($id, $cookie->id());
-        $responseHeaders = $response->getHeaders();
-        $this->assertInstanceOf(Headers::class, $responseHeaders);
-        $this->assertSame([], iterator_to_array($responseHeaders->getIterator()));
+        $this->assertFalse($called);
     }
 }

@@ -150,11 +150,15 @@ off through `collectors => ['history' => false]`; in that case no endpoint or st
 registered. `history.path` must be an absolute path, configured explicitly, and
 writable by the web-server user. Its validation happens only after the environment
 and collector gates allow History to boot. Storage is isolated by a SHA-256 hash
-of a random, HttpOnly, SameSite=Lax debug bar cookie. The bar never reads, starts,
-or changes the application's PHP session, so session ID regeneration does not hide
-earlier requests. The first allowed response for a browser sets the cookie but is
-not stored; storage begins with the next request carrying that cookie. Clients
-that do not retain cookies never create storage directories. Each stored
+of a random, HttpOnly, SameSite=Lax debug bar cookie. The cookie is also marked
+Secure on HTTPS and lasts for the browser session. It is sent through PHP's native
+cookie mechanism so it does not replace cookies queued by the application. The bar
+never reads, starts, or changes the application's PHP session, so session ID
+regeneration does not hide earlier requests. The first allowed response for a
+browser sets the cookie but is not stored; storage begins with the next request
+carrying that cookie. Closing the browser discards the identity while its files
+remain eligible for cleanup until `history.ttl_seconds` expires. Clients that do
+not retain cookies never create storage directories. Each stored
 entry distinguishes the request start time (`requested_at`) from the time it was
 persisted (`stored_at`). If the server does not expose `REQUEST_TIME_FLOAT`, the
 persistence time is used for both values. Each payload has a small metadata sidecar,

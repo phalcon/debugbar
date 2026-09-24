@@ -13,12 +13,13 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\History;
 
-use Phalcon\Http\ResponseInterface;
+use Closure;
 
 use function bin2hex;
 use function is_string;
 use function preg_match;
 use function random_bytes;
+use function setcookie;
 
 /**
  * Browser identity used only by request history. It never reads, starts, or
@@ -30,8 +31,13 @@ final class HistoryCookie
 
     private const ID_PATTERN = '/^[a-f0-9]{64}$/D';
 
-    public function __construct(private readonly ?string $value)
+    private readonly Closure $setCookie;
+
+    public function __construct(private readonly ?string $value, ?callable $setCookie = null)
     {
+        $this->setCookie = null === $setCookie
+            ? setcookie(...)
+            : Closure::fromCallable($setCookie);
     }
 
     public static function fromGlobals(): self
@@ -46,15 +52,21 @@ final class HistoryCookie
         return 1 === preg_match(self::ID_PATTERN, $this->value ?? '') ? $this->value : null;
     }
 
-    public function queue(ResponseInterface $response, string $path): void
+    public function queue(string $path, bool $secure): void
     {
         if (null !== $this->id()) {
             return;
         }
 
-        $response->setRawHeader(
-            'Set-Cookie: ' . self::NAME . '=' . bin2hex(random_bytes(32))
-            . '; Path=' . $path . '; HttpOnly; SameSite=Lax'
+        ($this->setCookie)(
+            self::NAME,
+            bin2hex(random_bytes(32)),
+            [
+                'path'     => $path,
+                'secure'   => $secure,
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ]
         );
     }
 }
