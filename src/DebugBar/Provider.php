@@ -156,6 +156,7 @@ class Provider
             return;
         }
 
+        /** @var DiInterface $container */
         $container  = $this->app->getDI();
         $request    = $this->resolveRequest($container);
         $accessGate = new AccessGate($this->allowedIps, $this->accessCallback);
@@ -172,7 +173,7 @@ class Provider
         Debug::setBar($bar);
 
         $eventsManager = $this->app->getEventsManager();
-        if (null === $eventsManager || null === $container) {
+        if (null === $eventsManager) {
             return;
         }
 

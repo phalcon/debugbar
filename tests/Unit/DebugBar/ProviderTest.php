@@ -21,6 +21,7 @@ use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\DebugBar\Provider;
 use Phalcon\Di\Di;
+use Phalcon\Di\DiInterface;
 use Phalcon\Di\FactoryDefault;
 use Phalcon\Events\Manager;
 use Phalcon\Http\Request;
@@ -269,8 +270,8 @@ final class ProviderTest extends AbstractUnitTestCase
             'history'    => ['enabled' => true],
         ]))->boot();
 
+        /** @var DiInterface $container */
         $container = $app->getDI();
-        $this->assertNotNull($container);
         $this->assertFalse($container->has(HistoryController::class));
         $this->assertFalse($this->bootedBar()->hasCollector('history'));
     }
@@ -340,8 +341,8 @@ final class ProviderTest extends AbstractUnitTestCase
                 'history' => ['enabled' => true, 'path' => sys_get_temp_dir() . '/debugbar'],
             ]))->boot();
 
+            /** @var DiInterface $container */
             $container = $app->getDI();
-            $this->assertNotNull($container);
             $this->assertTrue($container->has(HistoryController::class));
             $this->assertTrue($this->bootedBar()->hasCollector('history'));
         }
@@ -365,8 +366,8 @@ final class ProviderTest extends AbstractUnitTestCase
             'history' => ['enabled' => true, 'path' => sys_get_temp_dir() . '/debugbar'],
         ]))->boot();
 
+        /** @var DiInterface $container */
         $container = $app->getDI();
-        $this->assertNotNull($container);
         $this->assertTrue($container->has(HistoryController::class));
         $this->assertTrue($this->bootedBar()->hasCollector('history'));
     }
@@ -440,8 +441,8 @@ final class ProviderTest extends AbstractUnitTestCase
             'history' => ['enabled' => true, 'path' => sys_get_temp_dir() . '/debugbar'],
         ]))->boot();
 
+        /** @var DiInterface $container */
         $container = $app->getDI();
-        $this->assertNotNull($container);
         $this->assertTrue($container->has(HistoryController::class));
         $this->assertTrue($this->bootedBar()->hasCollector('history'));
         $this->assertTrue($this->bootedBar()->hasCollector('memory'));
