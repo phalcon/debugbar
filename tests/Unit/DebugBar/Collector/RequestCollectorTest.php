@@ -28,6 +28,13 @@ final class RequestCollectorTest extends AbstractUnitTestCase
         $collector = new RequestCollector(null, new Redactor());
 
         $this->assertSame('request', $collector->getName());
+        $this->assertSame(
+            [
+                'method' => ['metrics', RequestCollector::METRIC_METHOD],
+                'uri'    => ['metrics', RequestCollector::METRIC_URI],
+            ],
+            $collector->getWidget()['request']
+        );
         $this->assertSame([], $collector->collect()['panel']);
         $this->assertPanelContract($collector);
     }

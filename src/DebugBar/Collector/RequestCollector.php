@@ -91,6 +91,20 @@ final class RequestCollector extends AbstractCollector
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function getWidget(): array
+    {
+        $widget            = parent::getWidget();
+        $widget['request'] = [
+            'method' => ['metrics', self::METRIC_METHOD],
+            'uri'    => ['metrics', self::METRIC_URI],
+        ];
+
+        return $widget;
+    }
+
+    /**
      * @return array<array-key, mixed>
      */
     private function toArray(mixed $value): array

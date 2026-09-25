@@ -124,7 +124,8 @@ class Provider
             $history['url'] ?? '/_debugbar/open',
             $history['path'] ?? '',
             $history['max_requests'] ?? 100,
-            $history['ttl_seconds'] ?? 86400
+            $history['ttl_seconds'] ?? 86400,
+            $history['max_browsers'] ?? 10
         );
         $this->redactor         = new Redactor(
             [...Redactor::DEFAULT_KEYS, ...($redact['mask'] ?? [])],
@@ -305,8 +306,9 @@ class Provider
             return null;
         }
 
-        $this->historyCookie   = HistoryCookie::fromGlobals();
-        $history               = new FilesystemHistory($this->historyOptions, null, $this->historyCookie);
+        $this->historyCookie = HistoryCookie::fromGlobals();
+        $history             = new FilesystemHistory($this->historyOptions, null, $this->historyCookie);
+        $history->validateStorage();
         $this->historyEndpoint = new HistoryEndpoint($this->historyOptions, $container);
         $container->setShared(
             HistoryController::class,

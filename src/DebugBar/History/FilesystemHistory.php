@@ -16,7 +16,9 @@ namespace Phalcon\DebugBar\History;
 use DateTimeImmutable;
 use DateTimeZone;
 use Phalcon\DebugBar\Contracts\History;
+use RuntimeException;
 
+use function array_shift;
 use function array_slice;
 use function basename;
 use function bin2hex;
@@ -31,7 +33,10 @@ use function preg_replace;
 use function random_bytes;
 use function rsort;
 use function str_ends_with;
+use function str_replace;
+use function strcmp;
 use function time;
+use function usort;
 
 use const GLOB_ONLYDIR;
 use const JSON_UNESCAPED_SLASHES;
@@ -52,6 +57,8 @@ final class FilesystemHistory implements History
     private const GARBAGE_COLLECTION_MARKER               = '.gc';
 
     private const GARBAGE_COLLECTION_MAX_INTERVAL_SECONDS = 3600;
+
+    private const LOCK_FILE                               = '.lock';
 
     private const METADATA_SUFFIX                         = '.meta';
 
@@ -122,6 +129,8 @@ final class FilesystemHistory implements History
             }
         }
 
+        $this->removeDirectoryIfEmpty($directory);
+
         return $requests;
     }
 
@@ -189,6 +198,13 @@ final class FilesystemHistory implements History
         return $id;
     }
 
+    public function validateStorage(): void
+    {
+        if (!$this->ensureStorageRoot()) {
+            throw new RuntimeException('history.path must be writable by the web-server user.');
+        }
+    }
+
     /**
      * @return list<string>
      */
@@ -217,17 +233,43 @@ final class FilesystemHistory implements History
             return $this->fileOperations->isWritable($directory) ? $directory : null;
         }
 
-        if (
-            !$create
-            || (
-                !$this->fileOperations->createDirectory($directory, 0700, true)
-                && !$this->fileOperations->directoryExists($directory)
-            )
-        ) {
+        if (!$create || !$this->ensureStorageRoot()) {
             return null;
         }
 
-        return $this->fileOperations->isWritable($directory) ? $directory : null;
+        $created = $this->fileOperations->withExclusiveLock(
+            $this->options->path . '/' . self::LOCK_FILE,
+            function () use ($directory): bool {
+                if ($this->fileOperations->directoryExists($directory)) {
+                    return $this->fileOperations->isWritable($directory);
+                }
+
+                if (!$this->makeRoomForBrowser()) {
+                    return false;
+                }
+
+                return (
+                    $this->fileOperations->createDirectory($directory, 0700, true)
+                    || $this->fileOperations->directoryExists($directory)
+                ) && $this->fileOperations->isWritable($directory);
+            }
+        );
+
+        return $created ? $directory : null;
+    }
+
+    private function ensureStorageRoot(): bool
+    {
+        if (!$this->fileOperations->directoryExists($this->options->path)) {
+            if (
+                !$this->fileOperations->createDirectory($this->options->path, 0700, true)
+                && !$this->fileOperations->directoryExists($this->options->path)
+            ) {
+                return false;
+            }
+        }
+
+        return $this->fileOperations->isWritable($this->options->path);
     }
 
     /**
@@ -286,11 +328,41 @@ final class FilesystemHistory implements History
         return false !== $modified && $modified < time() - $this->options->ttlSeconds;
     }
 
+    private function makeRoomForBrowser(): bool
+    {
+        $directories = $this->browserDirectories();
+        usort(
+            $directories,
+            function (string $left, string $right): int {
+                $leftModified  = $this->fileOperations->modifiedAt($left);
+                $rightModified = $this->fileOperations->modifiedAt($right);
+                $comparison    = (false === $leftModified ? 0 : $leftModified)
+                    <=> (false === $rightModified ? 0 : $rightModified);
+
+                return 0 !== $comparison ? $comparison : strcmp($left, $right);
+            }
+        );
+
+        while (count($directories) >= $this->options->maxBrowsers) {
+            /** @var string $directory */
+            $directory = array_shift($directories);
+            $this->removeBrowserDirectory($directory);
+            if ($this->fileOperations->directoryExists($directory)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /**
      * @return list<string>
      */
     private function matching(string $directory, string $pattern, int $flags = 0): array
     {
+        if (1 === preg_match('/^(?:[a-zA-Z]:[\\\\\/]|\\\\\\\\)/D', $directory)) {
+            $directory = str_replace('\\', '/', $directory);
+        }
         $escapedDirectory = (string) preg_replace('/([*?\[\]\\\\])/', '\\\\$1', $directory);
 
         return $this->fileOperations->matching($escapedDirectory . '/' . $pattern, $flags);
@@ -382,6 +454,14 @@ final class FilesystemHistory implements History
         }
 
         return $entry['meta'];
+    }
+
+    private function removeBrowserDirectory(string $directory): void
+    {
+        foreach ($this->matching($directory, '*') as $file) {
+            $this->fileOperations->remove($file);
+        }
+        $this->fileOperations->removeDirectory($directory);
     }
 
     private function removeDirectoryIfEmpty(string $directory): void

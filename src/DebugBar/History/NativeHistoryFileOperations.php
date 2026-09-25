@@ -16,9 +16,12 @@ namespace Phalcon\DebugBar\History;
 use Closure;
 use ErrorException;
 
+use function fclose;
 use function file_get_contents;
 use function file_put_contents;
 use function filemtime;
+use function flock;
+use function fopen;
 use function glob;
 use function is_dir;
 use function is_file;
@@ -31,6 +34,7 @@ use function set_error_handler;
 use function unlink;
 
 use const LOCK_EX;
+use const LOCK_UN;
 
 final class NativeHistoryFileOperations implements HistoryFileOperations
 {
@@ -85,6 +89,27 @@ final class NativeHistoryFileOperations implements HistoryFileOperations
     public function removeDirectory(string $directory): bool
     {
         return $this->attempt(static fn (): bool => rmdir($directory), false);
+    }
+
+    public function withExclusiveLock(string $file, Closure $operation): bool
+    {
+        $handle = $this->attempt(static fn () => fopen($file, 'c+'), false);
+        if (false === $handle) {
+            return false;
+        }
+
+        if (!$this->attempt(static fn (): bool => flock($handle, LOCK_EX), false)) {
+            fclose($handle);
+
+            return false;
+        }
+
+        try {
+            return $operation();
+        } finally {
+            flock($handle, LOCK_UN);
+            fclose($handle);
+        }
     }
 
     public function write(string $file, string $contents): bool

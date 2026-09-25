@@ -106,6 +106,7 @@ final class HistoryController implements ControllerInterface
         $response->setStatusCode($status);
         $response->setContentType('application/json', 'UTF-8');
         $response->setHeader('Cache-Control', 'no-store, private');
+        $response->setHeader('X-Content-Type-Options', 'nosniff');
         $response->setContent(false === $json ? '{}' : $json);
 
         return $response;

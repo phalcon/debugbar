@@ -77,6 +77,7 @@ The second argument to `Provider` is a nested array. Every key is optional.
 | `history.url`      | `string`                  | `/_debugbar/open`        | Internal GET/DELETE endpoint path, relative to the application's base URI. |
 | `history.path`     | `string`                  | required when enabled    | Absolute writable storage directory; keep it outside the document root. |
 | `history.max_requests` | `int`                 | `100`                    | Maximum stored requests per browser.                             |
+| `history.max_browsers` | `int`                 | `10`                     | Maximum browser directories; the least recently updated is evicted first. |
 | `history.ttl_seconds` | `int`                  | `86400`                  | Lifetime in seconds; active-browser entries are checked immediately. |
 | `redact.hidden`    | `list<string>`            | `[]`                     | Keys dropped from the output entirely.                           |
 | `redact.mask`      | `list<string>`            | `[]`                     | Extra keys whose values are masked (added to the defaults).      |
@@ -94,6 +95,7 @@ use Phalcon\DebugBar\Provider;
         'enabled'      => true,
         'path'         => dirname(__DIR__) . '/runtime/debugbar',
         'max_requests' => 100,
+        'max_browsers' => 10,
         'ttl_seconds'  => 86400,
     ],
     'redact'     => ['mask' => ['api_key'], 'hidden' => ['secret_question']],
@@ -130,8 +132,8 @@ if (HistoryEndpoint::CONTROLLER_NAMESPACE === $dispatcher->getNamespaceName()) {
 }
 ```
 
-History endpoint responses are excluded from collection, diagnostic headers,
-HTML injection, and persistence.
+History endpoint responses include `X-Content-Type-Options: nosniff` and are
+excluded from collection, diagnostic headers, HTML injection, and persistence.
 
 The request indicator on the right (search icon, HTTP method, and URI) replaces a
 dedicated History tab. It initially identifies the current request. Clicking it
@@ -148,8 +150,9 @@ history control uses `History` as its fallback label. An empty history displays
 Request history is disabled by default. When enabled, it can still be switched
 off through `collectors => ['history' => false]`; in that case no endpoint or storage is
 registered. `history.path` must be an absolute path, configured explicitly, and
-writable by the web-server user. Its validation happens only after the environment
-and collector gates allow History to boot. Storage is isolated by a SHA-256 hash
+writable by the web-server user. The provider creates the directory when needed
+and verifies its writability during boot, after the environment and collector
+gates allow History to start. Storage is isolated by a SHA-256 hash
 of a random, HttpOnly, SameSite=Lax debug bar cookie. The cookie is also marked
 Secure on HTTPS and lasts for the browser session. It is sent through PHP's native
 cookie mechanism so it does not replace cookies queued by the application. The bar
@@ -158,7 +161,11 @@ regeneration does not hide earlier requests. The first allowed response for a
 browser sets the cookie but is not stored; storage begins with the next request
 carrying that cookie. Closing the browser discards the identity while its files
 remain eligible for cleanup until `history.ttl_seconds` expires. Clients that do
-not retain cookies never create storage directories. Each stored
+not retain cookies never create storage directories. The number of browser
+directories is capped by `history.max_browsers`; creation is serialized and evicts
+the least recently updated browser directory before admitting another identity.
+This bounds forged or repeatedly rotated cookie identities even when the access
+allowlist is empty. Each stored
 entry distinguishes the request start time (`requested_at`) from the time it was
 persisted (`stored_at`). If the server does not expose `REQUEST_TIME_FLOAT`, the
 persistence time is used for both values. Each payload has a small metadata sidecar,

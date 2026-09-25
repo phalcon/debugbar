@@ -33,6 +33,8 @@ use const PHP_URL_SCHEME;
  */
 final class HistoryOptions
 {
+    public readonly int $maxBrowsers;
+
     public readonly int $maxRequests;
 
     public readonly string $path;
@@ -44,12 +46,14 @@ final class HistoryOptions
         public readonly string $url = '/_debugbar/open',
         string $path = '',
         int $maxRequests = 100,
-        int $ttlSeconds = 86400
+        int $ttlSeconds = 86400,
+        int $maxBrowsers = 10
     ) {
         $path              = trim($path);
         $this->path        = $this->trimTrailingSeparators($path);
         $this->maxRequests = max(1, $maxRequests);
         $this->ttlSeconds  = max(1, $ttlSeconds);
+        $this->maxBrowsers = max(1, $maxBrowsers);
     }
 
     public function validate(): void

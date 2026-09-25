@@ -19,7 +19,17 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
   untouched, and is excluded from debug-bar collection and injection. Stored
   payloads are versioned, bounded, expired automatically, and listed through
   metadata sidecars. History requires an explicit absolute writable path and is
-  disabled by default.
+  disabled by default. Storage creation is serialized and capped across browser
+  identities, with least-recently-updated eviction.
+
+### Fixed
+
+- History now validates storage writability during boot, removes browser
+  directories emptied by reads, uses portable glob paths on Windows, and adds
+  `X-Content-Type-Options: nosniff` to its JSON responses.
+- The browser asset exports its test helpers only outside a DOM environment and
+  discovers request method and URI through collector widget metadata instead of a
+  hard-coded collector name.
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 

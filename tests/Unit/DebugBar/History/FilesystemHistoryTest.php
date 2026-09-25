@@ -18,17 +18,21 @@ use Phalcon\DebugBar\History\FilesystemHistory;
 use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEntry;
 use Phalcon\DebugBar\History\HistoryOptions;
+use Phalcon\DebugBar\History\NativeHistoryFileOperations;
 use Phalcon\DebugBar\History\RequestMetadata;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
+use Phalcon\Tests\Support\DebugBar\History\DelegatingHistoryFileOperations;
 use Phalcon\Tests\Support\DebugBar\History\FailingStreamWrapper;
 use Phalcon\Tests\Support\DebugBar\History\GarbageCollectionMarkerFailingFileOperations;
 use Phalcon\Tests\Support\DebugBar\History\MetadataMoveFailingHistoryFileOperations;
 use Phalcon\Tests\Support\DebugBar\History\MetadataWriteFailingHistoryFileOperations;
 use Phalcon\Tests\Support\DebugBar\History\PayloadMoveFailingHistoryFileOperations;
 use Phalcon\Tests\Support\DebugBar\History\PayloadReadTrackingHistoryFileOperations;
+use Phalcon\Tests\Support\DebugBar\History\RecordingMatchingHistoryFileOperations;
 use Phalcon\Tests\Support\DebugBar\History\RenameFailingHistoryFileOperations;
 use Phalcon\Tests\Support\DebugBar\History\UnwritableHistoryFileOperations;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use RuntimeException;
 
 use function bin2hex;
 use function file_exists;
@@ -126,6 +130,82 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
         }
     }
 
+    public function testConcurrentDirectoryCreationIsRecheckedInsideTheLock(): void
+    {
+        $path       = $this->temporaryPath();
+        $browserId  = str_repeat('1', 64);
+        $directory  = $path . '/' . hash('sha256', $browserId);
+        $operations = new class ($directory) extends DelegatingHistoryFileOperations {
+            public function __construct(private readonly string $directory)
+            {
+                parent::__construct();
+            }
+
+            public function withExclusiveLock(string $file, \Closure $operation): bool
+            {
+                if (!$this->directoryExists($this->directory)) {
+                    $this->createDirectory($this->directory, 0700, true);
+                }
+
+                return $operation();
+            }
+        };
+        $history = new FilesystemHistory(
+            new HistoryOptions(true, '/_debugbar/open', $path),
+            $operations,
+            new HistoryCookie($browserId)
+        );
+
+        try {
+            $this->assertIsString($history->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/', 200, false)
+            ));
+        } finally {
+            $this->removeHistory($path, $browserId);
+        }
+    }
+
+    public function testEvictionFailureRefusesANewBrowserDirectory(): void
+    {
+        $path       = $this->temporaryPath();
+        $firstId    = str_repeat('2', 64);
+        $secondId   = str_repeat('3', 64);
+        $firstPath  = $path . '/' . hash('sha256', $firstId);
+        $operations = new class () extends DelegatingHistoryFileOperations {
+            public string $blockedDirectory = '';
+
+            public function removeDirectory(string $directory): bool
+            {
+                return $directory === $this->blockedDirectory
+                    ? false
+                    : parent::removeDirectory($directory);
+            }
+        };
+        $options = new HistoryOptions(true, '/_debugbar/open', $path, 10, 60, 1);
+
+        try {
+            $first = new FilesystemHistory($options, $operations, new HistoryCookie($firstId));
+            $this->assertIsString($first->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/first', 200, false)
+            ));
+            $operations->blockedDirectory = $firstPath;
+
+            $second = new FilesystemHistory($options, $operations, new HistoryCookie($secondId));
+            $this->assertNull($second->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/second', 200, false)
+            ));
+            $this->assertTrue(is_dir($firstPath));
+            $this->assertFalse(is_dir($path . '/' . hash('sha256', $secondId)));
+        } finally {
+            $operations->blockedDirectory = '';
+            $this->removeHistory($path, $firstId);
+            $this->removeHistory($path, $secondId);
+        }
+    }
+
     #[RunInSeparateProcess]
     public function testExistingBrowserDirectoryMustRemainWritable(): void
     {
@@ -186,6 +266,32 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
         } finally {
             session_write_close();
             $this->removeHistory($path, $sessionId);
+        }
+    }
+
+    public function testFindRemovesAnEmptyExpiredBrowserDirectory(): void
+    {
+        $path      = $this->temporaryPath();
+        $browserId = str_repeat('d', 64);
+        $directory = $path . '/' . hash('sha256', $browserId);
+        $history   = new FilesystemHistory(
+            new HistoryOptions(true, '/_debugbar/open', $path, 10, 1),
+            null,
+            new HistoryCookie($browserId)
+        );
+
+        try {
+            $id = $history->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/', 200, false)
+            );
+            $this->assertIsString($id);
+            $this->assertTrue(touch($directory . '/' . $id . '.json', time() - 10));
+
+            $this->assertSame([], $history->find());
+            $this->assertFalse(is_dir($directory));
+        } finally {
+            $this->removeHistory($path, $browserId);
         }
     }
 
@@ -346,6 +452,7 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             $this->assertSame([], $history->find());
             $this->assertFalse(file_exists($directory . '/' . $savedId . '.json'));
 
+            $this->assertTrue(mkdir($directory, 0700, true));
             $this->assertIsInt(file_put_contents($directory . '/' . $id . '.json', '{invalid'));
             $this->assertNull($history->get($id));
             $this->assertNull($history->get('20260903120000-123456-cafebabe'));
@@ -391,6 +498,32 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
         } finally {
             session_write_close();
             $this->removeHistory($path, $sessionId);
+        }
+    }
+
+    public function testMaximumBrowserCountEvictsTheOldestDirectory(): void
+    {
+        $path      = $this->temporaryPath();
+        $browserId = [str_repeat('a', 64), str_repeat('b', 64), str_repeat('c', 64)];
+        $options   = new HistoryOptions(true, '/_debugbar/open', $path, 10, 60, 2);
+
+        try {
+            foreach ($browserId as $index => $id) {
+                $history = new FilesystemHistory($options, null, new HistoryCookie($id));
+                $this->assertIsString($history->save(
+                    ['data' => [], 'meta' => []],
+                    new RequestMetadata('GET', '/' . $index, 200, false)
+                ));
+                $this->assertTrue(touch($path . '/' . hash('sha256', $id), time() - (10 - $index)));
+            }
+
+            $this->assertFalse(is_dir($path . '/' . hash('sha256', $browserId[0])));
+            $this->assertTrue(is_dir($path . '/' . hash('sha256', $browserId[1])));
+            $this->assertTrue(is_dir($path . '/' . hash('sha256', $browserId[2])));
+        } finally {
+            foreach ($browserId as $id) {
+                $this->removeHistory($path, $id);
+            }
         }
     }
 
@@ -473,6 +606,26 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
         $this->assertSame(0, $history->clear());
     }
 
+    public function testNativeLockReturnsFalseWhenFileCannotBeOpened(): void
+    {
+        $operations = new NativeHistoryFileOperations();
+
+        $this->assertFalse($operations->withExclusiveLock(
+            $this->temporaryPath() . '/missing/lock',
+            static fn (): bool => true
+        ));
+    }
+
+    public function testNativeLockReturnsFalseWhenStreamCannotBeLocked(): void
+    {
+        $operations = new NativeHistoryFileOperations();
+
+        $this->assertFalse($operations->withExclusiveLock(
+            'php://memory',
+            static fn (): bool => true
+        ));
+    }
+
     #[RunInSeparateProcess]
     public function testPayloadMoveFailureRemovesStagedFiles(): void
     {
@@ -513,6 +666,9 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
             $this->assertFalse(is_dir($path . '/' . hash('sha256', $sessionId)));
         } finally {
             session_write_close();
+            if (file_exists($path . '/.lock')) {
+                unlink($path . '/.lock');
+            }
             if (is_dir($path)) {
                 rmdir($path);
             }
@@ -686,6 +842,28 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
         }
     }
 
+    public function testStorageValidationRejectsAnUnwritableRoot(): void
+    {
+        $path                     = $this->temporaryPath();
+        $fileOperations           = new UnwritableHistoryFileOperations();
+        $fileOperations->writable = false;
+        $history                  = new FilesystemHistory(
+            new HistoryOptions(true, '/_debugbar/open', $path),
+            $fileOperations,
+            new HistoryCookie(str_repeat('f', 64))
+        );
+
+        try {
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('history.path must be writable');
+            $history->validateStorage();
+        } finally {
+            if (is_dir($path)) {
+                rmdir($path);
+            }
+        }
+    }
+
     #[RunInSeparateProcess]
     public function testVersionedEntriesWithoutMetadataSidecarRemainReadable(): void
     {
@@ -715,6 +893,23 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
         }
     }
 
+    public function testWindowsStoragePathsUsePortableGlobSeparators(): void
+    {
+        $browserId      = str_repeat('e', 64);
+        $fileOperations = new RecordingMatchingHistoryFileOperations();
+        $history        = new FilesystemHistory(
+            new HistoryOptions(true, '/_debugbar/open', 'C:\\debug[bar]\\history'),
+            $fileOperations,
+            new HistoryCookie($browserId)
+        );
+
+        $this->assertSame([], $history->find());
+        $this->assertSame(
+            'C:/debug\\[bar\\]/history/' . hash('sha256', $browserId) . '/*.json',
+            $fileOperations->patterns[0]
+        );
+    }
+
     private function removeHistory(string $path, string $sessionId): void
     {
         $directory = $path . '/' . hash('sha256', $sessionId);
@@ -731,6 +926,9 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
         }
         if (file_exists($path . '/.gc')) {
             unlink($path . '/.gc');
+        }
+        if (file_exists($path . '/.lock')) {
+            unlink($path . '/.lock');
         }
         $pathPattern = preg_replace('/([*?\[\]\\\\])/', '\\\\$1', $path);
         $remaining   = null === $pathPattern ? false : glob($pathPattern . '/*');

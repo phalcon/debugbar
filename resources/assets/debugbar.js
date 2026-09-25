@@ -126,10 +126,13 @@
             mount.appendChild(indicator);
         });
 
-        var request = data.request || {};
-        var requestMetrics = request.metrics || {};
-        var method = scalar(requestMetrics.method);
-        var uri = scalar(requestMetrics.uri);
+        var requestName = Object.keys(widgets).find(function (name) {
+            return widgets[name] && widgets[name].request;
+        });
+        var requestDefinition = requestName ? widgets[requestName].request : {};
+        var request = requestName ? (data[requestName] || {}) : {};
+        var method = scalar(valueAtPath(request, requestDefinition.method || []));
+        var uri = scalar(valueAtPath(request, requestDefinition.uri || []));
         requestMetadata = requestMetadata || {};
         method = method || scalar(requestMetadata.method);
         uri = uri || scalar(requestMetadata.uri);
@@ -583,14 +586,13 @@
         }
     }
 
-    if (typeof module !== 'undefined' && module.exports) {
-        module.exports = {
-            createHistoryRequestGuard: createHistoryRequestGuard,
-            renderHistoryBrowser: renderHistoryBrowser
-        };
-    }
-
     if (typeof document === 'undefined') {
+        if (typeof module !== 'undefined' && module.exports) {
+            module.exports = {
+                createHistoryRequestGuard: createHistoryRequestGuard,
+                renderHistoryBrowser: renderHistoryBrowser
+            };
+        }
         return;
     }
 

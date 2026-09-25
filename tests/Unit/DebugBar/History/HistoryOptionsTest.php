@@ -40,6 +40,7 @@ final class HistoryOptionsTest extends AbstractUnitTestCase
         $options->validate();
 
         $this->assertSame('', $options->path);
+        $this->assertSame(10, $options->maxBrowsers);
     }
 
     public function testEnabledHistoryAcceptsAbsoluteStoragePaths(): void
@@ -84,5 +85,14 @@ final class HistoryOptionsTest extends AbstractUnitTestCase
         $this->expectExceptionMessage('history.url must be an absolute path');
 
         (new HistoryOptions(true, $url, '/var/debugbar'))->validate();
+    }
+
+    public function testHistoryLimitsAreAtLeastOne(): void
+    {
+        $options = new HistoryOptions(true, '/_debugbar/open', '/var/debugbar', 0, 0, 0);
+
+        $this->assertSame(1, $options->maxRequests);
+        $this->assertSame(1, $options->ttlSeconds);
+        $this->assertSame(1, $options->maxBrowsers);
     }
 }

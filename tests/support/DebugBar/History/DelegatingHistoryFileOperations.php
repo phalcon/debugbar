@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Support\DebugBar\History;
 
+use Closure;
 use Phalcon\DebugBar\History\HistoryFileOperations;
 use Phalcon\DebugBar\History\NativeHistoryFileOperations;
 
@@ -73,6 +74,11 @@ abstract class DelegatingHistoryFileOperations implements HistoryFileOperations
     public function removeDirectory(string $directory): bool
     {
         return $this->delegate->removeDirectory($directory);
+    }
+
+    public function withExclusiveLock(string $file, Closure $operation): bool
+    {
+        return $this->delegate->withExclusiveLock($file, $operation);
     }
 
     public function write(string $file, string $contents): bool

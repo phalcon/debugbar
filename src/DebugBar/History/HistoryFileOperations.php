@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\History;
 
+use Closure;
+
 /**
  * Internal filesystem access seam used by request-history storage.
  *
@@ -45,6 +47,11 @@ interface HistoryFileOperations
     public function remove(string $file): bool;
 
     public function removeDirectory(string $directory): bool;
+
+    /**
+     * @param Closure(): bool $operation
+     */
+    public function withExclusiveLock(string $file, Closure $operation): bool;
 
     public function write(string $file, string $contents): bool;
 }

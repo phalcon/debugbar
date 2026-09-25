@@ -11,6 +11,8 @@
 
 var test = require('node:test');
 var assert = require('node:assert/strict');
+var fs = require('node:fs');
+var vm = require('node:vm');
 var debugbarPath = require.resolve('../../resources/assets/debugbar.js');
 var debugbar = require(debugbarPath);
 var dom = require('./support/dom.js');
@@ -46,6 +48,23 @@ function deferred() {
 
     return {promise: promise, reject: reject, resolve: resolve};
 }
+
+test('browser execution does not replace a host CommonJS export', function () {
+    var hostExports = {host: true};
+    var context = {
+        document: {
+            addEventListener: function () {},
+            getElementById: function () {
+                return null;
+            }
+        },
+        module: {exports: hostExports}
+    };
+
+    vm.runInNewContext(fs.readFileSync(debugbarPath, 'utf8'), context);
+
+    assert.equal(context.module.exports, hostExports);
+});
 
 test('history request guard keeps only the latest list request', function () {
     var guard = createHistoryRequestGuard(function () {
@@ -455,7 +474,11 @@ test('indicator collectors render once on the right and open their panels', func
                         path: ['metrics', 'current_usage']
                     }
                 },
-                request: {label: 'Request', panel: 'grid'},
+                request: {
+                    label: 'Request',
+                    panel: 'grid',
+                    request: {method: ['metrics', 'method'], uri: ['metrics', 'uri']}
+                },
                 history: {label: 'History', panel: 'history'}
             }
         }
@@ -493,13 +516,13 @@ test('indicator collectors render once on the right and open their panels', func
     assert.equal(dom.findByClass(mount, 'phalcon-debugbar-body').style.display, 'none');
 });
 
-test('indicators and request metrics render when history is disabled', function () {
+test('request metrics use widget metadata when the collector has a different name', function () {
     var dataNode = new dom.TestElement('script');
     var mount = new dom.TestElement('div');
     dataNode.textContent = JSON.stringify({
         data: {
             time: {panel: [], badge: '12.34ms'},
-            request: {
+            http: {
                 panel: {Method: 'GET', URI: '/orders'},
                 metrics: {method: 'GET', uri: '/orders'}
             }
@@ -511,7 +534,11 @@ test('indicators and request metrics render when history is disabled', function 
                     panel: 'list',
                     indicator: {icon: 'clock', label: 'Request time', path: ['badge']}
                 },
-                request: {label: 'Request', panel: 'grid'}
+                http: {
+                    label: 'Request',
+                    panel: 'grid',
+                    request: {method: ['metrics', 'method'], uri: ['metrics', 'uri']}
+                }
             }
         }
     });
@@ -555,7 +582,11 @@ test('request control replaces the History tab and opens request history', async
         meta: {
             widgets: {
                 messages: {label: 'Messages', panel: 'list'},
-                request: {label: 'Request', panel: 'grid'},
+                request: {
+                    label: 'Request',
+                    panel: 'grid',
+                    request: {method: ['metrics', 'method'], uri: ['metrics', 'uri']}
+                },
                 history: {label: 'History', panel: 'history'}
             }
         }
@@ -616,7 +647,11 @@ test('selecting stored data closes history and uses metadata without a request c
             panel: 'list',
             indicator: {icon: 'clock', label: 'Request time', path: ['badge']}
         },
-        request: {label: 'Request', panel: 'grid'}
+        request: {
+            label: 'Request',
+            panel: 'grid',
+            request: {method: ['metrics', 'method'], uri: ['metrics', 'uri']}
+        }
     };
     dataNode.textContent = JSON.stringify({
         data: {
@@ -690,7 +725,11 @@ test('selecting stored data reopens the collector tab active before history', as
     var widgets = {
         database: {label: 'Database', panel: 'list'},
         history: {label: 'History', panel: 'history'},
-        request: {label: 'Request', panel: 'grid'}
+        request: {
+            label: 'Request',
+            panel: 'grid',
+            request: {method: ['metrics', 'method'], uri: ['metrics', 'uri']}
+        }
     };
     dataNode.textContent = JSON.stringify({
         data: {

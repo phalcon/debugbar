@@ -184,6 +184,9 @@ final class HistoryControllerTest extends AbstractUnitTestCase
             if (file_exists($path . '/.gc')) {
                 unlink($path . '/.gc');
             }
+            if (file_exists($path . '/.lock')) {
+                unlink($path . '/.lock');
+            }
             if (is_dir($path)) {
                 rmdir($path);
             }
@@ -233,6 +236,7 @@ final class HistoryControllerTest extends AbstractUnitTestCase
     private function assertJsonResponse(ResponseInterface $response, int $status, array $expectedBody): void
     {
         $this->assertSame($status, $response->getStatusCode());
+        $this->assertSame('nosniff', $response->getHeaders()->get('X-Content-Type-Options'));
         $this->assertSame($expectedBody, json_decode($response->getContent(), true));
     }
 

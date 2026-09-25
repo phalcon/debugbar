@@ -226,6 +226,9 @@ final class ResponseListenerTest extends AbstractUnitTestCase
             if (file_exists($path . '/.gc')) {
                 unlink($path . '/.gc');
             }
+            if (file_exists($path . '/.lock')) {
+                unlink($path . '/.lock');
+            }
             if (is_dir($path)) {
                 rmdir($path);
             }
@@ -287,6 +290,9 @@ final class ResponseListenerTest extends AbstractUnitTestCase
             }
             if (file_exists($path . '/.gc')) {
                 unlink($path . '/.gc');
+            }
+            if (file_exists($path . '/.lock')) {
+                unlink($path . '/.lock');
             }
             if (is_dir($path)) {
                 rmdir($path);
@@ -357,6 +363,9 @@ final class ResponseListenerTest extends AbstractUnitTestCase
             }
             if (file_exists($path . '/.gc')) {
                 unlink($path . '/.gc');
+            }
+            if (file_exists($path . '/.lock')) {
+                unlink($path . '/.lock');
             }
             if (is_dir($path)) {
                 rmdir($path);

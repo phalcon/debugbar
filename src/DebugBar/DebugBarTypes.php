@@ -25,7 +25,14 @@ namespace Phalcon\DebugBar;
  * @phpstan-type log_row array{label: string, message: string, context: string}
  * @phpstan-type log_panel list<log_row>
  * @phpstan-type indicator array{icon: string, label: string, path: list<string>}
- * @phpstan-type widget array{label: string, icon: string, panel: string, indicator?: indicator}
+ * @phpstan-type request_widget array{method: list<string>, uri: list<string>}
+ * @phpstan-type widget array{
+ *     label: string,
+ *     icon: string,
+ *     panel: string,
+ *     indicator?: indicator,
+ *     request?: request_widget
+ * }
  * @phpstan-type summary_row array{label: string, value: scalar}
  * @phpstan-type collector_summary list<summary_row>
  * @phpstan-type collector_metrics array<string, scalar>
@@ -65,7 +72,8 @@ namespace Phalcon\DebugBar;
  *         url?: string,
  *         path?: string,
  *         max_requests?: int,
- *         ttl_seconds?: int
+ *         ttl_seconds?: int,
+ *         max_browsers?: int
  *     },
  *     redact?: array{mask?: list<string>, hidden?: list<string>}
  * }
