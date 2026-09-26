@@ -13,13 +13,21 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
+use DateTimeImmutable;
+use DateTimeZone;
+use Phalcon\DebugBar\Contracts\History;
+use Phalcon\DebugBar\History\HistoryCookie;
+use Phalcon\DebugBar\History\HistoryEndpoint;
+use Phalcon\DebugBar\History\RequestMetadata;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Events\EventInterface;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
 
 use function count;
+use function is_float;
 use function is_string;
+use function sprintf;
 
 /**
  * The `application:beforeSendResponse` listener. On the event it runs the access
@@ -27,6 +35,7 @@ use function is_string;
  * HTML response - renders and splices the bar in.
  *
  * @phpstan-import-type request_context from DebugBarTypes
+ * @phpstan-import-type payload from DebugBarTypes
  */
 final class ResponseListener
 {
@@ -36,7 +45,10 @@ final class ResponseListener
         private readonly Injector $injector,
         private readonly AccessGate $accessGate,
         private readonly ?RequestInterface $request,
-        private readonly BarOptions $options
+        private readonly BarOptions $options,
+        private readonly ?History $history = null,
+        private readonly ?HistoryEndpoint $historyEndpoint = null,
+        private readonly ?HistoryCookie $historyCookie = null
     ) {
     }
 
@@ -46,12 +58,24 @@ final class ResponseListener
             return;
         }
 
+        if ($this->historyEndpoint?->matches()) {
+            return;
+        }
+
         [$clientIp, $isAjax] = $this->requestContext();
         if (true !== $this->accessGate->allows($clientIp)) {
             return;
         }
 
         $collected = $this->bar->collect();
+
+        $this->record($collected, $response, $isAjax);
+        if (null !== $this->history) {
+            $this->historyCookie?->queue(
+                $this->historyEndpoint?->cookiePath() ?? '/',
+                $this->request?->isSecure() ?? false
+            );
+        }
 
         if (true === $this->options->headers) {
             $response->setHeader('X-Debug-Bar', (string) count($collected['data']));
@@ -67,6 +91,28 @@ final class ResponseListener
     }
 
     /**
+     * @param payload $collected
+     */
+    private function record(array $collected, ResponseInterface $response, bool $isAjax): void
+    {
+        if (null === $this->history || null === $this->request) {
+            return;
+        }
+
+        $uri = $this->request->getURI();
+        $this->history->save(
+            $collected,
+            new RequestMetadata(
+                $this->request->getMethod(),
+                $uri,
+                $response->getStatusCode() ?? 200,
+                $isAjax,
+                $this->requestedAt()
+            )
+        );
+    }
+
+    /**
      * @return request_context
      */
     private function requestContext(): array
@@ -78,5 +124,21 @@ final class ResponseListener
         $clientIp = $this->request->getClientAddress();
 
         return [is_string($clientIp) ? $clientIp : null, $this->request->isAjax()];
+    }
+
+    private function requestedAt(): ?DateTimeImmutable
+    {
+        $timestamp = $_SERVER['REQUEST_TIME_FLOAT'] ?? null;
+        if (!is_float($timestamp)) {
+            return null;
+        }
+
+        $requestedAt = DateTimeImmutable::createFromFormat(
+            'U.u',
+            sprintf('%.6F', $timestamp),
+            new DateTimeZone('UTC')
+        );
+
+        return false === $requestedAt ? null : $requestedAt;
     }
 }

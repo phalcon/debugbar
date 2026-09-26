@@ -6,7 +6,30 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 
 ### Added
 
+- A memory collector reports current and peak PHP request usage. Time and Memory
+  are enabled by default and open from compact indicators on the right instead of
+  duplicate tabs; the indicators remain available when History is disabled.
 - Optional, extensible collector summaries rendered as headline metrics above a panel. The database collector uses them to report total queries, duplicate runs (executions after the first), and accumulated SQL time, and marks repeated statements with their execution count.
+- Optional browser-isolated request history with filesystem retention and an
+  internal `GET/DELETE /_debugbar/open` endpoint. A dedicated HttpOnly, SameSite=Lax
+  browser-session cookie keeps History independent from the application's PHP
+  session, is marked Secure on HTTPS, and is appended without replacing application
+  cookies; clients that do not return it create no storage. The endpoint resolves
+  the final base URI at request time, leaves application routes and shared responses
+  untouched, and is excluded from debug-bar collection and injection. Stored
+  payloads are versioned, bounded, expired automatically, and listed through
+  metadata sidecars. History requires an explicit absolute writable path and is
+  disabled by default. Storage creation is serialized and capped across browser
+  identities, with least-recently-updated eviction.
+
+### Fixed
+
+- History now validates storage writability during boot, removes browser
+  directories emptied by reads, uses portable glob paths on Windows, and adds
+  `X-Content-Type-Options: nosniff` to its JSON responses.
+- The browser asset exports its test helpers only outside a DOM environment and
+  discovers request method and URI through collector widget metadata instead of a
+  hard-coded collector name.
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
@@ -34,7 +57,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 
 ### Added
 
-- A `logger` collector and `Phalcon\DebugBar\Logger\Adapter`. Attach the adapter to the application logger and every item logged through `Phalcon\Logger` is captured in the bar's "Logs" tab, separate from the manual `messages` collector. Each entry keeps the log level, message, and PSR-3 context; the context renders as a collapsible, pretty-printed JSON detail. Forwarding runs through the new `DebugBar::addLog()` and no-ops when the collector is disabled. [#6](https://github.com/phalcon/debugbar/issues/6)
+- A `logger` collector and `Phalcon\DebugBar\Logger\Adapter`. Attach the adapter to the application logger and every item logged through `Phalcon\Logger` is captured in the `Logs` panel, separate from the manual `messages` collector. Each entry keeps the log level, message, and PSR-3 context; the context renders as a collapsible, pretty-printed JSON detail. Forwarding runs through the new `DebugBar::addLog()` and no-ops when the collector is disabled. [#6](https://github.com/phalcon/debugbar/issues/6)
 
 ### Fixed
 

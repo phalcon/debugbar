@@ -24,12 +24,31 @@ namespace Phalcon\DebugBar;
  * @phpstan-type exception_panel list<exception_row>
  * @phpstan-type log_row array{label: string, message: string, context: string}
  * @phpstan-type log_panel list<log_row>
- * @phpstan-type widget array{label: string, icon: string, panel: string}
+ * @phpstan-type indicator array{icon: string, label: string, path: list<string>}
+ * @phpstan-type request_widget array{method: list<string>, uri: list<string>}
+ * @phpstan-type widget array{
+ *     label: string,
+ *     icon: string,
+ *     panel: string,
+ *     indicator?: indicator,
+ *     request?: request_widget
+ * }
  * @phpstan-type summary_row array{label: string, value: scalar}
  * @phpstan-type collector_summary list<summary_row>
- * @phpstan-type envelope array{panel: mixed, badge: scalar|null, summary?: collector_summary}
+ * @phpstan-type collector_metrics array<string, scalar>
+ * @phpstan-type envelope array{
+ *     panel: mixed,
+ *     badge: scalar|null,
+ *     summary?: collector_summary,
+ *     metrics?: collector_metrics
+ * }
  * @phpstan-type list_envelope array{panel: list_panel, badge: scalar|null, summary?: collector_summary}
- * @phpstan-type grid_envelope array{panel: grid_panel, badge: scalar|null, summary?: collector_summary}
+ * @phpstan-type grid_envelope array{
+ *     panel: grid_panel,
+ *     badge: scalar|null,
+ *     summary?: collector_summary,
+ *     metrics?: collector_metrics
+ * }
  * @phpstan-type exception_envelope array{panel: exception_panel, badge: scalar|null, summary?: collector_summary}
  * @phpstan-type log_envelope array{panel: log_panel, badge: scalar|null, summary?: collector_summary}
  * @phpstan-type payload array{data: array<string, envelope>, meta: array<string, mixed>}
@@ -48,6 +67,14 @@ namespace Phalcon\DebugBar;
  *     access?: array{allow_ips?: list<string>, callback?: (\Closure(): bool)|null},
  *     collectors?: array<string, bool>,
  *     headers?: bool,
+ *     history?: array{
+ *         enabled?: bool,
+ *         url?: string,
+ *         path?: string,
+ *         max_requests?: int,
+ *         ttl_seconds?: int,
+ *         max_browsers?: int
+ *     },
  *     redact?: array{mask?: list<string>, hidden?: list<string>}
  * }
  */

@@ -124,6 +124,14 @@ final class TimeCollectorTest extends AbstractUnitTestCase
         $collector->startMeasure('x');
 
         $this->assertSame('time', $collector->getName());
+        $widget = $collector->getWidget();
+        if (!isset($widget['indicator'])) {
+            $this->fail('Expected the time indicator definition.');
+        }
+        $this->assertSame(
+            ['icon' => 'clock', 'label' => 'Request time', 'path' => ['badge']],
+            $widget['indicator']
+        );
         $this->assertPanelContract($collector);
     }
 }

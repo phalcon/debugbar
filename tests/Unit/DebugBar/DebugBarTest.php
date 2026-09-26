@@ -56,6 +56,12 @@ final class DebugBarTest extends AbstractUnitTestCase
         $this->assertArrayHasKey('grid_fixture', $result['data']);
         $this->assertArrayHasKey('list_fixture', $result['data']);
         $this->assertSame(2, $result['meta']['collectors']);
+        $widgets = $result['meta']['widgets'];
+        $this->assertIsArray($widgets);
+        $this->assertSame(
+            ['grid_fixture', 'list_fixture'],
+            array_keys($widgets)
+        );
         $this->assertSame($result, $bar->getData());
     }
 

@@ -28,6 +28,13 @@ final class RequestCollectorTest extends AbstractUnitTestCase
         $collector = new RequestCollector(null, new Redactor());
 
         $this->assertSame('request', $collector->getName());
+        $this->assertSame(
+            [
+                'method' => ['metrics', RequestCollector::METRIC_METHOD],
+                'uri'    => ['metrics', RequestCollector::METRIC_URI],
+            ],
+            $collector->getWidget()['request']
+        );
         $this->assertSame([], $collector->collect()['panel']);
         $this->assertPanelContract($collector);
     }
@@ -59,10 +66,16 @@ final class RequestCollectorTest extends AbstractUnitTestCase
             'Authorization' => 'Bearer token-value',
         ]);
 
-        $panel = (new RequestCollector($request, new Redactor()))->collect()['panel'];
+        $collected = (new RequestCollector($request, new Redactor()))->collect();
+        $panel     = $collected['panel'];
 
         $this->assertSame('POST', $panel['Method']);
         $this->assertSame('/login', $panel['URI']);
+        if (!isset($collected['metrics'])) {
+            $this->fail('Expected stable request metrics.');
+        }
+        $this->assertSame('POST', $collected['metrics'][RequestCollector::METRIC_METHOD]);
+        $this->assertSame('/login', $collected['metrics'][RequestCollector::METRIC_URI]);
         $this->assertSame('phalcon', $panel['Query.q']);
         $this->assertSame('', $panel['Query.n']);
         $this->assertSame('sarah-connor', $panel['Post.username']);

@@ -22,12 +22,18 @@ use Phalcon\DebugBar\DebugBarTypes;
  * label, panel type, and `collect()`.
  *
  * @phpstan-import-type widget from DebugBarTypes
+ * @phpstan-import-type indicator from DebugBarTypes
  */
 abstract class AbstractCollector implements Renderable
 {
     public const NAME = '';
 
     protected string $icon = '';
+
+    /**
+     * @var indicator|null
+     */
+    protected ?array $indicator = null;
 
     protected string $label = '';
 
@@ -46,10 +52,16 @@ abstract class AbstractCollector implements Renderable
      */
     public function getWidget(): array
     {
-        return [
+        $widget = [
             'label' => ('' !== $this->label) ? $this->label : $this->getName(),
             'icon'  => $this->icon,
             'panel' => $this->panel,
         ];
+
+        if (null !== $this->indicator) {
+            $widget['indicator'] = $this->indicator;
+        }
+
+        return $widget;
     }
 }

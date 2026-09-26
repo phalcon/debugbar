@@ -17,6 +17,7 @@ use Phalcon\DebugBar\Contracts\Collector;
 use Phalcon\DebugBar\Contracts\ExceptionAware;
 use Phalcon\DebugBar\Contracts\LoggerAware;
 use Phalcon\DebugBar\Contracts\MessageAware;
+use Phalcon\DebugBar\Contracts\Renderable;
 use Phalcon\DebugBar\Contracts\TimeAware;
 use Phalcon\DebugBar\Exceptions\Exception;
 use Throwable;
@@ -89,15 +90,20 @@ class DebugBar
      */
     public function collect(): array
     {
-        $data = [];
+        $data    = [];
+        $widgets = [];
         foreach ($this->collectors as $name => $collector) {
             $data[$name] = $collector->collect();
+            if ($collector instanceof Renderable) {
+                $widgets[$name] = $collector->getWidget();
+            }
         }
 
         $this->data = [
             'data' => $data,
             'meta' => [
                 'collectors' => count($data),
+                'widgets'    => $widgets,
             ],
         ];
 

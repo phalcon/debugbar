@@ -31,6 +31,10 @@ final class RequestCollector extends AbstractCollector
 {
     use FlattensToGrid;
 
+    public const METRIC_METHOD = 'method';
+
+    public const METRIC_URI = 'uri';
+
     public const NAME = 'request';
 
     protected string $icon = 'icon-request';
@@ -57,9 +61,11 @@ final class RequestCollector extends AbstractCollector
             ];
         }
 
-        $grid = [
-            'Method' => $this->request->getMethod(),
-            'URI'    => $this->request->getURI(),
+        $method = $this->request->getMethod();
+        $uri    = $this->request->getURI();
+        $grid   = [
+            'Method' => $method,
+            'URI'    => $uri,
         ];
 
         $sections = [
@@ -75,9 +81,27 @@ final class RequestCollector extends AbstractCollector
         }
 
         return [
-            'panel' => $grid,
-            'badge' => null,
+            'panel'   => $grid,
+            'badge'   => null,
+            'metrics' => [
+                self::METRIC_METHOD => $method,
+                self::METRIC_URI    => $uri,
+            ],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getWidget(): array
+    {
+        $widget            = parent::getWidget();
+        $widget['request'] = [
+            'method' => ['metrics', self::METRIC_METHOD],
+            'uri'    => ['metrics', self::METRIC_URI],
+        ];
+
+        return $widget;
     }
 
     /**
