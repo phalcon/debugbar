@@ -32,7 +32,8 @@ use function sprintf;
 /**
  * The `application:beforeSendResponse` listener. On the event it runs the access
  * gate, aggregates the bar, sets the diagnostic headers, and - for an injectable
- * HTML response - renders and splices the bar in.
+ * HTML response - renders and splices the bar in. `handle()` does the same work
+ * with no event.
  *
  * @phpstan-import-type request_context from DebugBarTypes
  * @phpstan-import-type payload from DebugBarTypes
@@ -58,6 +59,11 @@ final class ResponseListener
             return;
         }
 
+        $this->handle($response);
+    }
+
+    public function handle(ResponseInterface $response): void
+    {
         if ($this->historyEndpoint?->matches()) {
             return;
         }
