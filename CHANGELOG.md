@@ -21,6 +21,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
   metadata sidecars. History requires an explicit absolute writable path and is
   disabled by default. Storage creation is serialized and capped across browser
   identities, with least-recently-updated eviction.
+- `ResponseListener::handle()` runs the injection step with a `ResponseInterface` and no event. The MVC listener calls it, so MVC behavior does not change. [#39](https://github.com/phalcon/debugbar/issues/39)
 
 ### Fixed
 
