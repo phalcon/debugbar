@@ -33,7 +33,7 @@
         "squizlabs/php_codesniffer": "^4.0"
     },
     "suggest": {
-        "ext-phalcon": "Phalcon C extension (^5) - run the debug bar on Phalcon v5",
+        "ext-phalcon": "Phalcon C extension (^5) - run the debug bar on Phalcon v5. ADR support needs v5.18.0 or later",
         "phalcon/phalcon": "Phalcon PHP implementation (^6) - run the debug bar on Phalcon v6"
     },
     "autoload": {

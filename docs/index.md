@@ -10,7 +10,7 @@ The bar runs only in development. It refuses to boot when the environment is und
 ## Requirements
 
 - PHP 8.1 or later.
-- A Phalcon runtime: the Phalcon 5 C extension, or the Phalcon 6 PHP implementation (`phalcon/phalcon`).
+- A Phalcon runtime: the Phalcon 5 C extension, or the Phalcon 6 PHP implementation (`phalcon/phalcon`). ADR support needs Phalcon `v5.18.0` or later, or Phalcon 6.
 - `matthiasmullie/minify`, pulled in automatically by Composer. It minifies the bar's CSS and JavaScript before they are inlined.
 
 ## Installation
@@ -35,7 +35,7 @@ The remainder of this document covers the debug bar.
 
 ## Registering the Debug Bar
 
-The bar is booted by `Phalcon\DebugBar\Provider`. It takes the MVC application and an optional configuration array. The application must have an events manager set before the bar boots. The provider does not add or modify application routes.
+In an MVC application, the bar is booted by `Phalcon\DebugBar\Provider`. It takes the MVC application and an optional configuration array. The application must have an events manager set before the bar boots. The provider does not add or modify application routes. For other applications, see [ADR and Non-MVC Applications](#adr-and-non-mvc-applications).
 
 ```php
 <?php
@@ -58,9 +58,80 @@ echo $application->handle($_SERVER['REQUEST_URI'])->getContent();
 
 If the application has no events manager, `boot()` still registers the `Debug` facade but attaches no response listener, so nothing is injected. Set an events manager to enable the bar.
 
+## ADR and Non-MVC Applications
+
+### ADR
+
+`Phalcon\DebugBar\ADR\Provider` boots the bar in a `Phalcon\ADR` application. It is a container service provider, and it takes an optional configuration array. It needs Phalcon `v5.18.0` or later, or Phalcon 6.
+
+```php
+<?php
+
+use Phalcon\ADR\Front\AbstractHttpFront;
+use Phalcon\Container\Container;
+use Phalcon\DebugBar\ADR\Provider as DebugBarProvider;
+
+class AppFront extends AbstractHttpFront
+{
+    protected function registerProviders(Container $container): void
+    {
+        parent::registerProviders($container);
+
+        // Register the services of the application here.
+
+        // The debug bar provider must be the last provider.
+        (new DebugBarProvider())->provide($container);
+    }
+}
+```
+
+The provider reads the events manager (`Phalcon\Contracts\Events\Manager`) and the request (`Phalcon\Contracts\Http\AttributeRequest`) from the container. It attaches the response listener to `application:afterHandle`. The application fires this event for a successful response and for an error response, and it emits the response after this event.
+
+!!! warning "NOTE"
+
+   Register the provider after all other providers. It resolves the events manager and the request during registration. After that, `extend()` on these services throws `CannotExtendResolved`, and `set()` has no effect. In a blocked environment, the provider resolves no service.
+
+These limits apply in an ADR application:
+
+- **One request for each process.** `Phalcon\ADR\Application::handle()` supports a reused request in a long-lived worker, but collectors have no reset method. In a worker, their data grows from request to request. `HistoryCookie::fromGlobals()` also reads only at boot.
+- **Events manager.** The events manager must implement `Phalcon\Events\ManagerInterface`. The default manager does. A manager that implements only `Phalcon\Contracts\Events\Manager` gets no listener, so the bar is not injected.
+- **Empty panels.** The `database`, `route` and `exceptions` panels have no ADR source yet. The `view` and `cache` panels get data only when the application gives the events manager to these services. The provider reads no `config` service, so the `config` panel is empty.
+- **History.** The provider does not read the `history` keys. Request history works only in MVC.
+
+### A Host with No Events Manager
+
+`Phalcon\DebugBar\Core` boots the bar with no framework application. It takes the configuration array. All the arguments of `boot()` are optional: the events manager, the request and the config source. Call `handle()` when you have the response. The response must implement `Phalcon\Http\ResponseInterface`.
+
+```php
+<?php
+
+use Phalcon\DebugBar\Core;
+
+$core = new Core(['access' => ['allow_ips' => ['127.0.0.1']]]);
+$core->boot(null, $request);
+
+// The application creates the response here.
+
+$core->handle($response);
+```
+
+Give a request when you set `access.allow_ips`. With no request the client address is unknown, so the access gate stops the bar.
+
+If the host has an events manager, attach the listener that `boot()` returns to the response event of the host. `boot()` returns `null` when the bar cannot boot. In this example, `host:response` is a placeholder and Phalcon does not fire it. Replace it with the event that your host fires with the response as the event data.
+
+```php
+<?php
+
+$listener = $core->boot($eventsManager, $request);
+if (null !== $listener) {
+    // "host:response" is a placeholder. Replace it with the response event of your host.
+    $eventsManager->attach('host:response', $listener);
+}
+```
+
 ## Configuration
 
-The second argument to `Provider` is a nested array. Every key is optional.
+The second argument to `Provider` is a nested array. Every key is optional. `Phalcon\DebugBar\ADR\Provider` and `Phalcon\DebugBar\Core` take the same array as their only argument. They do not read the `history` keys.
 
 | Key                | Type                      | Default                  | Purpose                                                          |
 |--------------------|---------------------------|--------------------------|------------------------------------------------------------------|

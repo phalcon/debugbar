@@ -30,10 +30,11 @@ use function is_string;
 use function sprintf;
 
 /**
- * The `application:beforeSendResponse` listener. On the event it runs the access
- * gate, aggregates the bar, sets the diagnostic headers, and - for an injectable
- * HTML response - renders and splices the bar in. `handle()` does the same work
- * with no event.
+ * The response listener: MVC attaches it to `application:beforeSendResponse` and
+ * ADR to `application:afterHandle`. On the event it runs the access gate,
+ * aggregates the bar, sets the diagnostic headers, and - for an injectable HTML
+ * response - renders and splices the bar in. `handle()` does the same work with
+ * no event.
  *
  * @phpstan-import-type request_context from DebugBarTypes
  * @phpstan-import-type payload from DebugBarTypes
