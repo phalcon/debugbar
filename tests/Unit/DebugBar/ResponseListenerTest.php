@@ -147,6 +147,18 @@ final class ResponseListenerTest extends AbstractUnitTestCase
         $this->assertFalse(is_dir($path));
     }
 
+    public function testHandleInjectsWithoutAnEvent(): void
+    {
+        $listener = $this->listener(false);
+
+        $response = new Response();
+        $response->setContent('<html><body>hi</body></html>');
+
+        $listener->handle($response);
+
+        $this->assertStringContainsString('phalcon-debugbar-data', $response->getContent());
+    }
+
     public function testIgnoresNonResponsePayloads(): void
     {
         $listener = $this->listener(true);
