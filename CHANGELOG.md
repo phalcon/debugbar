@@ -23,6 +23,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
   identities, with least-recently-updated eviction.
 - `ResponseListener::handle()` runs the injection step with a `ResponseInterface` and no event. The MVC listener calls it, so MVC behavior does not change. [#39](https://github.com/phalcon/debugbar/issues/39)
 - `Core` boots the bar with no `Phalcon\Mvc\Application` and no `Phalcon\Di\DiInterface`. It takes an optional events manager, request, config source and history parts. `Provider` is now a wrapper over `Core`, so MVC behavior does not change. [#40](https://github.com/phalcon/debugbar/issues/40)
+- `ADR\Provider` boots the bar in a `Phalcon\ADR` application and injects it on `application:afterHandle`. Register it after all other providers. It needs Phalcon `v5.18.0` or later, or Phalcon 6. History and the panels that need MVC events are not available on ADR yet. [#14](https://github.com/phalcon/debugbar/issues/14)
 
 ### Fixed
 
