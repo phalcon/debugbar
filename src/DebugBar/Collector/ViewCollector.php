@@ -27,7 +27,8 @@ use function is_string;
  * Records rendered views by subscribing to `view:beforeRenderView`/
  * `view:afterRenderView`. The path is the event data on the "before" event, so
  * nothing is resolved from the container. A stack pairs each "before" with its
- * matching "after", so nested partials are timed correctly.
+ * matching "after", so nested partials are timed correctly. `startRender()` and
+ * `finishRender()` record a render with no events manager.
  *
  * @phpstan-import-type list_envelope from DebugBarTypes
  * @phpstan-import-type view_pending from DebugBarTypes
@@ -74,30 +75,44 @@ final class ViewCollector extends AbstractCollector implements Subscriber
         ];
     }
 
+    /**
+     * Records the last render that `startRender()` started. It does nothing when
+     * no render is pending.
+     */
+    public function finishRender(): void
+    {
+        $entry = array_pop($this->pending);
+        if (null === $entry) {
+            return;
+        }
+
+        $this->rendered[] = [
+            'path' => $entry['path'],
+            'time' => hrtime(true) - $entry['start'],
+        ];
+    }
+
+    public function startRender(string $path): void
+    {
+        $this->pending[] = [
+            'path'  => $path,
+            'start' => hrtime(true),
+        ];
+    }
+
     public function subscribe(ManagerInterface $eventsManager): void
     {
         $eventsManager->attach(
             'view:beforeRenderView',
             function (EventInterface $event, mixed $view, mixed $path): void {
-                $this->pending[] = [
-                    'path'  => is_string($path) ? $path : '',
-                    'start' => hrtime(true),
-                ];
+                $this->startRender(is_string($path) ? $path : '');
             }
         );
 
         $eventsManager->attach(
             'view:afterRenderView',
             function (): void {
-                $entry = array_pop($this->pending);
-                if (null === $entry) {
-                    return;
-                }
-
-                $this->rendered[] = [
-                    'path' => $entry['path'],
-                    'time' => hrtime(true) - $entry['start'],
-                ];
+                $this->finishRender();
             }
         );
     }

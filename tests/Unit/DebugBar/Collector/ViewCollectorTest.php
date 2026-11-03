@@ -45,12 +45,36 @@ final class ViewCollectorTest extends AbstractUnitTestCase
         $this->assertSame('/app/views/index.phtml', $row['message']);
     }
 
+    public function testFinishRenderWithNoStartIsIgnored(): void
+    {
+        $collector = new ViewCollector();
+
+        $collector->finishRender();
+
+        $this->assertSame(0, $collector->collect()['badge']);
+    }
+
     public function testNameAndPanelContract(): void
     {
         $collector = new ViewCollector();
 
         $this->assertSame('view', $collector->getName());
         $this->assertPanelContract($collector);
+    }
+
+    public function testNestedRendersPairWithTheirOwnStart(): void
+    {
+        $collector = new ViewCollector();
+
+        $collector->startRender('/app/views/layout.phtml');
+        $collector->startRender('/app/views/partial.phtml');
+        $collector->finishRender();
+        $collector->finishRender();
+
+        $this->assertSame(
+            ['/app/views/partial.phtml', '/app/views/layout.phtml'],
+            array_column($collector->collect()['panel'], 'message')
+        );
     }
 
     public function testRenderedViewsAreRecordedFromEvents(): void
@@ -61,6 +85,19 @@ final class ViewCollectorTest extends AbstractUnitTestCase
 
         $eventsManager->fire('view:beforeRenderView', $this, '/app/views/index.phtml');
         $eventsManager->fire('view:afterRenderView', $this);
+
+        $envelope = $collector->collect();
+
+        $this->assertSame(1, $envelope['badge']);
+        $this->assertSame('/app/views/index.phtml', $envelope['panel'][0]['message']);
+    }
+
+    public function testStartAndFinishRecordARenderWithNoEventsManager(): void
+    {
+        $collector = new ViewCollector();
+
+        $collector->startRender('/app/views/index.phtml');
+        $collector->finishRender();
 
         $envelope = $collector->collect();
 

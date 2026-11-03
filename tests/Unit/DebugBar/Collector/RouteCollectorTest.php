@@ -43,6 +43,21 @@ final class RouteCollectorTest extends AbstractUnitTestCase
         $this->assertSame([], $collector->collect()['panel']);
     }
 
+    public function testRouteClosureIsCalledAtCollectTime(): void
+    {
+        $collector = new RouteCollector();
+        $action    = 'before';
+
+        $collector->setRoute(
+            function () use (&$action): array {
+                return ['Action' => $action];
+            }
+        );
+        $action = 'after';
+
+        $this->assertSame(['Action' => 'after'], $collector->collect()['panel']);
+    }
+
     public function testRouteIsSnapshotFromTheRouter(): void
     {
         $collector     = new RouteCollector();
@@ -66,5 +81,38 @@ final class RouteCollectorTest extends AbstractUnitTestCase
         $this->assertSame('session', $panel['Controller']);
         $this->assertSame('login', $panel['Action']);
         $this->assertSame('{"id":5}', $panel['Params']);
+    }
+
+    public function testRouterIsReadAtCollectTime(): void
+    {
+        $collector     = new RouteCollector();
+        $eventsManager = new Manager();
+        $collector->subscribe($eventsManager);
+
+        $action = 'before';
+        $router = $this->createMock(RouterInterface::class);
+        $router->method('getActionName')->willReturnCallback(
+            function () use (&$action): string {
+                return $action;
+            }
+        );
+
+        $eventsManager->fire('router:matchedRoute', $router, null);
+        $action = 'after';
+
+        $this->assertSame('after', $collector->collect()['panel']['Action']);
+    }
+
+    public function testRouteValuesAreShownInThePanel(): void
+    {
+        $collector = new RouteCollector();
+        $values    = ['Action' => 'App\Action\GetPage', 'Attributes' => '{"id":5}'];
+
+        $collector->setRoute($values);
+
+        $envelope = $collector->collect();
+
+        $this->assertSame($values, $envelope['panel']);
+        $this->assertNull($envelope['badge']);
     }
 }

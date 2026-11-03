@@ -28,7 +28,8 @@ use function trim;
 /**
  * Records SQL queries by subscribing to `db:beforeQuery`/`db:afterQuery`. The
  * connection is the event's source, so the statement, bindings, and timing are
- * read straight off it - no `db` service is resolved.
+ * read straight off it - no `db` service is resolved. `startQuery()` and
+ * `finishQuery()` record a query with no events manager.
  *
  * @phpstan-import-type db_query from DebugBarTypes
  * @phpstan-import-type database_envelope from DebugBarTypes
@@ -93,12 +94,31 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
         ];
     }
 
+    /**
+     * Records a query. Call `startQuery()` first: the time starts there.
+     *
+     * @param array<array-key, mixed> $bindings
+     */
+    public function finishQuery(string $sql, array $bindings = []): void
+    {
+        $this->queries[] = [
+            'sql'      => $sql,
+            'bindings' => $bindings,
+            'time'     => hrtime(true) - $this->started,
+        ];
+    }
+
+    public function startQuery(): void
+    {
+        $this->started = hrtime(true);
+    }
+
     public function subscribe(ManagerInterface $eventsManager): void
     {
         $eventsManager->attach(
             'db:beforeQuery',
             function (): void {
-                $this->started = hrtime(true);
+                $this->startQuery();
             }
         );
 
@@ -106,11 +126,10 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
             'db:afterQuery',
             function (EventInterface $event, mixed $connection): void {
                 if ($connection instanceof AbstractAdapter) {
-                    $this->queries[] = [
-                        'sql'      => $connection->getSQLStatement(),
-                        'bindings' => $connection->getSQLVariables(),
-                        'time'     => hrtime(true) - $this->started,
-                    ];
+                    $this->finishQuery(
+                        $connection->getSQLStatement(),
+                        $connection->getSQLVariables()
+                    );
                 }
             }
         );
