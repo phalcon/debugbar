@@ -122,6 +122,38 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
         );
     }
 
+    public function testFinishQueryMeasuresTheTimeFromStartQuery(): void
+    {
+        $collector = new DatabaseCollector();
+
+        $collector->startQuery();
+        $collector->finishQuery('SELECT 1');
+
+        $property = new ReflectionProperty(DatabaseCollector::class, 'queries');
+        $property->setAccessible(true);
+
+        /** @var array<int, array{time: float|int}> $queries */
+        $queries = $property->getValue($collector);
+        $time    = $queries[0]['time'];
+
+        /**
+         * With no start time, `time` has the full monotonic clock value
+         * (billions of nanoseconds).
+         */
+        $this->assertGreaterThanOrEqual(0, $time);
+        $this->assertLessThan(1000000000, $time);
+    }
+
+    public function testFinishQueryWithNoBindingsShowsOnlyTheStatement(): void
+    {
+        $collector = new DatabaseCollector();
+
+        $collector->startQuery();
+        $collector->finishQuery('SELECT 1');
+
+        $this->assertSame('SELECT 1', $collector->collect()['panel'][0]['message']);
+    }
+
     public function testLabelReflectsQueryDurationInMilliseconds(): void
     {
         $collector = new DatabaseCollector();
@@ -181,6 +213,22 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
 
         $this->assertSame(1, $envelope['badge']);
         $this->assertSame('SELECT 1', $envelope['panel'][0]['message']);
+    }
+
+    public function testStartAndFinishRecordAQueryWithNoEventsManager(): void
+    {
+        $collector = new DatabaseCollector();
+
+        $collector->startQuery();
+        $collector->finishQuery('SELECT * FROM users WHERE id = :id', ['id' => 5]);
+
+        $envelope = $collector->collect();
+
+        $this->assertSame(1, $envelope['badge']);
+        $this->assertSame(
+            'SELECT * FROM users WHERE id = :id  {"id":5}',
+            $envelope['panel'][0]['message']
+        );
     }
 
     public function testSummaryReportsQueryCountDuplicatesAndTotalDuration(): void

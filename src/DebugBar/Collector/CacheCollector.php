@@ -24,7 +24,7 @@ use function is_string;
 /**
  * Records cache operations by subscribing to the `cache:after*` events. The key
  * is the event data, so it is read straight off the event - the `cache` service
- * is never resolved.
+ * is never resolved. `addOperation()` records an operation with no events manager.
  *
  * @phpstan-import-type list_envelope from DebugBarTypes
  * @phpstan-import-type list_panel from DebugBarTypes
@@ -43,6 +43,14 @@ final class CacheCollector extends AbstractCollector implements Subscriber
      * @var list_panel
      */
     private array $operations = [];
+
+    public function addOperation(string $operation, string $key): void
+    {
+        $this->operations[] = [
+            'label'   => $operation,
+            'message' => $key,
+        ];
+    }
 
     /**
      * @return list_envelope
@@ -68,10 +76,7 @@ final class CacheCollector extends AbstractCollector implements Subscriber
             $eventsManager->attach(
                 $eventName,
                 function (EventInterface $event, mixed $cache, mixed $key) use ($operation): void {
-                    $this->operations[] = [
-                        'label'   => $operation,
-                        'message' => is_string($key) ? $key : '',
-                    ];
+                    $this->addOperation($operation, is_string($key) ? $key : '');
                 }
             );
         }

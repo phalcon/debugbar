@@ -22,6 +22,18 @@ final class CacheCollectorTest extends AbstractUnitTestCase
 {
     use PanelContractTrait;
 
+    public function testAddOperationRecordsWithNoEventsManager(): void
+    {
+        $collector = new CacheCollector();
+
+        $collector->addOperation('Get', 'user_42');
+
+        $envelope = $collector->collect();
+
+        $this->assertSame(1, $envelope['badge']);
+        $this->assertSame([['label' => 'Get', 'message' => 'user_42']], $envelope['panel']);
+    }
+
     public function testCacheOperationsAreRecordedFromEvents(): void
     {
         $collector     = new CacheCollector();
