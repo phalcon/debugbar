@@ -6,33 +6,17 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 
 ### Added
 
-- A memory collector reports current and peak PHP request usage. Time and Memory
-  are enabled by default and open from compact indicators on the right instead of
-  duplicate tabs; the indicators remain available when History is disabled.
-- Optional, extensible collector summaries rendered as headline metrics above a panel. The database collector uses them to report total queries, duplicate runs (executions after the first), and accumulated SQL time, and marks repeated statements with their execution count.
-- Optional browser-isolated request history with filesystem retention and an
-  internal `GET/DELETE /_debugbar/open` endpoint. A dedicated HttpOnly, SameSite=Lax
-  browser-session cookie keeps History independent from the application's PHP
-  session, is marked Secure on HTTPS, and is appended without replacing application
-  cookies; clients that do not return it create no storage. The endpoint resolves
-  the final base URI at request time, leaves application routes and shared responses
-  untouched, and is excluded from debug-bar collection and injection. Stored
-  payloads are versioned, bounded, expired automatically, and listed through
-  metadata sidecars. History requires an explicit absolute writable path and is
-  disabled by default. Storage creation is serialized and capped across browser
-  identities, with least-recently-updated eviction.
-- `ResponseListener::handle()` runs the injection step with a `ResponseInterface` and no event. The MVC listener calls it, so MVC behavior does not change. [#39](https://github.com/phalcon/debugbar/issues/39)
-- `Core` boots the bar with no `Phalcon\Mvc\Application` and no `Phalcon\Di\DiInterface`. It takes an optional events manager, request, config source and history parts. `Provider` is now a wrapper over `Core`, so MVC behavior does not change. [#40](https://github.com/phalcon/debugbar/issues/40)
-- `ADR\Provider` boots the bar in a `Phalcon\ADR` application and injects it on `application:afterHandle`. Register it after all other providers. It needs Phalcon `v5.18.0` or later, or Phalcon 6. History and the panels that need MVC events are not available on ADR yet. [#14](https://github.com/phalcon/debugbar/issues/14)
+- `memory` collector for current and peak PHP memory use. Time and Memory now open from indicators on the right, not from tabs.
+- Optional collector summaries show headline metrics above a panel. The database panel shows total queries, duplicate runs and SQL time.
+- Request history for each browser, at `GET/DELETE /_debugbar/open`. It is disabled by default and needs an absolute, writable `history.path`.
+- `ResponseListener::handle()` injects the bar with no event. [#39](https://github.com/phalcon/debugbar/issues/39)
+- `Core` boots the bar with no MVC application and no DI container. [#40](https://github.com/phalcon/debugbar/issues/40)
+- `ADR\Provider` boots the bar in `Phalcon\ADR` applications (Phalcon `v5.18.0` or later, or Phalcon 6). [#14](https://github.com/phalcon/debugbar/issues/14)
 
 ### Fixed
 
-- History now validates storage writability during boot, removes browser
-  directories emptied by reads, uses portable glob paths on Windows, and adds
-  `X-Content-Type-Options: nosniff` to its JSON responses.
-- The browser asset exports its test helpers only outside a DOM environment and
-  discovers request method and URI through collector widget metadata instead of a
-  hard-coded collector name.
+- History: check storage at boot, remove empty browser directories, fix glob paths on Windows, add `nosniff` to JSON responses.
+- The browser asset exports test helpers only outside a DOM, and no longer hard-codes the request collector name.
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
