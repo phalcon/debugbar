@@ -24,15 +24,18 @@ use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\Events\ManagerInterface;
 use Phalcon\Http\ResponseInterface;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
+use Phalcon\Tests\Support\DebugBar\ADR\Action\Cache\GetCache;
 use Phalcon\Tests\Support\DebugBar\ADR\Action\Data\GetData;
 use Phalcon\Tests\Support\DebugBar\ADR\Action\Page\GetPage;
 use Phalcon\Tests\Support\DebugBar\ADR\Action\Queries\GetQueries;
+use Phalcon\Tests\Support\DebugBar\ADR\Action\View\GetView;
 use Phalcon\Tests\Support\DebugBar\ADR\Front;
 use Phalcon\Tests\Support\DebugBar\ADR\RecordingEmitter;
 use PHPUnit\Framework\Attributes\BackupGlobals;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 
 use function is_array;
+use function is_string;
 
 #[BackupGlobals(true)]
 final class ProviderTest extends AbstractUnitTestCase
@@ -91,6 +94,26 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertStringContainsString('page', $response->getContent());
         $this->assertTrue($response->getHeaders()->has('X-Debug-Bar'));
         $this->assertInstanceOf(DebugBar::class, Debug::getBar());
+    }
+
+    public function testCacheReachesTheCachePanel(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $this->dispatch('/cache');
+
+        $cache = $this->bootedBar()->collect()['data']['cache'];
+
+        $this->assertSame(4, $cache['badge']);
+        $this->assertSame(
+            [
+                ['label' => 'Set', 'message' => GetCache::KEY],
+                ['label' => 'Has', 'message' => GetCache::KEY],
+                ['label' => 'Get', 'message' => GetCache::KEY],
+                ['label' => 'Delete', 'message' => GetCache::KEY],
+            ],
+            $cache['panel']
+        );
     }
 
     public function testCollectorsSubscribeToTheSharedEventsManager(): void
@@ -220,6 +243,23 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->dispatch('/missing');
 
         $this->assertSame([], $this->bootedBar()->collect()['data']['route']['panel']);
+    }
+
+    public function testViewReachesTheViewPanel(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $response = $this->dispatch('/view');
+
+        $view  = $this->bootedBar()->collect()['data']['view'];
+        $panel = $view['panel'];
+        if (!is_array($panel) || !is_array($panel[0] ?? null) || !is_string($panel[0]['message'] ?? null)) {
+            $this->fail('The view panel should have a row.');
+        }
+
+        $this->assertSame(1, $view['badge']);
+        $this->assertStringEndsWith('/' . GetView::TEMPLATE . '.phtml', $panel[0]['message']);
+        $this->assertStringContainsString(GetView::CONTENT, $response->getContent());
     }
 
     private function bootedBar(): DebugBar
