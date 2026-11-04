@@ -190,6 +190,18 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertSame('/page', $panel['URI']);
     }
 
+    public function testRouteReachesTheRoutePanel(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $this->dispatch('/page/7');
+
+        $this->assertSame(
+            ['Action' => GetPage::class, 'Attributes' => '["7"]'],
+            $this->bootedBar()->collect()['data']['route']['panel']
+        );
+    }
+
     public function testStrictBlockedEnvironmentThrows(): void
     {
         $_ENV[self::ENV_VAR] = 'production';
@@ -199,6 +211,15 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->expectException(CannotUseInProduction::class);
 
         $provider->provide(new Container());
+    }
+
+    public function testUrlWithNoMatchLeavesTheRoutePanelEmpty(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $this->dispatch('/missing');
+
+        $this->assertSame([], $this->bootedBar()->collect()['data']['route']['panel']);
     }
 
     private function bootedBar(): DebugBar

@@ -18,7 +18,7 @@ use function json_encode;
 
 /**
  * Encodes a value as JSON, returning an empty string when `json_encode()`
- * fails (it returns `false`). Shared by the collectors that render structured
+ * fails (it returns `false`). Shared by the classes that render structured
  * values into a panel.
  */
 trait EncodesJson
