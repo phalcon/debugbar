@@ -150,11 +150,52 @@ $container->set(
 
 Give the events manager to the cache and not to its adapter. If you give it to both, the `cache` panel shows each operation two times. The panel shows `get()`, `set()`, `has()` and `delete()`. It also shows the keys of `getMultiple()` and `setMultiple()`. It does not show `deleteMultiple()` or `clear()`.
 
+The `exceptions` panel reads the logger. `Phalcon\ADR\ErrorResponder` logs each exception that it handles and fires no event. Add `Phalcon\DebugBar\Logger\ExceptionAdapter` to your logger. The bar cannot do this for you, because `Phalcon\Contracts\Logger\Logger` has no `addAdapter()` method. The bar injects only into HTML responses and the default error response is JSON. To see the panel on an error page, give `ErrorResponder` a responder that returns HTML:
+
+```php
+<?php
+
+use Phalcon\ADR\ErrorResponder;
+use Phalcon\ADR\Responder\StatusMapper;
+use Phalcon\ADR\Responder\ViewResponder;
+use Phalcon\Contracts\Logger\Logger as LoggerContract;
+use Phalcon\Contracts\View\Renderer;
+use Phalcon\DebugBar\Debug;
+use Phalcon\DebugBar\Logger\ExceptionAdapter;
+use Phalcon\Logger\Adapter\Stream;
+use Phalcon\Logger\Logger;
+
+$container->set(
+    LoggerContract::class,
+    function (): LoggerContract {
+        return new Logger(
+            'app',
+            [
+                'main'     => new Stream('/var/log/app.log'),
+                'debugbar' => new ExceptionAdapter(Debug::getBar()),
+            ]
+        );
+    }
+);
+
+$container->set(
+    ErrorResponder::class,
+    function () use ($container): ErrorResponder {
+        return new ErrorResponder(
+            new ViewResponder($container->get(Renderer::class), new StatusMapper(), 'errors/error'),
+            $container->get(LoggerContract::class)
+        );
+    }
+);
+```
+
+The closure calls `Debug::getBar()` when the application first uses the logger. This is after the provider boots the bar. The adapter does not change the response and does not keep the exception from the error responder. The panel also shows `RouteNotFound` for a URL with no route, because the error responder logs this too. If the error responder itself fails, the application returns a bare 500 response and logs nothing, so the panel does not show the exception.
+
 These limits apply in an ADR application:
 
 - **One request for each process.** `Phalcon\ADR\Application::handle()` supports a reused request in a long-lived worker, but collectors have no reset method. In a worker, their data grows from request to request. `HistoryCookie::fromGlobals()` also reads only at boot.
 - **Events manager.** The events manager must implement `Phalcon\Events\ManagerInterface`. The default manager does. A manager that implements only `Phalcon\Contracts\Events\Manager` gets no listener, so the bar is not injected.
-- **Empty panels.** The `exceptions` panel has no ADR source yet. The `database`, `view` and `cache` panels get data only when the application gives the events manager to these services. The provider reads no `config` service, so the `config` panel is empty.
+- **Empty panels.** The `database`, `view` and `cache` panels get data only when the application gives the events manager to these services. The `exceptions` panel gets data only when the application adds `ExceptionAdapter` to its logger. The provider reads no `config` service, so the `config` panel is empty.
 - **History.** The provider does not read the `history` keys. Request history works only in MVC.
 
 ### A Host with No Events Manager
