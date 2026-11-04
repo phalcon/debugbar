@@ -14,18 +14,25 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Support\DebugBar\ADR;
 
 use Phalcon\ADR\Application;
+use Phalcon\ADR\ErrorResponder;
 use Phalcon\ADR\Front\AbstractHttpFront;
+use Phalcon\ADR\Responder\StatusMapper;
+use Phalcon\ADR\Responder\ViewResponder;
 use Phalcon\Cache\Adapter\Memory;
 use Phalcon\Cache\Cache;
 use Phalcon\Container\Container;
 use Phalcon\Contracts\ADR\Application as ApplicationInterface;
 use Phalcon\Contracts\ADR\Emitter\Emitter;
 use Phalcon\Contracts\Events\Manager as ManagerContract;
+use Phalcon\Contracts\Logger\Logger as LoggerContract;
 use Phalcon\Contracts\View\Renderer;
 use Phalcon\DataMapper\Pdo\Connection;
 use Phalcon\DebugBar\ADR\Provider;
+use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBarTypes;
+use Phalcon\DebugBar\Logger\ExceptionAdapter;
 use Phalcon\Events\ManagerInterface;
+use Phalcon\Logger\Logger;
 use Phalcon\Mvc\View\Simple;
 use Phalcon\Storage\SerializerFactory;
 
@@ -42,7 +49,8 @@ final class Front extends AbstractHttpFront
      */
     public function __construct(
         private readonly Emitter $emitter,
-        private readonly array $config = []
+        private readonly array $config = [],
+        private readonly bool $htmlErrors = false
     ) {
         parent::__construct(__DIR__);
     }
@@ -79,11 +87,7 @@ final class Front extends AbstractHttpFront
         $container->set(
             Renderer::class,
             function () use ($container): Renderer {
-                $view = new Simple();
-                $view->setViewsDir($this->projectRoot . '/Views/');
-                $this->giveEventsManager($container, $view);
-
-                return $view;
+                return $this->newRenderer($container);
             }
         );
 
@@ -97,6 +101,25 @@ final class Front extends AbstractHttpFront
             }
         );
 
+        $container->set(
+            LoggerContract::class,
+            function (): LoggerContract {
+                return $this->newLogger();
+            }
+        );
+
+        if ($this->htmlErrors) {
+            $container->set(
+                ErrorResponder::class,
+                function () use ($container): ErrorResponder {
+                    return new ErrorResponder(
+                        new ViewResponder($this->newRenderer($container), new StatusMapper(), 'error'),
+                        $this->newLogger()
+                    );
+                }
+            );
+        }
+
         (new Provider($this->config))->provide($container);
     }
 
@@ -106,5 +129,19 @@ final class Front extends AbstractHttpFront
         if ($eventsManager instanceof ManagerInterface) {
             $service->setEventsManager($eventsManager);
         }
+    }
+
+    private function newLogger(): Logger
+    {
+        return new Logger('adr', ['debugbar' => new ExceptionAdapter(Debug::getBar())]);
+    }
+
+    private function newRenderer(Container $container): Simple
+    {
+        $view = new Simple();
+        $view->setViewsDir($this->projectRoot . '/Views/');
+        $this->giveEventsManager($container, $view);
+
+        return $view;
     }
 }
