@@ -16,6 +16,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - The Database panel shows `Phalcon\DataMapper` queries in ADR applications (Phalcon `v5.19.0` or later, or Phalcon 6). [#16](https://github.com/phalcon/debugbar/issues/16)
 - The Route panel shows the Action class and the request attributes in ADR applications. [#45](https://github.com/phalcon/debugbar/issues/45)
 - Documentation and tests for the View and Cache panels in ADR applications. [#46](https://github.com/phalcon/debugbar/issues/46)
+- `Logger\ExceptionAdapter` feeds the Exceptions panel from the logger in ADR applications. [#47](https://github.com/phalcon/debugbar/issues/47)
 
 ### Fixed
 

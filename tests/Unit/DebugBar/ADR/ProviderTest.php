@@ -26,6 +26,7 @@ use Phalcon\Http\ResponseInterface;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\ADR\Action\Cache\GetCache;
 use Phalcon\Tests\Support\DebugBar\ADR\Action\Data\GetData;
+use Phalcon\Tests\Support\DebugBar\ADR\Action\Failure\GetFailure;
 use Phalcon\Tests\Support\DebugBar\ADR\Action\Page\GetPage;
 use Phalcon\Tests\Support\DebugBar\ADR\Action\Queries\GetQueries;
 use Phalcon\Tests\Support\DebugBar\ADR\Action\View\GetView;
@@ -160,6 +161,39 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertStringNotContainsString('phalcon-debugbar-data', $response->getContent());
     }
 
+    public function testExceptionReachesAnHtmlErrorPage(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $response = $this->dispatch('/failure', true);
+
+        $this->assertSame(500, $response->getStatusCode());
+        $this->assertStringContainsString('error page', $response->getContent());
+        $this->assertStringContainsString('phalcon-debugbar-data', $response->getContent());
+        $this->assertStringContainsString(GetFailure::MESSAGE, $response->getContent());
+    }
+
+    public function testExceptionReachesTheExceptionsPanel(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $response = $this->dispatch('/failure');
+
+        $exceptions = $this->bootedBar()->collect()['data']['exceptions'];
+        $panel      = $exceptions['panel'];
+        if (!is_array($panel) || !is_array($panel[0] ?? null) || !is_string($panel[0]['message'] ?? null)) {
+            $this->fail('The exceptions panel should have a row.');
+        }
+
+        $this->assertSame(1, $exceptions['badge']);
+        $this->assertSame('RuntimeException', $panel[0]['label']);
+        $this->assertStringStartsWith(GetFailure::MESSAGE . ' (', $panel[0]['message']);
+
+        $this->assertSame(500, $response->getStatusCode());
+        $this->assertStringContainsString('Internal Server Error', $response->getContent());
+        $this->assertStringNotContainsString(GetFailure::MESSAGE, $response->getContent());
+    }
+
     public function testManagerOutsideTheEventsManagerInterfaceGetsNoListener(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
@@ -211,6 +245,20 @@ final class ProviderTest extends AbstractUnitTestCase
 
         $this->assertSame('GET', $panel['Method']);
         $this->assertSame('/page', $panel['URI']);
+    }
+
+    public function testRouteNotFoundReachesTheExceptionsPanel(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $this->dispatch('/missing');
+
+        $panel = $this->bootedBar()->collect()['data']['exceptions']['panel'];
+        if (!is_array($panel) || !is_array($panel[0] ?? null)) {
+            $this->fail('The exceptions panel should have a row.');
+        }
+
+        $this->assertSame('RouteNotFound', $panel[0]['label']);
     }
 
     public function testRouteReachesTheRoutePanel(): void
@@ -284,13 +332,13 @@ final class ProviderTest extends AbstractUnitTestCase
     /**
      * Runs a full `GET` request through a real ADR front controller.
      */
-    private function dispatch(string $uri): ResponseInterface
+    private function dispatch(string $uri, bool $htmlErrors = false): ResponseInterface
     {
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI']    = $uri;
 
         $emitter = new RecordingEmitter();
-        $code    = (new Front($emitter, ['env' => ['var' => self::ENV_VAR]]))->run();
+        $code    = (new Front($emitter, ['env' => ['var' => self::ENV_VAR]], $htmlErrors))->run();
 
         $this->assertSame(0, $code);
         if (null === $emitter->response) {
