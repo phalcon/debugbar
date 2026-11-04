@@ -10,7 +10,7 @@ The bar runs only in development. It refuses to boot when the environment is und
 ## Requirements
 
 - PHP 8.1 or later.
-- A Phalcon runtime: the Phalcon 5 C extension, or the Phalcon 6 PHP implementation (`phalcon/phalcon`). ADR support needs Phalcon `v5.18.0` or later, or Phalcon 6.
+- A Phalcon runtime: the Phalcon 5 C extension, or the Phalcon 6 PHP implementation (`phalcon/phalcon`). ADR support needs Phalcon `v5.18.0` or later, or Phalcon 6. The Database panel in an ADR application needs Phalcon `v5.19.0` or later, or Phalcon 6.
 - `matthiasmullie/minify`, pulled in automatically by Composer. It minifies the bar's CSS and JavaScript before they are inlined.
 
 ## Installation
@@ -91,11 +91,32 @@ The provider reads the events manager (`Phalcon\Contracts\Events\Manager`) and t
 
    Register the provider after all other providers. It resolves the events manager and the request during registration. After that, `extend()` on these services throws `CannotExtendResolved`, and `set()` has no effect. In a blocked environment, the provider resolves no service.
 
+The `database` panel reads the `dm:*` events of `Phalcon\DataMapper\Pdo\Connection`. It needs Phalcon `v5.19.0` or later, or Phalcon 6. A connection fires these events only when it has an events manager. In `registerProviders()`, give the connection the events manager from the container:
+
+```php
+<?php
+
+use Phalcon\Contracts\Events\Manager as EventsManager;
+use Phalcon\DataMapper\Pdo\Connection;
+
+$container->set(
+    Connection::class,
+    function () use ($container): Connection {
+        $connection = new Connection('mysql:host=localhost;dbname=app', 'user', 'secret');
+        $connection->setEventsManager($container->get(EventsManager::class));
+
+        return $connection;
+    }
+);
+```
+
+The panel shows the values that you give to `perform()` and to the `fetch*()` methods. `exec()` and `query()` take no values, so the panel shows only their statements.
+
 These limits apply in an ADR application:
 
 - **One request for each process.** `Phalcon\ADR\Application::handle()` supports a reused request in a long-lived worker, but collectors have no reset method. In a worker, their data grows from request to request. `HistoryCookie::fromGlobals()` also reads only at boot.
 - **Events manager.** The events manager must implement `Phalcon\Events\ManagerInterface`. The default manager does. A manager that implements only `Phalcon\Contracts\Events\Manager` gets no listener, so the bar is not injected.
-- **Empty panels.** The `database`, `route` and `exceptions` panels have no ADR source yet. The `view` and `cache` panels get data only when the application gives the events manager to these services. The provider reads no `config` service, so the `config` panel is empty.
+- **Empty panels.** The `route` and `exceptions` panels have no ADR source yet. The `database`, `view` and `cache` panels get data only when the application gives the events manager to these services. The provider reads no `config` service, so the `config` panel is empty.
 - **History.** The provider does not read the `history` keys. Request history works only in MVC.
 
 ### A Host with No Events Manager
