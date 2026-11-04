@@ -11,7 +11,7 @@ on:
 env:
   # Phalcon v5 C extension constraint (installed from source via PIE)
   PHALCON_CONSTRAINT: "^5.0"
-  EXTENSIONS: "fileinfo, json, mbstring, pdo, xml"
+  EXTENSIONS: "fileinfo, json, mbstring, pdo, pdo_sqlite, xml"
 
 permissions: { }
 
