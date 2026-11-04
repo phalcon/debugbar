@@ -112,11 +112,13 @@ $container->set(
 
 The panel shows the values that you give to `perform()` and to the `fetch*()` methods. `exec()` and `query()` take no values, so the panel shows only their statements.
 
+The `route` panel shows the Action class and the request attributes. The application gives this data in the `adr:beforeExecuteAction` event, so you do not have to do anything. The panel is empty when a middleware returns a response before the Action runs, and when no route matches the URL.
+
 These limits apply in an ADR application:
 
 - **One request for each process.** `Phalcon\ADR\Application::handle()` supports a reused request in a long-lived worker, but collectors have no reset method. In a worker, their data grows from request to request. `HistoryCookie::fromGlobals()` also reads only at boot.
 - **Events manager.** The events manager must implement `Phalcon\Events\ManagerInterface`. The default manager does. A manager that implements only `Phalcon\Contracts\Events\Manager` gets no listener, so the bar is not injected.
-- **Empty panels.** The `route` and `exceptions` panels have no ADR source yet. The `database`, `view` and `cache` panels get data only when the application gives the events manager to these services. The provider reads no `config` service, so the `config` panel is empty.
+- **Empty panels.** The `exceptions` panel has no ADR source yet. The `database`, `view` and `cache` panels get data only when the application gives the events manager to these services. The provider reads no `config` service, so the `config` panel is empty.
 - **History.** The provider does not read the `history` keys. Request history works only in MVC.
 
 ### A Host with No Events Manager

@@ -14,6 +14,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - `ADR\Provider` boots the bar in `Phalcon\ADR` applications (Phalcon `v5.18.0` or later, or Phalcon 6). [#14](https://github.com/phalcon/debugbar/issues/14)
 - The database, view, cache and route collectors take data through public methods, with no events manager. [#44](https://github.com/phalcon/debugbar/issues/44)
 - The Database panel shows `Phalcon\DataMapper` queries in ADR applications (Phalcon `v5.19.0` or later, or Phalcon 6). [#16](https://github.com/phalcon/debugbar/issues/16)
+- The Route panel shows the Action class and the request attributes in ADR applications. [#45](https://github.com/phalcon/debugbar/issues/45)
 
 ### Fixed
 
