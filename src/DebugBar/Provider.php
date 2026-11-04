@@ -22,12 +22,14 @@ use Phalcon\DebugBar\History\FilesystemHistory;
 use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\HistoryOptions;
+use Phalcon\DebugBar\Mvc\HistoryListener;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Di\DiInterface;
 use Phalcon\Http\Request;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\Response;
 use Phalcon\Mvc\Application;
+use Phalcon\Mvc\Url\UrlInterface;
 
 /**
  * Boots the debug bar against an MVC application. It reads the services from the
@@ -133,23 +135,38 @@ class Provider
         $this->historyCookie = HistoryCookie::fromGlobals();
         $history             = new FilesystemHistory($this->historyOptions, null, $this->historyCookie);
         $history->validateStorage();
-        $this->historyEndpoint = new HistoryEndpoint($this->historyOptions, $container);
+        $request               = fn (): ?RequestInterface => $this->resolveSharedRequest($container);
+        $this->historyEndpoint = new HistoryEndpoint(
+            $this->historyOptions,
+            $request,
+            fn (): string => $this->resolveBaseUri($container)
+        );
+        // The DI binds this closure to the container, so `$this` is not the provider here.
         $container->setShared(
             HistoryController::class,
-            function () use ($accessGate, $container, $history): HistoryController {
-                $request = $container->has('request') ? $container->getShared('request') : null;
-
+            function () use ($accessGate, $history, $request): HistoryController {
                 return new HistoryController(
                     $history,
                     $accessGate,
-                    $request instanceof RequestInterface ? $request : new Request(),
+                    $request() ?? new Request(),
                     new Response()
                 );
             }
         );
-        $eventsManager->attach('application:beforeHandleRequest', $this->historyEndpoint);
+        $eventsManager->attach('application:beforeHandleRequest', new HistoryListener($this->historyEndpoint));
 
         return $history;
+    }
+
+    private function resolveBaseUri(DiInterface $container): string
+    {
+        if (!$container->has('url')) {
+            return '/';
+        }
+
+        $url = $container->getShared('url');
+
+        return $url instanceof UrlInterface ? $url->getBaseUri() : '/';
     }
 
     private function resolveConfig(DiInterface $container): ?ConfigInterface
@@ -170,6 +187,17 @@ class Provider
         }
 
         $request = $container->get('request');
+
+        return $request instanceof RequestInterface ? $request : null;
+    }
+
+    private function resolveSharedRequest(DiInterface $container): ?RequestInterface
+    {
+        if (!$container->has('request')) {
+            return null;
+        }
+
+        $request = $container->getShared('request');
 
         return $request instanceof RequestInterface ? $request : null;
     }

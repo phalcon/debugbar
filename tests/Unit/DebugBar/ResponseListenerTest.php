@@ -23,12 +23,10 @@ use Phalcon\DebugBar\Injector;
 use Phalcon\DebugBar\Renderer;
 use Phalcon\DebugBar\ResponseListener;
 use Phalcon\DebugBar\Security\AccessGate;
-use Phalcon\Di\FactoryDefault;
 use Phalcon\Events\Event;
 use Phalcon\Http\Request;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\Response;
-use Phalcon\Mvc\Url;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\Fixtures\GridCollector;
 use Phalcon\Tests\Support\DebugBar\Fixtures\ListCollector;
@@ -413,13 +411,11 @@ final class ResponseListenerTest extends AbstractUnitTestCase
         RequestInterface $request,
         string $baseUri = '/'
     ): HistoryEndpoint {
-        $container = new FactoryDefault();
-        $url       = new Url();
-        $url->setBaseUri($baseUri);
-        $container->setShared('request', $request);
-        $container->setShared('url', $url);
-
-        return new HistoryEndpoint($options, $container);
+        return new HistoryEndpoint(
+            $options,
+            fn (): RequestInterface => $request,
+            fn (): string => $baseUri
+        );
     }
 
     private function event(): Event

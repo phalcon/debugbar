@@ -19,15 +19,18 @@ use Phalcon\DebugBar\Controllers\HistoryController;
 use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
+use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\Provider;
 use Phalcon\Di\Di;
 use Phalcon\Di\DiInterface;
 use Phalcon\Di\FactoryDefault;
 use Phalcon\Events\Manager;
 use Phalcon\Http\Request;
+use Phalcon\Http\RequestInterface;
 use Phalcon\Http\Response;
 use Phalcon\Http\ResponseInterface;
 use Phalcon\Mvc\Application;
+use Phalcon\Mvc\Dispatcher;
 use Phalcon\Mvc\Router;
 use Phalcon\Mvc\Url;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
@@ -37,6 +40,7 @@ use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use stdClass;
 
 use function array_keys;
+use function dirname;
 use function is_array;
 use function json_decode;
 use function parse_url;
@@ -77,6 +81,28 @@ final class ProviderTest extends AbstractUnitTestCase
             'subfolder GET'    => ['/app1/', 'GET', 200, '{"requests":[]}'],
             'subfolder DELETE' => ['/app1/', 'DELETE', 200, '{"cleared":0}'],
             'subfolder POST'   => ['/app1/', 'POST', 405, '{"error":"Method not allowed."}'],
+        ];
+    }
+
+    /**
+     * @return array<string, array{array<string, object>}>
+     */
+    public static function historyUnusableRequestServices(): array
+    {
+        return [
+            'missing' => [[]],
+            'invalid' => [['request' => new stdClass()]],
+        ];
+    }
+
+    /**
+     * @return array<string, array{array<string, object>}>
+     */
+    public static function historyUnusableUrlServices(): array
+    {
+        return [
+            'missing' => [[]],
+            'invalid' => [['url' => new stdClass()]],
         ];
     }
 
@@ -323,6 +349,24 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertFalse($response->getHeaders()->has('X-Debug-Bar'));
     }
 
+    public function testHistoryControllerReadsTheRequestService(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $request             = $this->createMock(RequestInterface::class);
+        $request->method('getServer')->willReturn('GET');
+        $request->method('getQuery')->willReturn('unknown-id');
+
+        $this->assertSame(404, $this->historyController(['request' => $request])->indexAction()->getStatusCode());
+    }
+
+    public function testHistoryControllerWithNoRequestServiceUsesANewRequest(): void
+    {
+        $_ENV[self::ENV_VAR]       = 'dev';
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+
+        $this->assertSame(200, $this->historyController([])->indexAction()->getStatusCode());
+    }
+
     public function testHistoryDoesNotResolveResponseServicesAtBoot(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
@@ -451,6 +495,32 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertFalse($container->has('debugbar.access_gate'));
     }
 
+    public function testHistoryUsesTheFinalRequestServiceRegisteredAfterBoot(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $initialRequest      = $this->createMock(RequestInterface::class);
+        $initialRequest->method('getURI')->willReturn('/orders');
+        $finalRequest = $this->createMock(RequestInterface::class);
+        $finalRequest->method('getURI')->willReturn('/_debugbar/open');
+        $em         = new Manager();
+        $app        = $this->applicationWithServices($em, []);
+        $dispatcher = new Dispatcher();
+
+        /** @var DiInterface $container */
+        $container = $app->getDI();
+        $container->set('request', $initialRequest);
+
+        (new Provider($app, [
+            'env'     => ['var' => self::ENV_VAR],
+            'history' => ['enabled' => true, 'path' => $this->historyPath()],
+        ]))->boot();
+
+        $container->setShared('request', $finalRequest);
+        $em->fire('application:beforeHandleRequest', $app, $dispatcher);
+
+        $this->assertSame(HistoryEndpoint::CONTROLLER_NAMESPACE, $dispatcher->getNamespaceName());
+    }
+
     public function testHistoryUsesTheFinalUrlServiceRegisteredAfterBoot(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
@@ -473,6 +543,49 @@ final class ProviderTest extends AbstractUnitTestCase
 
         $this->assertIsArray($panel);
         $this->assertSame('/final/_debugbar/open', $panel['url']);
+    }
+
+    /**
+     * @param array<string, object> $services
+     */
+    #[DataProvider('historyUnusableRequestServices')]
+    public function testHistoryWithNoUsableRequestDoesNotSelectTheController(array $services): void
+    {
+        $_ENV[self::ENV_VAR]    = 'dev';
+        $_SERVER['REQUEST_URI'] = '/_debugbar/open';
+        $em                     = new Manager();
+        $app                    = $this->applicationWithServices($em, $services);
+        $dispatcher             = new Dispatcher();
+        $dispatcher->setNamespaceName('App');
+
+        (new Provider($app, [
+            'env'     => ['var' => self::ENV_VAR],
+            'history' => ['enabled' => true, 'path' => $this->historyPath()],
+        ]))->boot();
+
+        $em->fire('application:beforeHandleRequest', $app, $dispatcher);
+
+        $this->assertSame('App', $dispatcher->getNamespaceName());
+    }
+
+    /**
+     * @param array<string, object> $services
+     */
+    #[DataProvider('historyUnusableUrlServices')]
+    public function testHistoryWithNoUsableUrlUsesTheRootPath(array $services): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $app                 = $this->applicationWithServices(new Manager(), $services);
+
+        (new Provider($app, [
+            'env'     => ['var' => self::ENV_VAR],
+            'history' => ['enabled' => true, 'path' => $this->historyPath()],
+        ]))->boot();
+
+        $panel = $this->bootedBar()->collect()['data']['history']['panel'];
+
+        $this->assertIsArray($panel);
+        $this->assertSame('/_debugbar/open', $panel['url']);
     }
 
     public function testHistoryWithoutEventsManagerDoesNotRegisterAnUnreachableEndpoint(): void
@@ -663,6 +776,32 @@ final class ProviderTest extends AbstractUnitTestCase
         }
 
         return $bar;
+    }
+
+    /**
+     * @param array<string, object> $services
+     */
+    private function historyController(array $services): HistoryController
+    {
+        $_GET = [];
+        $app  = $this->applicationWithServices(new Manager(), $services);
+
+        (new Provider($app, [
+            'env'     => ['var' => self::ENV_VAR],
+            'history' => ['enabled' => true, 'path' => $this->historyPath()],
+        ]))->boot();
+
+        /** @var DiInterface $container */
+        $container  = $app->getDI();
+        $controller = $container->getShared(HistoryController::class);
+        $this->assertInstanceOf(HistoryController::class, $controller);
+
+        return $controller;
+    }
+
+    private function historyPath(): string
+    {
+        return dirname(__DIR__, 2) . '/_output/debugbar-history';
     }
 
     private function provider(Application $app): Provider

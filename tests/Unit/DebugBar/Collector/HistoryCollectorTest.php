@@ -16,9 +16,7 @@ namespace Phalcon\Tests\Unit\DebugBar\Collector;
 use Phalcon\DebugBar\Collector\HistoryCollector;
 use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\HistoryOptions;
-use Phalcon\Di\FactoryDefault;
 use Phalcon\Http\Request;
-use Phalcon\Mvc\Url;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
 
@@ -49,12 +47,12 @@ final class HistoryCollectorTest extends AbstractUnitTestCase
 
     private function collector(): HistoryCollector
     {
-        $container = new FactoryDefault();
-        $url       = new Url();
-        $url->setBaseUri('/');
-        $container->setShared('request', new Request());
-        $container->setShared('url', $url);
-
-        return new HistoryCollector(new HistoryEndpoint(new HistoryOptions(true), $container));
+        return new HistoryCollector(
+            new HistoryEndpoint(
+                new HistoryOptions(true),
+                fn (): Request => new Request(),
+                fn (): string => '/'
+            )
+        );
     }
 }

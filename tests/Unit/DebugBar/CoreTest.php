@@ -22,7 +22,6 @@ use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\HistoryOptions;
-use Phalcon\Di\Di;
 use Phalcon\Events\Manager;
 use Phalcon\Http\Request;
 use Phalcon\Http\RequestInterface;
@@ -373,12 +372,10 @@ final class CoreTest extends AbstractUnitTestCase
 
     private function endpoint(RequestInterface $request): HistoryEndpoint
     {
-        $container = new Di();
-        $container->setShared('request', $request);
-
         return new HistoryEndpoint(
             new HistoryOptions(true, '/_debugbar/open', sys_get_temp_dir() . '/unused'),
-            $container
+            fn (): RequestInterface => $request,
+            fn (): string => '/'
         );
     }
 
