@@ -114,6 +114,42 @@ The panel shows the values that you give to `perform()` and to the `fetch*()` me
 
 The `route` panel shows the Action class and the request attributes. The application gives this data in the `adr:beforeExecuteAction` event, so you do not have to do anything. The panel is empty when a middleware returns a response before the Action runs, and when no route matches the URL.
 
+The `view` and `cache` panels also need the events manager. In `registerProviders()`, give it to the `Phalcon\Mvc\View\Simple` instance and to the `Phalcon\Cache\Cache` instance:
+
+```php
+<?php
+
+use Phalcon\Cache\Adapter\Memory;
+use Phalcon\Cache\Cache;
+use Phalcon\Contracts\Events\Manager as EventsManager;
+use Phalcon\Contracts\View\Renderer;
+use Phalcon\Mvc\View\Simple;
+use Phalcon\Storage\SerializerFactory;
+
+$container->set(
+    Renderer::class,
+    function () use ($container): Renderer {
+        $view = new Simple();
+        $view->setViewsDir('/path/to/views/');
+        $view->setEventsManager($container->get(EventsManager::class));
+
+        return $view;
+    }
+);
+
+$container->set(
+    Cache::class,
+    function () use ($container): Cache {
+        $cache = new Cache(new Memory(new SerializerFactory()));
+        $cache->setEventsManager($container->get(EventsManager::class));
+
+        return $cache;
+    }
+);
+```
+
+Give the events manager to the cache and not to its adapter. If you give it to both, the `cache` panel shows each operation two times. The panel shows `get()`, `set()`, `has()` and `delete()`. It also shows the keys of `getMultiple()` and `setMultiple()`. It does not show `deleteMultiple()` or `clear()`.
+
 These limits apply in an ADR application:
 
 - **One request for each process.** `Phalcon\ADR\Application::handle()` supports a reused request in a long-lived worker, but collectors have no reset method. In a worker, their data grows from request to request. `HistoryCookie::fromGlobals()` also reads only at boot.
