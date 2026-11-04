@@ -26,9 +26,11 @@ use Phalcon\Http\ResponseInterface;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\ADR\Action\Data\GetData;
 use Phalcon\Tests\Support\DebugBar\ADR\Action\Page\GetPage;
+use Phalcon\Tests\Support\DebugBar\ADR\Action\Queries\GetQueries;
 use Phalcon\Tests\Support\DebugBar\ADR\Front;
 use Phalcon\Tests\Support\DebugBar\ADR\RecordingEmitter;
 use PHPUnit\Framework\Attributes\BackupGlobals;
+use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 
 use function is_array;
 
@@ -153,6 +155,24 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->provider()->provide($container);
 
         $this->assertInstanceOf(DebugBar::class, Debug::getBar());
+    }
+
+    #[RequiresPhpExtension('pdo_sqlite')]
+    public function testQueryReachesTheDatabasePanel(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $response = $this->dispatch('/queries');
+
+        $database = $this->bootedBar()->collect()['data']['database'];
+        $panel    = $database['panel'];
+        if (!is_array($panel) || !is_array($panel[0] ?? null)) {
+            $this->fail('The database panel should have a row.');
+        }
+
+        $this->assertSame(1, $database['badge']);
+        $this->assertSame(GetQueries::STATEMENT . '  {"value":42}', $panel[0]['message']);
+        $this->assertStringContainsString(GetQueries::STATEMENT, $response->getContent());
     }
 
     public function testRequestReachesTheCollector(): void

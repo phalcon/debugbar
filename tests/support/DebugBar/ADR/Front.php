@@ -18,8 +18,11 @@ use Phalcon\ADR\Front\AbstractHttpFront;
 use Phalcon\Container\Container;
 use Phalcon\Contracts\ADR\Application as ApplicationInterface;
 use Phalcon\Contracts\ADR\Emitter\Emitter;
+use Phalcon\Contracts\Events\Manager as ManagerContract;
+use Phalcon\DataMapper\Pdo\Connection;
 use Phalcon\DebugBar\ADR\Provider;
 use Phalcon\DebugBar\DebugBarTypes;
+use Phalcon\Events\ManagerInterface;
 
 /**
  * An ADR front controller that registers the debug bar provider last, as an
@@ -55,6 +58,19 @@ final class Front extends AbstractHttpFront
             Emitter::class,
             function () use ($emitter): Emitter {
                 return $emitter;
+            }
+        );
+
+        $container->set(
+            Connection::class,
+            function () use ($container): Connection {
+                $connection    = new Connection('sqlite::memory:');
+                $eventsManager = $container->get(ManagerContract::class);
+                if ($eventsManager instanceof ManagerInterface) {
+                    $connection->setEventsManager($eventsManager);
+                }
+
+                return $connection;
             }
         );
 
