@@ -13,11 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\History;
 
-use Phalcon\Di\DiInterface;
-use Phalcon\Events\EventInterface;
+use Closure;
 use Phalcon\Http\RequestInterface;
-use Phalcon\Mvc\DispatcherInterface;
-use Phalcon\Mvc\Url\UrlInterface;
 
 use function is_string;
 use function ltrim;
@@ -27,52 +24,36 @@ use function rtrim;
 use const PHP_URL_PATH;
 
 /**
- * Selects the package controller without adding or changing application routes.
- * The public URL includes the application's base URI.
+ * Finds the public URL of the history endpoint, which includes the base URI of
+ * the application. It has no container: each integration gives closures that read
+ * the request and the base URI, and the endpoint calls them when it needs a value.
  */
 final class HistoryEndpoint
 {
     public const CONTROLLER_NAMESPACE = 'Phalcon\\DebugBar\\Controllers';
 
+    /**
+     * @param Closure(): ?RequestInterface $request
+     * @param Closure(): string            $baseUri
+     */
     public function __construct(
         private readonly HistoryOptions $options,
-        private readonly DiInterface $container
+        private readonly Closure $request,
+        private readonly Closure $baseUri
     ) {
-    }
-
-    public function __invoke(EventInterface $event, mixed $source, mixed $dispatcher): void
-    {
-        if (!$dispatcher instanceof DispatcherInterface || !$this->matches()) {
-            return;
-        }
-
-        $dispatcher->setNamespaceName(self::CONTROLLER_NAMESPACE);
-        $dispatcher->setControllerName('history');
-        $dispatcher->setControllerSuffix('Controller');
-        $dispatcher->setActionSuffix('Action');
-        $dispatcher->setActionName('open');
-        $dispatcher->setParams([]);
     }
 
     public function cookiePath(): string
     {
-        $baseUri = '/';
-        if ($this->container->has('url')) {
-            $url = $this->container->getShared('url');
-            if ($url instanceof UrlInterface) {
-                $path = parse_url($url->getBaseUri(), PHP_URL_PATH);
-                if (is_string($path) && '' !== $path) {
-                    $baseUri = $path;
-                }
-            }
-        }
+        $path    = parse_url(($this->baseUri)(), PHP_URL_PATH);
+        $baseUri = is_string($path) && '' !== $path ? $path : '/';
 
         return '/' . ltrim(rtrim($baseUri, '/') . '/', '/');
     }
 
     public function matches(): bool
     {
-        $request = $this->request();
+        $request = ($this->request)();
 
         return null !== $request && parse_url($request->getURI(), PHP_URL_PATH) === $this->url();
     }
@@ -80,16 +61,5 @@ final class HistoryEndpoint
     public function url(): string
     {
         return rtrim($this->cookiePath(), '/') . '/' . ltrim($this->options->url, '/');
-    }
-
-    private function request(): ?RequestInterface
-    {
-        if (!$this->container->has('request')) {
-            return null;
-        }
-
-        $request = $this->container->getShared('request');
-
-        return $request instanceof RequestInterface ? $request : null;
     }
 }

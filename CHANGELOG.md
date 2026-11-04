@@ -17,6 +17,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - The Route panel shows the Action class and the request attributes in ADR applications. [#45](https://github.com/phalcon/debugbar/issues/45)
 - Documentation and tests for the View and Cache panels in ADR applications. [#46](https://github.com/phalcon/debugbar/issues/46)
 - `Logger\ExceptionAdapter` feeds the Exceptions panel from the logger in ADR applications. [#47](https://github.com/phalcon/debugbar/issues/47)
+- `History\HistoryEndpoint` takes the request and the base URI with no DI container, and `Mvc\HistoryListener` selects the MVC controller. [#41](https://github.com/phalcon/debugbar/issues/41)
 
 ### Fixed
 

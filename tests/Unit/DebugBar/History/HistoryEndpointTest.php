@@ -15,82 +15,90 @@ namespace Phalcon\Tests\Unit\DebugBar\History;
 
 use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\HistoryOptions;
-use Phalcon\Di\Di;
-use Phalcon\Di\FactoryDefault;
-use Phalcon\Events\Event;
 use Phalcon\Http\RequestInterface;
-use Phalcon\Mvc\Dispatcher;
-use Phalcon\Mvc\Url;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class HistoryEndpointTest extends AbstractUnitTestCase
 {
-    public function testInternalRequestsUseThePackageControllerAndDiscardRouteParameters(): void
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function baseUris(): array
     {
-        $request = $this->createMock(RequestInterface::class);
-        $request->method('getURI')->willReturn('/app1/_debugbar/open?id=entry');
-        $endpoint   = $this->endpoint($request, '/app1/');
-        $dispatcher = new Dispatcher();
-        $dispatcher->setControllerSuffix('Handler');
-        $dispatcher->setActionSuffix('Execute');
-        $dispatcher->setParams(['unrelated']);
-
-        $endpoint(new Event('beforeHandleRequest', $this), null, $dispatcher);
-
-        $this->assertTrue($endpoint->matches());
-        $this->assertSame(HistoryEndpoint::CONTROLLER_NAMESPACE, $dispatcher->getNamespaceName());
-        $this->assertSame('Phalcon\\DebugBar\\Controllers\\HistoryController', $dispatcher->getControllerClass());
-        $this->assertSame('open', $dispatcher->getActionName());
-        $this->assertSame('Action', $dispatcher->getActionSuffix());
-        $this->assertSame([], $dispatcher->getParams());
+        return [
+            'root'                => ['/', '/'],
+            'path'                => ['/app1/', '/app1/'],
+            'no trailing slash'   => ['/app1', '/app1/'],
+            'absolute'            => ['https://example.test/app1/', '/app1/'],
+            'absolute, no path'   => ['https://example.test', '/'],
+            'empty'               => ['', '/'],
+        ];
     }
 
-    public function testMissingOptionalServicesUseTheRootPathAndDoNotMatch(): void
+    public function testBaseUriAndRequestAreReadAtCallTime(): void
     {
-        $endpoint = new HistoryEndpoint(new HistoryOptions(true), new Di());
+        $baseUri = '/initial/';
+        $request = null;
+        $final   = $this->createMock(RequestInterface::class);
+        $final->method('getURI')->willReturn('/final/_debugbar/open');
+        $endpoint = new HistoryEndpoint(
+            new HistoryOptions(true),
+            function () use (&$request): ?RequestInterface {
+                return $request;
+            },
+            function () use (&$baseUri): string {
+                return $baseUri;
+            }
+        );
+
+        $this->assertSame('/initial/_debugbar/open', $endpoint->url());
+        $this->assertFalse($endpoint->matches());
+
+        $baseUri = '/final/';
+        $request = $final;
+
+        $this->assertSame('/final/_debugbar/open', $endpoint->url());
+        $this->assertTrue($endpoint->matches());
+    }
+
+    #[DataProvider('baseUris')]
+    public function testCookiePathIsThePathOfTheBaseUri(string $baseUri, string $expected): void
+    {
+        $this->assertSame($expected, $this->endpoint(null, $baseUri)->cookiePath());
+    }
+
+    public function testNoRequestUsesTheRootPathAndDoesNotMatch(): void
+    {
+        $endpoint = $this->endpoint(null);
 
         $this->assertSame('/', $endpoint->cookiePath());
         $this->assertSame('/_debugbar/open', $endpoint->url());
         $this->assertFalse($endpoint->matches());
     }
 
-    public function testOrdinaryRequestsKeepTheirDispatcherConfiguration(): void
+    public function testRequestForTheEndpointMatches(): void
+    {
+        $request = $this->createMock(RequestInterface::class);
+        $request->method('getURI')->willReturn('/app1/_debugbar/open?id=entry');
+
+        $this->assertTrue($this->endpoint($request, '/app1/')->matches());
+    }
+
+    public function testRequestWithTheEndpointInItsQueryDoesNotMatch(): void
     {
         $request = $this->createMock(RequestInterface::class);
         $request->method('getURI')->willReturn('/app1/orders/open?next=/_debugbar/open');
-        $endpoint   = $this->endpoint($request, 'http://localhost:8080/app1/');
-        $dispatcher = new Dispatcher();
-        $dispatcher->setNamespaceName('App');
-        $dispatcher->setControllerName('orders');
-        $dispatcher->setActionName('open');
-        $dispatcher->setParams(['42']);
 
-        $endpoint(new Event('beforeHandleRequest', $this), null, $dispatcher);
-
-        $this->assertFalse($endpoint->matches());
-        $this->assertSame('App', $dispatcher->getNamespaceName());
-        $this->assertSame('orders', $dispatcher->getControllerName());
-        $this->assertSame('open', $dispatcher->getActionName());
-        $this->assertSame(['42'], $dispatcher->getParams());
+        $this->assertFalse($this->endpoint($request, 'http://localhost:8080/app1/')->matches());
     }
 
-    public function testUnrelatedEventPayloadIsIgnored(): void
+    private function endpoint(?RequestInterface $request, string $baseUri = '/'): HistoryEndpoint
     {
-        $request = $this->createMock(RequestInterface::class);
-        $request->expects($this->never())->method('getURI');
-        $endpoint = $this->endpoint($request);
-
-        $endpoint(new Event('beforeHandleRequest', $this), null, null);
-    }
-
-    private function endpoint(RequestInterface $request, string $baseUri = '/'): HistoryEndpoint
-    {
-        $container = new FactoryDefault();
-        $url       = new Url();
-        $url->setBaseUri($baseUri);
-        $container->setShared('request', $request);
-        $container->setShared('url', $url);
-
-        return new HistoryEndpoint(new HistoryOptions(true), $container);
+        return new HistoryEndpoint(
+            new HistoryOptions(true),
+            fn (): ?RequestInterface => $request,
+            fn (): string => $baseUri
+        );
     }
 }
