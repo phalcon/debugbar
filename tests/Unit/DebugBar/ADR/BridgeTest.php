@@ -17,10 +17,13 @@ use Closure;
 use Phalcon\DataMapper\Pdo\Connection;
 use Phalcon\DebugBar\ADR\Bridge;
 use Phalcon\DebugBar\Collector\DatabaseCollector;
+use Phalcon\DebugBar\Collector\RouteCollector;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\Events\Manager;
 use Phalcon\Events\ManagerInterface;
+use Phalcon\Http\Request;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
+use Phalcon\Tests\Support\DebugBar\ADR\Action\Page\GetPage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 
@@ -37,6 +40,31 @@ final class BridgeTest extends AbstractUnitTestCase
             'perform' => [static fn (Connection $connection): mixed => $connection->perform('SELECT 1')],
             'query'   => [static fn (Connection $connection): mixed => $connection->query('SELECT 1')],
         ];
+    }
+
+    public function testActionEventShowsTheActionClassAndTheAttributes(): void
+    {
+        $manager   = new Manager();
+        $collector = $this->routeCollector($manager);
+        $request   = new Request();
+        $request->getAttributes()->set('id', 5);
+
+        $manager->fire('adr:beforeExecuteAction', new GetPage(), $request);
+
+        $this->assertSame(
+            ['Action' => GetPage::class, 'Attributes' => '{"id":5}'],
+            $collector->collect()['panel']
+        );
+    }
+
+    public function testActionEventWithNoRequestIsIgnored(): void
+    {
+        $manager   = new Manager();
+        $collector = $this->routeCollector($manager);
+
+        $manager->fire('adr:beforeExecuteAction', new GetPage());
+
+        $this->assertSame([], $collector->collect()['panel']);
     }
 
     public function testAfterEventWithInvalidValuesShowsOnlyTheStatement(): void
@@ -61,7 +89,7 @@ final class BridgeTest extends AbstractUnitTestCase
         $this->assertSame(0, $collector->collect()['badge']);
     }
 
-    public function testBarWithNoDatabaseCollectorAttachesNothing(): void
+    public function testBarWithNoCollectorsAttachesNothing(): void
     {
         $manager = new Manager();
 
@@ -71,6 +99,28 @@ final class BridgeTest extends AbstractUnitTestCase
             $this->assertFalse($manager->hasListeners('dm:before' . $operation));
             $this->assertFalse($manager->hasListeners('dm:after' . $operation));
         }
+
+        $this->assertFalse($manager->hasListeners('adr:beforeExecuteAction'));
+    }
+
+    public function testBarWithOnlyTheDatabaseCollectorGetsNoRouteListener(): void
+    {
+        $manager = new Manager();
+
+        $this->collector($manager);
+
+        $this->assertTrue($manager->hasListeners('dm:afterPerform'));
+        $this->assertFalse($manager->hasListeners('adr:beforeExecuteAction'));
+    }
+
+    public function testBarWithOnlyTheRouteCollectorGetsNoDatabaseListeners(): void
+    {
+        $manager = new Manager();
+
+        $this->routeCollector($manager);
+
+        $this->assertTrue($manager->hasListeners('adr:beforeExecuteAction'));
+        $this->assertFalse($manager->hasListeners('dm:afterPerform'));
     }
 
     public function testFetchAllRecordsOneQuery(): void
@@ -128,5 +178,14 @@ final class BridgeTest extends AbstractUnitTestCase
         $connection->setEventsManager($manager);
 
         return $connection;
+    }
+
+    private function routeCollector(ManagerInterface $manager): RouteCollector
+    {
+        $collector = new RouteCollector();
+
+        (new Bridge((new DebugBar())->addCollector($collector)))->subscribe($manager);
+
+        return $collector;
     }
 }
