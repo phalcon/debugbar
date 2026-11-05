@@ -23,15 +23,30 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - The `debug_page` option shows the debug page for a server error in ADR applications. [#48](https://github.com/phalcon/debugbar/issues/48)
 - `Mvc\Bridge` and `ServiceBridge` feed the built-in collectors, which no longer hold framework event names. [#15](https://github.com/phalcon/debugbar/issues/15)
 - `DebugBar::addCollector()` subscribes a collector that implements `Contracts\Subscriber`. [#15](https://github.com/phalcon/debugbar/issues/15)
+- `Core::createHistory()` creates the request history from the `history` config, and `History\HistoryRecorder` holds its workflow. [#62](https://github.com/phalcon/debugbar/issues/62)
+- `Core::getBar()` returns the bar that `boot()` created. [#62](https://github.com/phalcon/debugbar/issues/62)
+- `RequestContext` holds the client address and the AJAX and HTTPS flags for each decision, and `Injector::isHtml()` tells if a response is an HTML page. [#62](https://github.com/phalcon/debugbar/issues/62)
+- `Security\Redactor::redactUri()` applies the redaction rule to the query of a URI. [#62](https://github.com/phalcon/debugbar/issues/62)
+- A shared fixture, `tests/support/assets/DebugBar/panel-contract.json`, makes the PHP and JavaScript tests use the same payload. [#62](https://github.com/phalcon/debugbar/issues/62)
 
 ### Changed
 
 - **Breaking:** the built-in collectors no longer implement `Contracts\Subscriber` and have no `subscribe()` method. [#15](https://github.com/phalcon/debugbar/issues/15)
+- **Breaking:** `Logger\Adapter` and `Logger\ExceptionAdapter` have no constructor argument. They read the active bar each time the logger writes, so you can create them before the bar boots. Replace `new Adapter(Debug::getBar())` with `new Adapter()`. [#62](https://github.com/phalcon/debugbar/issues/62)
+- **Breaking:** `LoggerCollector` takes a `Security\Redactor`, and it redacts the log context. [#62](https://github.com/phalcon/debugbar/issues/62)
+- `Core::boot()` and `ResponseListener` take one `?History\HistoryRecorder` in place of the history, endpoint and cookie arguments. [#62](https://github.com/phalcon/debugbar/issues/62)
+- `History\HistoryEndpoint::CONTROLLER_NAMESPACE` is now `Mvc\HistoryListener::CONTROLLER_NAMESPACE`. [#62](https://github.com/phalcon/debugbar/issues/62)
+- The providers validate the `history` config after they check for the events manager, and for the container or the router. An invalid `history.path` does not throw when history cannot run. [#62](https://github.com/phalcon/debugbar/issues/62)
+- A collector no longer sends `widget.icon` and `AbstractCollector` has no `$icon` property, because the browser client never read them. `indicator.icon` does not change. [#62](https://github.com/phalcon/debugbar/issues/62)
+- `DebugBarTypes` holds the wire contract and the config shapes, and it lists the panel names, so static analysis rejects an unknown panel name. [#62](https://github.com/phalcon/debugbar/issues/62)
+- The debug page in ADR applications uses `Injector::isHtml()` and no longer depends on the injection rules of the bar. [#62](https://github.com/phalcon/debugbar/issues/62)
 
 ### Fixed
 
 - History: check storage at boot, remove empty browser directories, fix glob paths on Windows, add `nosniff` to JSON responses.
 - The browser asset exports test helpers only outside a DOM, and no longer hard-codes the request collector name.
+- The `request` panel and request history no longer show or store a query value under a masked key in the URI. [#62](https://github.com/phalcon/debugbar/issues/62)
+- The documentation states the effect of a long-lived worker on request history. [#62](https://github.com/phalcon/debugbar/issues/62)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 

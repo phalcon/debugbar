@@ -162,7 +162,6 @@ use Phalcon\ADR\Responder\StatusMapper;
 use Phalcon\ADR\Responder\ViewResponder;
 use Phalcon\Contracts\Logger\Logger as LoggerContract;
 use Phalcon\Contracts\View\Renderer;
-use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\Logger\ExceptionAdapter;
 use Phalcon\Logger\Adapter\Stream;
 use Phalcon\Logger\Logger;
@@ -174,7 +173,7 @@ $container->set(
             'app',
             [
                 'main'     => new Stream('/var/log/app.log'),
-                'debugbar' => new ExceptionAdapter(Debug::getBar()),
+                'debugbar' => new ExceptionAdapter(),
             ]
         );
     }
@@ -191,7 +190,7 @@ $container->set(
 );
 ```
 
-The closure calls `Debug::getBar()` when the application first uses the logger. This is after the provider boots the bar. The adapter does not change the response and does not keep the exception from the error responder. The panel also shows `RouteNotFound` for a URL with no route, because the error responder logs this too. If the error responder itself fails, the application returns a bare 500 response and logs nothing, so the panel does not show the exception.
+The adapter reads the active bar each time the logger writes, so you can create the logger before the provider boots the bar. An exception that the logger writes before the boot is lost. The adapter does not change the response and does not keep the exception from the error responder. The panel also shows `RouteNotFound` for a URL with no route, because the error responder logs this too. If the error responder itself fails, the application returns a bare 500 response and logs nothing, so the panel does not show the exception.
 
 The `history` keys turn on request history. You do not have to add a route. Set `history.base_uri` when the application is not at the root of the host, because an ADR application has no `url` service by default.
 
@@ -244,7 +243,7 @@ $debug = (new Debug())->setBlacklist(['server' => ['DB_PASSWORD', 'APP_CRYPT_SAL
 
 These limits apply in an ADR application:
 
-- **One request for each process.** `Phalcon\ADR\Application::handle()` supports a reused request in a long-lived worker, but collectors have no reset method. In a worker, their data grows from request to request. `HistoryCookie::fromGlobals()` also reads only at boot.
+- **One request for each process.** `Phalcon\ADR\Application::handle()` supports a reused request in a long-lived worker, but collectors have no reset method. In a worker, their data grows from request to request. `HistoryCookie::fromGlobals()` also reads only at boot, so history uses the cookie of the first browser for all requests in the worker. The request data of one browser can then appear in the history of another browser.
 - **Events manager.** The events manager must implement `Phalcon\Events\ManagerInterface`. The default manager does. A manager that implements only `Phalcon\Contracts\Events\Manager` gets no listener, so the bar is not injected.
 - **Empty panels.** The `database`, `view` and `cache` panels get data only when the application gives the events manager to these services. The `exceptions` panel gets data only when the application adds `ExceptionAdapter` to its logger. The provider reads no `config` service, so the `config` panel is empty.
 
@@ -279,9 +278,18 @@ if (null !== $listener) {
 }
 ```
 
+To use request history, create the recorder from the `history` keys and give it to `boot()`. `createHistory()` returns `null` when the bar cannot boot or history is off. It does not route the URL: send `history.url` to `Phalcon\DebugBar\History\HistoryHandler` in your host, with `$recorder->history()` and `$core->getAccessGate()`.
+
+```php
+<?php
+
+$recorder = $core->createHistory(fn () => $request);
+$core->boot(null, $request, null, $recorder);
+```
+
 ## Configuration
 
-The second argument to `Provider` is a nested array. Every key is optional. `Phalcon\DebugBar\ADR\Provider` and `Phalcon\DebugBar\Core` take the same array as their only argument. `Core` does not read the `debug_page` and `history` keys.
+The second argument to `Provider` is a nested array. Every key is optional. `Phalcon\DebugBar\ADR\Provider` and `Phalcon\DebugBar\Core` take the same array as their only argument. `Core` does not read the `debug_page` key.
 
 | Key                | Type                      | Default                  | Purpose                                                          |
 |--------------------|---------------------------|--------------------------|------------------------------------------------------------------|
@@ -348,9 +356,9 @@ before applying application controller rules:
 ```php
 <?php
 
-use Phalcon\DebugBar\History\HistoryEndpoint;
+use Phalcon\DebugBar\Mvc\HistoryListener;
 
-if (HistoryEndpoint::CONTROLLER_NAMESPACE === $dispatcher->getNamespaceName()) {
+if (HistoryListener::CONTROLLER_NAMESPACE === $dispatcher->getNamespaceName()) {
     return true;
 }
 ```
@@ -486,6 +494,8 @@ Debug::getBar()?->addCollector(new OrdersCollector());
 
 `addCollector()` calls `subscribe()` when the bar has an events manager. A collector with no events does not implement `Subscriber`, and you add it the same way. A collector with the name of a built-in collector replaces it. The bridges do not feed the replacement, so it must attach its own listeners.
 
+The bar does not redact the data of a custom collector. Run sensitive data through `Phalcon\DebugBar\Security\Redactor` in the collector. The collector does not receive the `redact.mask` and `redact.hidden` values, so give them to its `Redactor`.
+
 ## Sharing the Events Manager
 
 Streamed collectors only receive events from components that fire on the same events manager the bar is subscribed to. Phalcon components fire events only on an events manager set on them explicitly; they do not read one from the container. Register a single events manager as a shared service and hand it to the application and to each component whose events you want.
@@ -551,18 +561,17 @@ The `exceptions` collector also captures throwables automatically. In an MVC app
 - Phalcon 5 (the C extension) exposes the `Phalcon\Logger` adapter contract the adapter builds on.
 - Phalcon 6 (`phalcon/phalcon`) exposes the same contract. The adapter attaches the same way on either runtime.
 
-The adapter forwards each `Phalcon\Logger\Item` to the active bar through `Phalcon\DebugBar\Debug::getBar()`, reading the item's level name, message, and PSR-3 context. Forwarding no-ops when the `logger` collector is absent or disabled, so the adapter is safe to leave attached. The adapter also accepts a `null` bar - which `Debug::getBar()` returns until the bar boots - so it can be attached unconditionally.
+The adapter forwards each `Phalcon\Logger\Item` to the active bar through `Phalcon\DebugBar\Debug::getBar()`, reading the item's level name, message, and PSR-3 context. Forwarding no-ops when the `logger` collector is absent or disabled, so the adapter is safe to leave attached. The adapter reads the active bar each time the logger writes, so you can attach it before the bar boots. Items that the logger writes before the boot are lost.
 
 ```php
 <?php
 
-use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\Logger\Adapter;
 use Phalcon\Logger\Adapter\Stream;
 use Phalcon\Logger\Logger;
 
 $logger = new Logger('messages', ['main' => new Stream('/var/log/app.log')]);
-$logger->addAdapter('debugbar', new Adapter(Debug::getBar()));
+$logger->addAdapter('debugbar', new Adapter());
 
 $logger->info('user login', ['user_id' => 42]);
 $logger->error('payment declined', ['order_id' => 1001]);
@@ -589,7 +598,11 @@ use Phalcon\DebugBar\Provider;
 - **Masked** keys keep their key but replace the value with `***`.
 - **Hidden** keys are dropped entirely.
 
-The default masked keys are `authorization`, `cookie`, `csrf`, `key`, `password`, `secret`, and `token`. The `request`, `config`, and `session` collectors run their data through the redactor. The `session` collector also omits the raw session id and every `$PHALCON/*` internal key, including the CSRF token.
+The default masked keys are `authorization`, `cookie`, `csrf`, `key`, `password`, `secret`, and `token`. The redactor matches whole key names, so `token` does not match `reset_token`. Add other keys to `redact.mask`.
+
+The `request`, `config`, `session`, and `logger` collectors run their data through the redactor. The `request` panel and request history also redact the query of the URI. When the redactor changes a value in a query, it rebuilds the query, so the encoding of the other values can change. The `session` collector also omits the raw session id and every `$PHALCON/*` internal key, including the CSRF token.
+
+The `database` panel and request history show and store query bindings as they are, because generated names such as `:APL0` do not match a key. The redactor does not change log messages, exception messages, or stack traces.
 
 `Phalcon\DebugBar\Security\AccessGate` decides who receives the bar within an allowed environment. An empty IP allowlist admits any client. When both an allowlist and a callback are given, both must pass.
 
