@@ -16,14 +16,13 @@ namespace Phalcon\DebugBar\ADR;
 use Phalcon\Debug;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\Injector;
+use Phalcon\DebugBar\RequestContext;
 use Phalcon\DebugBar\ResponseListener;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Events\EventInterface;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
 use Throwable;
-
-use function is_string;
 
 /**
  * Shows the debug page for a server error in an ADR application. The application
@@ -65,10 +64,11 @@ final class DebugPageListener
      */
     private function applies(ResponseInterface $response): bool
     {
-        $clientIp = $this->request?->getClientAddress();
+        $context = RequestContext::fromRequest($this->request);
 
         return ($response->getStatusCode() ?? 0) >= 500
-            && $this->accessGate->allows(is_string($clientIp) ? $clientIp : null)
-            && (new Injector())->shouldInject($response, $this->request?->isAjax() ?? false);
+            && $this->accessGate->allows($context->clientIp)
+            && !$context->isAjax
+            && (new Injector())->isHtml($response);
     }
 }
