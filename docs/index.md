@@ -191,12 +191,33 @@ $container->set(
 
 The closure calls `Debug::getBar()` when the application first uses the logger. This is after the provider boots the bar. The adapter does not change the response and does not keep the exception from the error responder. The panel also shows `RouteNotFound` for a URL with no route, because the error responder logs this too. If the error responder itself fails, the application returns a bare 500 response and logs nothing, so the panel does not show the exception.
 
+The `history` keys turn on request history. You do not have to add a route. Set `history.base_uri` when the application is not at the root of the host, because an ADR application has no `url` service by default.
+
+```php
+<?php
+
+use Phalcon\DebugBar\ADR\Provider as DebugBarProvider;
+
+(new DebugBarProvider([
+    'history' => [
+        'enabled'  => true,
+        'path'     => dirname(__DIR__) . '/runtime/debugbar',
+        'base_uri' => '/',
+    ],
+]))->provide($container);
+```
+
+The provider decorates the router (`Phalcon\Contracts\ADR\Router\Router`) with `extend()`. The history URL goes to `Phalcon\DebugBar\ADR\HistoryAction`, and all other URLs go to the router of the application. The history URL replaces an application route with the same path. The global middleware of the application also runs for this Action. Route middleware does not run.
+
+!!! warning "NOTE"
+
+   Do not resolve the router during registration. `extend()` on a resolved service throws `CannotExtendResolved`. In a blocked environment, the provider does not change the router.
+
 These limits apply in an ADR application:
 
 - **One request for each process.** `Phalcon\ADR\Application::handle()` supports a reused request in a long-lived worker, but collectors have no reset method. In a worker, their data grows from request to request. `HistoryCookie::fromGlobals()` also reads only at boot.
 - **Events manager.** The events manager must implement `Phalcon\Events\ManagerInterface`. The default manager does. A manager that implements only `Phalcon\Contracts\Events\Manager` gets no listener, so the bar is not injected.
 - **Empty panels.** The `database`, `view` and `cache` panels get data only when the application gives the events manager to these services. The `exceptions` panel gets data only when the application adds `ExceptionAdapter` to its logger. The provider reads no `config` service, so the `config` panel is empty.
-- **History.** The provider does not read the `history` keys. Request history works only in MVC.
 
 ### A Host with No Events Manager
 
@@ -231,7 +252,7 @@ if (null !== $listener) {
 
 ## Configuration
 
-The second argument to `Provider` is a nested array. Every key is optional. `Phalcon\DebugBar\ADR\Provider` and `Phalcon\DebugBar\Core` take the same array as their only argument. They do not read the `history` keys.
+The second argument to `Provider` is a nested array. Every key is optional. `Phalcon\DebugBar\ADR\Provider` and `Phalcon\DebugBar\Core` take the same array as their only argument. `Core` does not read the `history` keys.
 
 | Key                | Type                      | Default                  | Purpose                                                          |
 |--------------------|---------------------------|--------------------------|------------------------------------------------------------------|
@@ -244,6 +265,7 @@ The second argument to `Provider` is a nested array. Every key is optional. `Pha
 | `env.strict`       | `bool`                    | `false`                  | When `true`, `boot()` throws in a blocked/undefined environment instead of returning silently. |
 | `env.var`          | `string`                  | `APP_ENV`                | Environment variable inspected by the gate.                      |
 | `headers`          | `bool`                    | `true`                   | Emit the `X-Debug-Bar` diagnostic header.                        |
+| `history.base_uri` | `string`                  | `/`                      | Base URI of an ADR application. The MVC provider reads the `url` service. |
 | `history.enabled`  | `bool`                    | `false`                  | Store and browse recent requests for the active browser.         |
 | `history.url`      | `string`                  | `/_debugbar/open`        | Internal GET/DELETE endpoint path, relative to the application's base URI. |
 | `history.path`     | `string`                  | required when enabled    | Absolute writable storage directory; keep it outside the document root. |
