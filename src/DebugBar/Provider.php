@@ -14,18 +14,13 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar;
 
 use Phalcon\Config\ConfigInterface;
-use Phalcon\DebugBar\Collector\HistoryCollector;
-use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\Controllers\HistoryController;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
-use Phalcon\DebugBar\History\FilesystemHistory;
-use Phalcon\DebugBar\History\HistoryCookie;
-use Phalcon\DebugBar\History\HistoryEndpoint;
-use Phalcon\DebugBar\History\HistoryOptions;
+use Phalcon\DebugBar\History\HistoryRecorder;
 use Phalcon\DebugBar\Mvc\Bridge;
 use Phalcon\DebugBar\Mvc\HistoryListener;
-use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Di\DiInterface;
+use Phalcon\Events\ManagerInterface;
 use Phalcon\Http\Request;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\Response;
@@ -44,19 +39,12 @@ class Provider
 {
     private Core $core;
 
-    private ?HistoryCookie $historyCookie = null;
-
-    private ?HistoryEndpoint $historyEndpoint = null;
-
-    private HistoryOptions $historyOptions;
-
     /**
      * @param provider_config $config
      */
     public function __construct(private readonly Application $app, array $config = [])
     {
-        $this->core           = new Core($config);
-        $this->historyOptions = HistoryOptions::fromConfig($config['history'] ?? []);
+        $this->core = new Core($config);
     }
 
     /**
@@ -74,18 +62,15 @@ class Provider
         /** @var DiInterface $container */
         $container     = $this->app->getDI();
         $request       = $this->resolveRequest($container);
-        $history       = $this->registerHistory($container, $this->core->getAccessGate());
         $eventsManager = $this->app->getEventsManager();
         $listener      = $this->core->boot(
             $eventsManager,
             $request,
             $this->resolveConfig($container),
-            $history,
-            $this->historyEndpoint,
-            $this->historyCookie
+            $this->registerHistory($container, $eventsManager)
         );
 
-        $bar           = Debug::getBar();
+        $bar           = $this->core->getBar();
 
         if (null === $eventsManager || null === $listener || null === $bar) {
             return;
@@ -106,36 +91,20 @@ class Provider
     /**
      * Wires the internal endpoint without reading or mutating the app router.
      */
-    private function registerHistory(
-        ?DiInterface $container,
-        AccessGate $accessGate
-    ): ?History {
-        if (
-            !$this->historyOptions->enabled
-            || !$this->core->isCollectorEnabled(HistoryCollector::NAME)
-        ) {
+    private function registerHistory(?DiInterface $container, ?ManagerInterface $eventsManager): ?HistoryRecorder
+    {
+        if (null === $container || null === $eventsManager) {
             return null;
         }
 
-        $this->historyOptions->validate();
-
-        $eventsManager = $this->app->getEventsManager();
-        if (
-            null === $container
-            || null === $eventsManager
-        ) {
+        $request  = fn (): ?RequestInterface => $this->resolveSharedRequest($container);
+        $recorder = $this->core->createHistory($request, fn (): string => $this->resolveBaseUri($container));
+        if (null === $recorder) {
             return null;
         }
 
-        $this->historyCookie = HistoryCookie::fromGlobals();
-        $history             = new FilesystemHistory($this->historyOptions, null, $this->historyCookie);
-        $history->validateStorage();
-        $request               = fn (): ?RequestInterface => $this->resolveSharedRequest($container);
-        $this->historyEndpoint = new HistoryEndpoint(
-            $this->historyOptions,
-            $request,
-            fn (): string => $this->resolveBaseUri($container)
-        );
+        $accessGate = $this->core->getAccessGate();
+        $history    = $recorder->history();
         // The DI binds this closure to the container, so `$this` is not the provider here.
         $container->setShared(
             HistoryController::class,
@@ -148,9 +117,9 @@ class Provider
                 );
             }
         );
-        $eventsManager->attach('application:beforeHandleRequest', new HistoryListener($this->historyEndpoint));
+        $eventsManager->attach('application:beforeHandleRequest', new HistoryListener($recorder->endpoint()));
 
-        return $history;
+        return $recorder;
     }
 
     private function resolveBaseUri(DiInterface $container): string

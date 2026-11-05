@@ -14,15 +14,18 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar;
 
 use Phalcon\DebugBar\BarOptions;
+use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\History\FilesystemHistory;
 use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\HistoryOptions;
+use Phalcon\DebugBar\History\HistoryRecorder;
 use Phalcon\DebugBar\Injector;
 use Phalcon\DebugBar\Renderer;
 use Phalcon\DebugBar\ResponseListener;
 use Phalcon\DebugBar\Security\AccessGate;
+use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Events\Event;
 use Phalcon\Http\Request;
 use Phalcon\Http\RequestInterface;
@@ -81,9 +84,11 @@ final class ResponseListenerTest extends AbstractUnitTestCase
             new AccessGate(['127.0.0.1'], null),
             $request,
             new BarOptions(false, null),
-            new FilesystemHistory($options, null, $cookie),
-            $this->endpoint($options, $request),
-            $cookie
+            $this->recorder(
+                new FilesystemHistory($options, null, $cookie),
+                $this->endpoint($options, $request),
+                $cookie
+            )
         );
         $response = new Response();
 
@@ -120,9 +125,7 @@ final class ResponseListenerTest extends AbstractUnitTestCase
             new AccessGate([], null),
             $request,
             new BarOptions(false, null),
-            $history,
-            $this->endpoint($options, $request, '/app1/'),
-            $cookie
+            $this->recorder($history, $this->endpoint($options, $request, '/app1/'), $cookie)
         );
         $response = new Response();
         $response->setContent('accepted');
@@ -208,9 +211,7 @@ final class ResponseListenerTest extends AbstractUnitTestCase
                 new AccessGate([], null),
                 $request,
                 new BarOptions(true, null),
-                $history,
-                $this->endpoint($options, $request, '/app1/'),
-                HistoryCookie::fromGlobals()
+                $this->recorder($history, $this->endpoint($options, $request, '/app1/'), HistoryCookie::fromGlobals())
             );
             $response = new Response();
             $response->setContent('<html><body>endpoint error</body></html>');
@@ -272,9 +273,7 @@ final class ResponseListenerTest extends AbstractUnitTestCase
                 new AccessGate([], null),
                 new Request(),
                 new BarOptions(false, null),
-                $history,
-                $this->endpoint($options, new Request()),
-                HistoryCookie::fromGlobals()
+                $this->recorder($history, $this->endpoint($options, new Request()), HistoryCookie::fromGlobals())
             );
             $response = new Response();
             $response->setStatusCode(202);
@@ -337,9 +336,7 @@ final class ResponseListenerTest extends AbstractUnitTestCase
                 new AccessGate([], null),
                 $request,
                 new BarOptions(false, null),
-                $history,
-                $this->endpoint($options, $request, '/app1/'),
-                HistoryCookie::fromGlobals()
+                $this->recorder($history, $this->endpoint($options, $request, '/app1/'), HistoryCookie::fromGlobals())
             );
             $response = new Response();
             $response->setStatusCode(202);
@@ -436,5 +433,10 @@ final class ResponseListenerTest extends AbstractUnitTestCase
             null,
             new BarOptions($headers, null)
         );
+    }
+
+    private function recorder(History $history, HistoryEndpoint $endpoint, HistoryCookie $cookie): HistoryRecorder
+    {
+        return new HistoryRecorder($history, $endpoint, $cookie, new Redactor());
     }
 }

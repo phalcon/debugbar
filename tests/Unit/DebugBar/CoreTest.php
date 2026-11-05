@@ -13,7 +13,9 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Unit\DebugBar;
 
+use InvalidArgumentException;
 use Phalcon\Config\Config;
+use Phalcon\DebugBar\Collector\LoggerCollector;
 use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\Core;
 use Phalcon\DebugBar\Debug;
@@ -22,6 +24,8 @@ use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\HistoryOptions;
+use Phalcon\DebugBar\History\HistoryRecorder;
+use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Events\Manager;
 use Phalcon\Http\Request;
 use Phalcon\Http\RequestInterface;
@@ -32,7 +36,13 @@ use PHPUnit\Framework\Attributes\BackupGlobals;
 use RuntimeException;
 
 use function array_keys;
+use function bin2hex;
+use function dirname;
 use function is_array;
+use function is_dir;
+use function json_decode;
+use function random_bytes;
+use function rmdir;
 use function sys_get_temp_dir;
 
 #[BackupGlobals(true)]
@@ -42,16 +52,22 @@ final class CoreTest extends AbstractUnitTestCase
 
     private const HTML    = '<html><body>hi</body></html>';
 
+    private string $storage = '';
+
     protected function setUp(): void
     {
         parent::setUp();
 
         Debug::setBar(null);
+        $this->storage = dirname(__DIR__, 2) . '/_output/debugbar-core-' . bin2hex(random_bytes(8));
     }
 
     protected function tearDown(): void
     {
         Debug::setBar(null);
+        if (is_dir($this->storage)) {
+            rmdir($this->storage);
+        }
 
         parent::tearDown();
     }
@@ -188,6 +204,75 @@ final class CoreTest extends AbstractUnitTestCase
         $this->assertArrayNotHasKey('section.dropme', $panel);
     }
 
+    public function testCreateHistoryIsNullInABlockedEnvironment(): void
+    {
+        $_ENV[self::ENV_VAR] = 'production';
+
+        $recorder = $this->core(['history' => ['enabled' => true, 'path' => $this->storage]])
+            ->createHistory(fn (): ?RequestInterface => null);
+
+        $this->assertNull($recorder);
+        $this->assertDirectoryDoesNotExist($this->storage);
+    }
+
+    public function testCreateHistoryIsNullWhenHistoryIsOff(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $this->assertNull($this->core()->createHistory(fn (): ?RequestInterface => null));
+    }
+
+    public function testCreateHistoryIsNullWhenTheCollectorIsOff(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $core                = $this->core(
+            ['collectors' => ['history' => false], 'history' => ['enabled' => true]]
+        );
+
+        $this->assertNull($core->createHistory(fn (): ?RequestInterface => null));
+    }
+
+    public function testCreateHistoryRejectsStorageThatCannotBeWritten(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('history.path must be writable');
+
+        $this->core(['history' => ['enabled' => true, 'path' => __FILE__]])
+            ->createHistory(fn (): ?RequestInterface => null);
+    }
+
+    public function testCreateHistoryRejectsTheOptionsWithNoPath(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('history.path is required');
+
+        $this->core(['history' => ['enabled' => true]])->createHistory(fn (): ?RequestInterface => null);
+    }
+
+    public function testCreateHistoryUsesTheConfiguredBaseUriByDefault(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $recorder = $this->core(['history' => ['enabled' => true, 'path' => $this->storage, 'base_uri' => '/app1/']])
+            ->createHistory(fn (): ?RequestInterface => null);
+
+        $this->assertSame('/app1/_debugbar/open', $recorder?->endpoint()->url());
+    }
+
+    public function testCreateHistoryUsesTheGivenBaseUriOverTheConfiguredOne(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $recorder = $this->core(['history' => ['enabled' => true, 'path' => $this->storage, 'base_uri' => '/app1/']])
+            ->createHistory(fn (): ?RequestInterface => null, fn (): string => '/app2/');
+
+        $this->assertSame('/app2/_debugbar/open', $recorder?->endpoint()->url());
+    }
+
     public function testDefaultBootRegistersEveryCollectorInOrder(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
@@ -250,6 +335,29 @@ final class CoreTest extends AbstractUnitTestCase
         $this->assertTrue($core->isAllowed());
     }
 
+    public function testGetBarIsNullWhenTheBarDidNotBoot(): void
+    {
+        $_ENV[self::ENV_VAR] = 'production';
+        $core                = $this->core();
+
+        $core->boot();
+
+        $this->assertNull($core->getBar());
+    }
+
+    public function testGetBarReturnsTheBarOfThisCore(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $core                = $this->core();
+
+        $core->boot();
+        $bar = $core->getBar();
+        Debug::setBar(null);
+
+        $this->assertInstanceOf(DebugBar::class, $bar);
+        $this->assertSame($bar, $core->getBar());
+    }
+
     public function testHandleBeforeBootDoesNothing(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
@@ -285,13 +393,23 @@ final class CoreTest extends AbstractUnitTestCase
         $core                = $this->core();
         $response            = $this->response();
 
-        $core->boot(null, $request, null, null, $this->endpoint($request));
+        $core->boot(
+            null,
+            $request,
+            null,
+            new HistoryRecorder(
+                $this->createMock(History::class),
+                $this->endpoint($request),
+                new HistoryCookie(null),
+                new Redactor()
+            )
+        );
         $core->handle($response);
 
         $this->assertSame(self::HTML, $response->getContent());
     }
 
-    public function testHistoryPartsAddTheCollectorAndRecordTheRequest(): void
+    public function testHistoryRecorderAddsTheCollectorAndRecordsTheRequest(): void
     {
         unset($_COOKIE[HistoryCookie::NAME]);
         $_ENV[self::ENV_VAR] = 'dev';
@@ -309,7 +427,12 @@ final class CoreTest extends AbstractUnitTestCase
         );
         $core                = $this->core();
 
-        $core->boot(null, $request, null, $history, $this->endpoint($request), $cookie);
+        $core->boot(
+            null,
+            $request,
+            null,
+            new HistoryRecorder($history, $this->endpoint($request), $cookie, new Redactor())
+        );
         $core->handle($this->response());
 
         $this->assertTrue($this->bootedBar()->hasCollector('history'));
@@ -338,6 +461,22 @@ final class CoreTest extends AbstractUnitTestCase
 
         $this->assertSame([], $data['config']['panel']);
         $this->assertSame([], $data['request']['panel']);
+    }
+
+    public function testRedactOptionsReachTheLogContext(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $this->core(['redact' => ['mask' => ['maskme'], 'hidden' => ['dropme']]])->boot();
+
+        $bar = $this->bootedBar();
+        $bar->addLog('login', 'info', ['maskme' => 'mask-value', 'dropme' => 'drop-value']);
+        $collector = $bar->getCollector('logger');
+        if (!$collector instanceof LoggerCollector) {
+            $this->fail('Expected the logger collector.');
+        }
+
+        $this->assertSame(['maskme' => '***'], json_decode($collector->collect()['panel'][0]['context'], true));
     }
 
     public function testRequestReachesTheCollector(): void
@@ -392,6 +531,7 @@ final class CoreTest extends AbstractUnitTestCase
      *     access?: array{allow_ips?: list<string>},
      *     collectors?: array<string, bool>,
      *     headers?: bool,
+     *     history?: array{enabled?: bool, path?: string, base_uri?: string},
      *     redact?: array{mask?: list<string>, hidden?: list<string>}
      * } $config
      */

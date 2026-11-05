@@ -19,17 +19,11 @@ use Phalcon\Contracts\Container\Service\Provider as ProviderContract;
 use Phalcon\Contracts\Events\Manager as ManagerContract;
 use Phalcon\Contracts\Http\AttributeRequest;
 use Phalcon\Debug as DebugPage;
-use Phalcon\DebugBar\Collector\HistoryCollector;
-use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\Core;
-use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
-use Phalcon\DebugBar\History\FilesystemHistory;
-use Phalcon\DebugBar\History\HistoryCookie;
-use Phalcon\DebugBar\History\HistoryEndpoint;
-use Phalcon\DebugBar\History\HistoryOptions;
+use Phalcon\DebugBar\History\HistoryRecorder;
 use Phalcon\DebugBar\ResponseListener;
 use Phalcon\Events\ManagerInterface;
 use Phalcon\Http\RequestInterface;
@@ -51,20 +45,13 @@ final class Provider implements ProviderContract
 
     private bool | DebugPage $debugPage;
 
-    private ?HistoryCookie $historyCookie = null;
-
-    private ?HistoryEndpoint $historyEndpoint = null;
-
-    private HistoryOptions $historyOptions;
-
     /**
      * @param provider_config $config
      */
     public function __construct(array $config = [])
     {
-        $this->core           = new Core($config);
-        $this->debugPage      = $config['debug_page'] ?? false;
-        $this->historyOptions = HistoryOptions::fromConfig($config['history'] ?? []);
+        $this->core      = new Core($config);
+        $this->debugPage = $config['debug_page'] ?? false;
     }
 
     /**
@@ -80,16 +67,13 @@ final class Provider implements ProviderContract
         $eventsManager = $eventsManager instanceof ManagerInterface ? $eventsManager : null;
         $request       = $this->resolve($services, AttributeRequest::class);
         $request       = $request instanceof RequestInterface ? $request : null;
-        $history       = $this->registerHistory($services, $eventsManager, $request);
         $listener      = $this->core->boot(
             $eventsManager,
             $request,
             null,
-            $history,
-            $this->historyEndpoint,
-            $this->historyCookie
+            $this->registerHistory($services, $eventsManager, $request)
         );
-        $bar           = Debug::getBar();
+        $bar           = $this->core->getBar();
 
         if (null === $eventsManager || null === $listener || null === $bar) {
             return;
@@ -107,31 +91,19 @@ final class Provider implements ProviderContract
         Collection $services,
         ?ManagerInterface $eventsManager,
         ?RequestInterface $request
-    ): ?History {
-        if (
-            !$this->historyOptions->enabled
-            || !$this->core->isCollectorEnabled(HistoryCollector::NAME)
-        ) {
-            return null;
-        }
-
-        $this->historyOptions->validate();
-
+    ): ?HistoryRecorder {
         if (null === $eventsManager || !$services->has(Router::class)) {
             return null;
         }
 
-        $this->historyCookie = HistoryCookie::fromGlobals();
-        $history             = new FilesystemHistory($this->historyOptions, null, $this->historyCookie);
-        $history->validateStorage();
-        $accessGate            = $this->core->getAccessGate();
-        $baseUri               = $this->historyOptions->baseUri;
-        $endpoint              = new HistoryEndpoint(
-            $this->historyOptions,
-            fn (): ?RequestInterface => $request,
-            fn (): string => $baseUri
-        );
-        $this->historyEndpoint = $endpoint;
+        $recorder = $this->core->createHistory(fn (): ?RequestInterface => $request);
+        if (null === $recorder) {
+            return null;
+        }
+
+        $accessGate = $this->core->getAccessGate();
+        $endpoint   = $recorder->endpoint();
+        $history    = $recorder->history();
 
         $services->set(
             HistoryAction::class,
@@ -142,7 +114,7 @@ final class Provider implements ProviderContract
             fn (Router $router): Router => new HistoryRouter($router, $endpoint)
         );
 
-        return $history;
+        return $recorder;
     }
 
     private function resolve(Collection $services, string $name): mixed

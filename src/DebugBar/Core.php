@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
+use Closure;
+use InvalidArgumentException;
 use Phalcon\Config\ConfigInterface;
 use Phalcon\DebugBar\Collector\CacheCollector;
 use Phalcon\DebugBar\Collector\ConfigCollector;
@@ -29,15 +31,18 @@ use Phalcon\DebugBar\Collector\TimeCollector;
 use Phalcon\DebugBar\Collector\VersionCollector;
 use Phalcon\DebugBar\Collector\ViewCollector;
 use Phalcon\DebugBar\Contracts\Collector;
-use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
+use Phalcon\DebugBar\History\FilesystemHistory;
 use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEndpoint;
+use Phalcon\DebugBar\History\HistoryOptions;
+use Phalcon\DebugBar\History\HistoryRecorder;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Events\ManagerInterface;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
+use RuntimeException;
 
 use function getenv;
 use function in_array;
@@ -56,6 +61,8 @@ final class Core
 {
     private AccessGate $accessGate;
 
+    private ?DebugBar $bar = null;
+
     /**
      * @var list<string>
      */
@@ -71,6 +78,8 @@ final class Core
     private string $envVar;
 
     private bool $headers;
+
+    private HistoryOptions $historyOptions;
 
     private ?ResponseListener $listener = null;
 
@@ -98,6 +107,7 @@ final class Core
         $this->accessGate       = new AccessGate($access['allow_ips'] ?? [], $access['callback'] ?? null);
         $this->collectorsConfig = $config['collectors'] ?? [];
         $this->headers          = $config['headers'] ?? true;
+        $this->historyOptions   = HistoryOptions::fromConfig($config['history'] ?? []);
         $this->redactor         = new Redactor(
             [...Redactor::DEFAULT_KEYS, ...($redact['mask'] ?? [])],
             $redact['hidden'] ?? []
@@ -115,9 +125,7 @@ final class Core
         ?ManagerInterface $eventsManager = null,
         ?RequestInterface $request = null,
         ?ConfigInterface $config = null,
-        ?History $history = null,
-        ?HistoryEndpoint $historyEndpoint = null,
-        ?HistoryCookie $historyCookie = null
+        ?HistoryRecorder $history = null
     ): ?ResponseListener {
         if (true !== $this->canBoot()) {
             return null;
@@ -127,10 +135,11 @@ final class Core
         foreach ($this->buildCollectors($request, $config) as $collector) {
             $bar->addCollector($collector);
         }
-        if (null !== $historyEndpoint) {
-            $bar->addCollector(new HistoryCollector($historyEndpoint));
+        if (null !== $history) {
+            $bar->addCollector(new HistoryCollector($history->endpoint()));
         }
 
+        $this->bar = $bar;
         Debug::setBar($bar);
 
         if (null !== $eventsManager) {
@@ -144,9 +153,7 @@ final class Core
             $this->accessGate,
             $request,
             new BarOptions($this->headers, $this->nonce),
-            $history,
-            $historyEndpoint,
-            $historyCookie
+            $history
         );
 
         return $this->listener;
@@ -173,9 +180,55 @@ final class Core
         return $this->enabled;
     }
 
+    /**
+     * Creates the history recorder from the `history` config. It returns null when
+     * the bar cannot boot or history is off. Each integration gives the closures
+     * that read the request and the base URI. With no base URI closure, the recorder
+     * uses `history.base_uri`. The integration must route the endpoint.
+     *
+     * @param Closure(): ?RequestInterface $request
+     * @param (Closure(): string)|null     $baseUri
+     *
+     * @throws CannotUseInProduction    When `env.strict` is set and the environment is blocked or undefined.
+     * @throws InvalidArgumentException When the `history` config is not valid.
+     * @throws RuntimeException         When the web-server user cannot write to `history.path`.
+     */
+    public function createHistory(Closure $request, ?Closure $baseUri = null): ?HistoryRecorder
+    {
+        if (
+            true !== $this->canBoot()
+            || !$this->historyOptions->enabled
+            || !$this->isCollectorEnabled(HistoryCollector::NAME)
+        ) {
+            return null;
+        }
+
+        $options = $this->historyOptions;
+        $options->validate();
+
+        $cookie  = HistoryCookie::fromGlobals();
+        $history = new FilesystemHistory($options, null, $cookie);
+        $history->validateStorage();
+
+        return new HistoryRecorder(
+            $history,
+            new HistoryEndpoint($options, $request, $baseUri ?? fn (): string => $options->baseUri),
+            $cookie,
+            $this->redactor
+        );
+    }
+
     public function getAccessGate(): AccessGate
     {
         return $this->accessGate;
+    }
+
+    /**
+     * The bar that `boot()` created, or null when the bar did not boot.
+     */
+    public function getBar(): ?DebugBar
+    {
+        return $this->bar;
     }
 
     /**
@@ -222,7 +275,7 @@ final class Core
         }
 
         if ($this->isCollectorEnabled(LoggerCollector::NAME)) {
-            $collectors[] = new LoggerCollector();
+            $collectors[] = new LoggerCollector($this->redactor);
         }
 
         if ($this->isCollectorEnabled(ExceptionsCollector::NAME)) {

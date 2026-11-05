@@ -23,6 +23,8 @@ use Phalcon\Mvc\DispatcherInterface;
  */
 final class HistoryListener
 {
+    public const CONTROLLER_NAMESPACE = 'Phalcon\\DebugBar\\Controllers';
+
     public function __construct(private readonly HistoryEndpoint $endpoint)
     {
     }
@@ -33,7 +35,7 @@ final class HistoryListener
             return;
         }
 
-        $dispatcher->setNamespaceName(HistoryEndpoint::CONTROLLER_NAMESPACE);
+        $dispatcher->setNamespaceName(self::CONTROLLER_NAMESPACE);
         $dispatcher->setControllerName('history');
         $dispatcher->setControllerSuffix('Controller');
         $dispatcher->setActionSuffix('Action');
