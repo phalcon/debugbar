@@ -13,11 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Collector;
 
-use Phalcon\Db\Adapter\AbstractAdapter;
-use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\DebugBarTypes;
-use Phalcon\Events\EventInterface;
-use Phalcon\Events\ManagerInterface;
 
 use function count;
 use function hrtime;
@@ -26,15 +22,13 @@ use function preg_replace;
 use function trim;
 
 /**
- * Records SQL queries by subscribing to `db:beforeQuery`/`db:afterQuery`. The
- * connection is the event's source, so the statement, bindings, and timing are
- * read straight off it - no `db` service is resolved. `startQuery()` and
- * `finishQuery()` record a query with no events manager.
+ * Records SQL queries. `startQuery()` starts the time, and `finishQuery()` takes
+ * the statement and the bindings.
  *
  * @phpstan-import-type db_query from DebugBarTypes
  * @phpstan-import-type database_envelope from DebugBarTypes
  */
-final class DatabaseCollector extends AbstractCollector implements Subscriber
+final class DatabaseCollector extends AbstractCollector
 {
     use EncodesJson;
     use FormatsDuration;
@@ -111,28 +105,6 @@ final class DatabaseCollector extends AbstractCollector implements Subscriber
     public function startQuery(): void
     {
         $this->started = hrtime(true);
-    }
-
-    public function subscribe(ManagerInterface $eventsManager): void
-    {
-        $eventsManager->attach(
-            'db:beforeQuery',
-            function (): void {
-                $this->startQuery();
-            }
-        );
-
-        $eventsManager->attach(
-            'db:afterQuery',
-            function (EventInterface $event, mixed $connection): void {
-                if ($connection instanceof AbstractAdapter) {
-                    $this->finishQuery(
-                        $connection->getSQLStatement(),
-                        $connection->getSQLVariables()
-                    );
-                }
-            }
-        );
     }
 
     /**

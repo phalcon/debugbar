@@ -14,10 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Contracts\ExceptionAware;
-use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\DebugBarTypes;
-use Phalcon\Events\EventInterface;
-use Phalcon\Events\ManagerInterface;
 use Throwable;
 
 use function count;
@@ -25,15 +22,14 @@ use function strrpos;
 use function substr;
 
 /**
- * Records throwables - automatically via `dispatch:beforeException` (the
- * throwable is only recorded, never swallowed) and manually through the `Debug`
- * facade / DebugBar `addException()`. Each entry keeps a compact summary plus the
- * stack trace; the full report remains the Debug page's job.
+ * Records throwables that `addThrowable()` receives, from a bridge or through the
+ * `Debug` facade / DebugBar `addException()`. Each entry keeps a compact summary
+ * plus the stack trace; the full report remains the Debug page's job.
  *
  * @phpstan-import-type exception_envelope from DebugBarTypes
  * @phpstan-import-type exception_panel from DebugBarTypes
  */
-final class ExceptionsCollector extends AbstractCollector implements ExceptionAware, Subscriber
+final class ExceptionsCollector extends AbstractCollector implements ExceptionAware
 {
     public const NAME = 'exceptions';
 
@@ -67,22 +63,6 @@ final class ExceptionsCollector extends AbstractCollector implements ExceptionAw
             'panel' => $this->exceptions,
             'badge' => count($this->exceptions),
         ];
-    }
-
-    /**
-     * Auto-captures dispatch exceptions. The throwable is recorded and left to
-     * bubble - the bar never handles or swallows it.
-     */
-    public function subscribe(ManagerInterface $eventsManager): void
-    {
-        $eventsManager->attach(
-            'dispatch:beforeException',
-            function (EventInterface $event, mixed $dispatcher, mixed $exception): void {
-                if ($exception instanceof Throwable) {
-                    $this->addThrowable($exception);
-                }
-            }
-        );
     }
 
     private function shortClass(string $class): string

@@ -17,6 +17,7 @@ use Phalcon\ADR\Container\AdrProvider;
 use Phalcon\Container\Container;
 use Phalcon\Contracts\Events\Manager as ManagerContract;
 use Phalcon\Contracts\Http\AttributeRequest;
+use Phalcon\Db\Adapter\AbstractAdapter;
 use Phalcon\DebugBar\ADR\Provider;
 use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBar;
@@ -32,6 +33,7 @@ use Phalcon\Tests\Support\DebugBar\ADR\Action\Queries\GetQueries;
 use Phalcon\Tests\Support\DebugBar\ADR\Action\View\GetView;
 use Phalcon\Tests\Support\DebugBar\ADR\Front;
 use Phalcon\Tests\Support\DebugBar\ADR\RecordingEmitter;
+use Phalcon\Tests\Support\DebugBar\Fixtures\SubscribingCollector;
 use PHPUnit\Framework\Attributes\BackupGlobals;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 
@@ -138,6 +140,41 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->provider()->provide(new Container());
 
         $this->assertSame([], $this->bootedBar()->collect()['data']['request']['panel']);
+    }
+
+    public function testCustomCollectorGetsItsEvents(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $manager = $this->container()->get(ManagerContract::class);
+        if (!$manager instanceof ManagerInterface) {
+            $this->fail('Expected the default events manager.');
+        }
+
+        $collector = new SubscribingCollector();
+        Debug::getBar()?->addCollector($collector);
+        $manager->fire(SubscribingCollector::EVENT, $this, 'happened');
+
+        $this->assertSame([['message' => 'happened']], $collector->collect()['panel']);
+    }
+
+    public function testDbEventsOfAPhalconAdapterReachTheDatabasePanel(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $manager = $this->container()->get(ManagerContract::class);
+        if (!$manager instanceof ManagerInterface) {
+            $this->fail('Expected the default events manager.');
+        }
+
+        $connection = $this->createMock(AbstractAdapter::class);
+        $connection->method('getSQLStatement')->willReturn('SELECT 1');
+        $connection->method('getSQLVariables')->willReturn([]);
+
+        $manager->fire('db:beforeQuery', $connection);
+        $manager->fire('db:afterQuery', $connection);
+
+        $this->assertSame(1, $this->bootedBar()->collect()['data']['database']['badge']);
     }
 
     public function testDoesNotInjectIntoAJsonResponse(): void

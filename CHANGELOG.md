@@ -21,6 +21,12 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - `History\HistoryHandler` lists, reads and clears the request history with no MVC types. [#42](https://github.com/phalcon/debugbar/issues/42)
 - Request history in ADR applications, with the `history.base_uri` option. [#43](https://github.com/phalcon/debugbar/issues/43)
 - The `debug_page` option shows the debug page for a server error in ADR applications. [#48](https://github.com/phalcon/debugbar/issues/48)
+- `Mvc\Bridge` and `ServiceBridge` feed the built-in collectors, which no longer hold framework event names. [#15](https://github.com/phalcon/debugbar/issues/15)
+- `DebugBar::addCollector()` subscribes a collector that implements `Contracts\Subscriber`. [#15](https://github.com/phalcon/debugbar/issues/15)
+
+### Changed
+
+- **Breaking:** the built-in collectors no longer implement `Contracts\Subscriber` and have no `subscribe()` method. [#15](https://github.com/phalcon/debugbar/issues/15)
 
 ### Fixed
 

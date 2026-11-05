@@ -14,7 +14,6 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar\Collector;
 
 use Phalcon\DebugBar\Collector\ViewCollector;
-use Phalcon\Events\Manager;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
 use ReflectionProperty;
@@ -77,21 +76,6 @@ final class ViewCollectorTest extends AbstractUnitTestCase
         );
     }
 
-    public function testRenderedViewsAreRecordedFromEvents(): void
-    {
-        $collector     = new ViewCollector();
-        $eventsManager = new Manager();
-        $collector->subscribe($eventsManager);
-
-        $eventsManager->fire('view:beforeRenderView', $this, '/app/views/index.phtml');
-        $eventsManager->fire('view:afterRenderView', $this);
-
-        $envelope = $collector->collect();
-
-        $this->assertSame(1, $envelope['badge']);
-        $this->assertSame('/app/views/index.phtml', $envelope['panel'][0]['message']);
-    }
-
     public function testStartAndFinishRecordARenderWithNoEventsManager(): void
     {
         $collector = new ViewCollector();
@@ -103,41 +87,5 @@ final class ViewCollectorTest extends AbstractUnitTestCase
 
         $this->assertSame(1, $envelope['badge']);
         $this->assertSame('/app/views/index.phtml', $envelope['panel'][0]['message']);
-    }
-
-    public function testTimeIsMeasuredBetweenBeforeAndAfterRender(): void
-    {
-        $collector     = new ViewCollector();
-        $eventsManager = new Manager();
-        $collector->subscribe($eventsManager);
-
-        $eventsManager->fire('view:beforeRenderView', $this, '/app/views/index.phtml');
-        $eventsManager->fire('view:afterRenderView', $this);
-
-        $property = new ReflectionProperty(ViewCollector::class, 'rendered');
-        $property->setAccessible(true);
-
-        /** @var array<int, array{time: float|int}> $rendered */
-        $rendered = $property->getValue($collector);
-        $time     = $rendered[0]['time'];
-
-        /**
-         * The delta between two consecutive event fires is a handful of
-         * nanoseconds. If the subtraction became an addition, `time` would
-         * carry the full monotonic clock value (billions of nanoseconds).
-         */
-        $this->assertGreaterThanOrEqual(0, $time);
-        $this->assertLessThan(1000000000, $time);
-    }
-
-    public function testUnmatchedAfterRenderIsIgnored(): void
-    {
-        $collector     = new ViewCollector();
-        $eventsManager = new Manager();
-        $collector->subscribe($eventsManager);
-
-        $eventsManager->fire('view:afterRenderView', $this);
-
-        $this->assertSame(0, $collector->collect()['badge']);
     }
 }
