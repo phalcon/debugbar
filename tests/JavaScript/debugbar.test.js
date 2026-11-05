@@ -42,6 +42,50 @@ function panelContract() {
     return JSON.parse(fs.readFileSync(require.resolve('../support/assets/DebugBar/panel-contract.json'), 'utf8'));
 }
 
+function renderPayload(payload) {
+    var dataNode = new dom.TestElement('script');
+    var mount = new dom.TestElement('div');
+    dataNode.textContent = JSON.stringify(payload);
+    global.document = dom.createDocument({
+        'phalcon-debugbar': mount,
+        'phalcon-debugbar-data': dataNode
+    });
+    global.window = {
+        localStorage: {
+            getItem: function () {
+                return null;
+            },
+            setItem: function () {}
+        }
+    };
+
+    delete require.cache[debugbarPath];
+    require(debugbarPath);
+
+    return mount;
+}
+
+function renderIndicator(icon) {
+    return renderPayload({
+        data: {time: {panel: [], badge: '12.34ms'}},
+        meta: {
+            widgets: {
+                time: {
+                    label: 'Time',
+                    panel: 'list',
+                    indicator: {icon: icon, label: 'Request time', path: ['badge']}
+                }
+            }
+        }
+    });
+}
+
+function iconShapes(icon) {
+    return icon.children.map(function (shape) {
+        return shape.tagName;
+    });
+}
+
 function deferred() {
     var reject;
     var resolve;
@@ -518,6 +562,48 @@ test('indicator collectors render once on the right and open their panels', func
     metrics[0].click();
     assert.equal(metrics[0].classList.contains('is-active'), false);
     assert.equal(dom.findByClass(mount, 'phalcon-debugbar-body').style.display, 'none');
+});
+
+test('an indicator draws the icon that it names', function () {
+    var clock = dom.findByClass(renderIndicator('clock'), 'phalcon-debugbar-indicator-icon');
+    var cogs = dom.findByClass(renderIndicator('cogs'), 'phalcon-debugbar-indicator-icon');
+
+    assert.deepEqual(iconShapes(clock), ['CIRCLE', 'PATH']);
+    assert.equal(clock.children[0].getAttribute('r'), '6.5');
+    assert.deepEqual(iconShapes(cogs), ['G', 'G']);
+});
+
+test('the request control draws the search icon', function () {
+    var mount = renderPayload({
+        data: {history: {panel: {url: '/_debugbar/open'}}},
+        meta: {widgets: {history: {label: 'History', panel: 'history'}}}
+    });
+    var control = dom.findByClass(mount, 'phalcon-debugbar-request-control');
+    var search = dom.findByClass(control, 'phalcon-debugbar-indicator-icon');
+
+    assert.deepEqual(iconShapes(search), ['CIRCLE', 'PATH']);
+    assert.equal(search.children[0].getAttribute('r'), '4.5');
+});
+
+test('an indicator with an unknown icon name shows its value and no icon', function () {
+    ['clcok', 'constructor', ''].forEach(function (name) {
+        var mount = renderIndicator(name);
+        var indicator = dom.findByClass(mount, 'phalcon-debugbar-metric');
+
+        assert.equal(dom.findByClass(indicator, 'phalcon-debugbar-indicator-icon'), null);
+        assert.equal(indicator.textContent, '12.34ms');
+    });
+});
+
+test('the icon names in PHP match the drawings in the client', function () {
+    var types = fs.readFileSync(require.resolve('../../src/DebugBar/DebugBarTypes.php'), 'utf8');
+    var definition = /@phpstan-type icon_type (\S+)/.exec(types);
+
+    assert.ok(definition, 'DebugBarTypes must define icon_type');
+    assert.deepEqual(
+        definition[1].replace(/'/g, '').split('|').sort(),
+        debugbar.iconNames.slice().sort()
+    );
 });
 
 test('the client renders the output of the real collectors', function () {
