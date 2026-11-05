@@ -13,23 +13,17 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Collector;
 
-use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\DebugBarTypes;
-use Phalcon\Events\EventInterface;
-use Phalcon\Events\ManagerInterface;
 
 use function count;
-use function is_string;
 
 /**
- * Records cache operations by subscribing to the `cache:after*` events. The key
- * is the event data, so it is read straight off the event - the `cache` service
- * is never resolved. `addOperation()` records an operation with no events manager.
+ * Records cache operations. `addOperation()` takes the operation and the key.
  *
  * @phpstan-import-type list_envelope from DebugBarTypes
  * @phpstan-import-type list_panel from DebugBarTypes
  */
-final class CacheCollector extends AbstractCollector implements Subscriber
+final class CacheCollector extends AbstractCollector
 {
     public const NAME = 'cache';
 
@@ -61,24 +55,5 @@ final class CacheCollector extends AbstractCollector implements Subscriber
             'panel' => $this->operations,
             'badge' => count($this->operations),
         ];
-    }
-
-    public function subscribe(ManagerInterface $eventsManager): void
-    {
-        $events = [
-            'cache:afterGet'    => 'Get',
-            'cache:afterSet'    => 'Set',
-            'cache:afterHas'    => 'Has',
-            'cache:afterDelete' => 'Delete',
-        ];
-
-        foreach ($events as $eventName => $operation) {
-            $eventsManager->attach(
-                $eventName,
-                function (EventInterface $event, mixed $cache, mixed $key) use ($operation): void {
-                    $this->addOperation($operation, is_string($key) ? $key : '');
-                }
-            );
-        }
     }
 }

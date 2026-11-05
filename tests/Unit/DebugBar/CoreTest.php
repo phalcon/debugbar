@@ -27,7 +27,9 @@ use Phalcon\Http\Request;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\Response;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
+use Phalcon\Tests\Support\DebugBar\Fixtures\SubscribingCollector;
 use PHPUnit\Framework\Attributes\BackupGlobals;
+use RuntimeException;
 
 use function array_keys;
 use function is_array;
@@ -104,6 +106,17 @@ final class CoreTest extends AbstractUnitTestCase
         $this->assertInstanceOf(DebugBar::class, Debug::getBar());
     }
 
+    public function testBootLeavesTheMvcEventsToTheMvcBridge(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $manager             = new Manager();
+
+        $this->core()->boot($manager);
+        $manager->fire('dispatch:beforeException', $this, new RuntimeException('boom'));
+
+        $this->assertSame(0, $this->bootedBar()->collect()['data']['exceptions']['badge']);
+    }
+
     public function testBootReturnsAListenerForAnyResponseEvent(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
@@ -130,6 +143,23 @@ final class CoreTest extends AbstractUnitTestCase
         $manager->fire('cache:afterGet', $this, 'cache-key-42');
 
         $this->assertSame(1, $this->bootedBar()->collect()['data']['cache']['badge']);
+    }
+
+    public function testCollectorAddedAfterBootGetsItsEventsAndReachesTheBar(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $manager             = new Manager();
+        $core                = $this->core();
+
+        $core->boot($manager);
+        $this->bootedBar()->addCollector(new SubscribingCollector());
+        $manager->fire(SubscribingCollector::EVENT, $this, 'happened');
+
+        $response = $this->response();
+        $core->handle($response);
+
+        $this->assertSame(1, $this->bootedBar()->getData()['data'][SubscribingCollector::NAME]['badge']);
+        $this->assertStringContainsString(SubscribingCollector::NAME, $response->getContent());
     }
 
     public function testConfigSourceReachesTheCollectorRedacted(): void

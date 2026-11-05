@@ -15,9 +15,12 @@ namespace Phalcon\Tests\Unit\DebugBar;
 
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\Exceptions\Exception;
+use Phalcon\Events\Manager;
+use Phalcon\Events\ManagerInterface;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\Fixtures\GridCollector;
 use Phalcon\Tests\Support\DebugBar\Fixtures\ListCollector;
+use Phalcon\Tests\Support\DebugBar\Fixtures\SubscribingCollector;
 
 final class DebugBarTest extends AbstractUnitTestCase
 {
@@ -45,6 +48,29 @@ final class DebugBarTest extends AbstractUnitTestCase
         $this->assertCount(1, $bar->getCollectors());
     }
 
+    public function testAddCollectorSubscribesASubscriber(): void
+    {
+        $manager   = new Manager();
+        $collector = new SubscribingCollector();
+
+        (new DebugBar($manager))->addCollector($collector);
+        $manager->fire(SubscribingCollector::EVENT, $this, 'happened');
+
+        $this->assertSame([['message' => 'happened']], $collector->collect()['panel']);
+    }
+
+    public function testAddCollectorWithNoEventsManagerDoesNotSubscribe(): void
+    {
+        $collector = new SubscribingCollector();
+
+        (new DebugBar())->addCollector($collector);
+
+        $manager = new Manager();
+        $manager->fire(SubscribingCollector::EVENT, $this, 'happened');
+
+        $this->assertSame([], $collector->collect()['panel']);
+    }
+
     public function testCollectAggregatesEveryCollectorAndCaches(): void
     {
         $bar = new DebugBar();
@@ -63,6 +89,14 @@ final class DebugBarTest extends AbstractUnitTestCase
             array_keys($widgets)
         );
         $this->assertSame($result, $bar->getData());
+    }
+
+    public function testCollectorThatIsNotASubscriberAttachesNothing(): void
+    {
+        $manager = $this->createMock(ManagerInterface::class);
+        $manager->expects($this->never())->method('attach');
+
+        (new DebugBar($manager))->addCollector(new GridCollector());
     }
 
     public function testGetCollectorThrowsForUnknown(): void

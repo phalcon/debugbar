@@ -30,7 +30,6 @@ use Phalcon\DebugBar\Collector\VersionCollector;
 use Phalcon\DebugBar\Collector\ViewCollector;
 use Phalcon\DebugBar\Contracts\Collector;
 use Phalcon\DebugBar\Contracts\History;
-use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEndpoint;
@@ -107,8 +106,8 @@ final class Core
 
     /**
      * Creates the bar with its enabled collectors, points the `Debug` facade at
-     * it and subscribes the streamed collectors. It returns the listener, or null
-     * when the bar cannot boot.
+     * it and subscribes `ServiceBridge`. It returns the listener, or null when the
+     * bar cannot boot.
      *
      * @throws CannotUseInProduction When `env.strict` is set and the environment is blocked or undefined.
      */
@@ -124,7 +123,7 @@ final class Core
             return null;
         }
 
-        $bar = new DebugBar();
+        $bar = new DebugBar($eventsManager);
         foreach ($this->buildCollectors($request, $config) as $collector) {
             $bar->addCollector($collector);
         }
@@ -135,11 +134,7 @@ final class Core
         Debug::setBar($bar);
 
         if (null !== $eventsManager) {
-            foreach ($bar->getCollectors() as $collector) {
-                if ($collector instanceof Subscriber) {
-                    $collector->subscribe($eventsManager);
-                }
-            }
+            (new ServiceBridge($bar))->subscribe($eventsManager);
         }
 
         $this->listener = new ResponseListener(

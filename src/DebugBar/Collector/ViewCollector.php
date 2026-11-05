@@ -13,28 +13,22 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Collector;
 
-use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\DebugBarTypes;
-use Phalcon\Events\EventInterface;
-use Phalcon\Events\ManagerInterface;
 
 use function array_pop;
 use function count;
 use function hrtime;
-use function is_string;
 
 /**
- * Records rendered views by subscribing to `view:beforeRenderView`/
- * `view:afterRenderView`. The path is the event data on the "before" event, so
- * nothing is resolved from the container. A stack pairs each "before" with its
- * matching "after", so nested partials are timed correctly. `startRender()` and
- * `finishRender()` record a render with no events manager.
+ * Records rendered views. `startRender()` takes the path and `finishRender()` ends
+ * the last render that started. A stack pairs each start with its finish, so nested
+ * partials are timed correctly.
  *
  * @phpstan-import-type list_envelope from DebugBarTypes
  * @phpstan-import-type view_pending from DebugBarTypes
  * @phpstan-import-type view_render from DebugBarTypes
  */
-final class ViewCollector extends AbstractCollector implements Subscriber
+final class ViewCollector extends AbstractCollector
 {
     use FormatsDuration;
 
@@ -98,22 +92,5 @@ final class ViewCollector extends AbstractCollector implements Subscriber
             'path'  => $path,
             'start' => hrtime(true),
         ];
-    }
-
-    public function subscribe(ManagerInterface $eventsManager): void
-    {
-        $eventsManager->attach(
-            'view:beforeRenderView',
-            function (EventInterface $event, mixed $view, mixed $path): void {
-                $this->startRender(is_string($path) ? $path : '');
-            }
-        );
-
-        $eventsManager->attach(
-            'view:afterRenderView',
-            function (): void {
-                $this->finishRender();
-            }
-        );
     }
 }

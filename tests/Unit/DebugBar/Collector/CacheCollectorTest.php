@@ -14,7 +14,6 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar\Collector;
 
 use Phalcon\DebugBar\Collector\CacheCollector;
-use Phalcon\Events\Manager;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
 
@@ -32,23 +31,6 @@ final class CacheCollectorTest extends AbstractUnitTestCase
 
         $this->assertSame(1, $envelope['badge']);
         $this->assertSame([['label' => 'Get', 'message' => 'user_42']], $envelope['panel']);
-    }
-
-    public function testCacheOperationsAreRecordedFromEvents(): void
-    {
-        $collector     = new CacheCollector();
-        $eventsManager = new Manager();
-        $collector->subscribe($eventsManager);
-
-        $eventsManager->fire('cache:afterGet', $this, 'user_42');
-        $eventsManager->fire('cache:afterSet', $this, 'user_42');
-
-        $envelope = $collector->collect();
-
-        $this->assertSame(2, $envelope['badge']);
-        $this->assertSame('Get', $envelope['panel'][0]['label']);
-        $this->assertSame('user_42', $envelope['panel'][0]['message']);
-        $this->assertSame('Set', $envelope['panel'][1]['label']);
     }
 
     public function testNameAndPanelContract(): void

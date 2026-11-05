@@ -32,11 +32,14 @@ use Phalcon\Http\ResponseInterface;
 use Phalcon\Mvc\Application;
 use Phalcon\Mvc\Dispatcher;
 use Phalcon\Mvc\Router;
+use Phalcon\Mvc\RouterInterface;
 use Phalcon\Mvc\Url;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
+use Phalcon\Tests\Support\DebugBar\Fixtures\SubscribingCollector;
 use PHPUnit\Framework\Attributes\BackupGlobals;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use RuntimeException;
 use stdClass;
 
 use function array_keys;
@@ -229,6 +232,19 @@ final class ProviderTest extends AbstractUnitTestCase
 
         $_ENV[self::ENV_VAR] = 'production';
         $this->assertTrue($provider->isAllowed());
+    }
+
+    public function testCustomCollectorGetsItsEvents(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $em                  = new Manager();
+        $collector           = new SubscribingCollector();
+
+        $this->provider($this->application($em))->boot();
+        Debug::getBar()?->addCollector($collector);
+        $em->fire(SubscribingCollector::EVENT, $this, 'happened');
+
+        $this->assertSame([['message' => 'happened']], $collector->collect()['panel']);
     }
 
     public function testDefaultBootRegistersEveryCollector(): void
@@ -626,6 +642,27 @@ final class ProviderTest extends AbstractUnitTestCase
         );
 
         $this->assertFalse($provider->isAllowed());
+    }
+
+    public function testMvcEventsReachTheCollectors(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+        $em                  = new Manager();
+        $app                 = $this->application($em);
+
+        $this->provider($app)->boot();
+
+        $router = $this->createMock(RouterInterface::class);
+        $router->method('getActionName')->willReturn('login');
+        $em->fire('router:matchedRoute', $router);
+        $em->fire('dispatch:beforeException', $app, new RuntimeException('boom'));
+
+        $data  = $this->bootedBar()->collect()['data'];
+        $route = $data['route']['panel'];
+
+        $this->assertIsArray($route);
+        $this->assertSame('login', $route['Action']);
+        $this->assertSame(1, $data['exceptions']['badge']);
     }
 
     public function testNonceIsStampedOnInjectedTags(): void

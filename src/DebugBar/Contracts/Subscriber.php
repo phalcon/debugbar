@@ -16,9 +16,9 @@ namespace Phalcon\DebugBar\Contracts;
 use Phalcon\Events\ManagerInterface;
 
 /**
- * Implemented by a collector that gathers its data from framework events. At
- * boot the provider hands each such collector the application's EventsManager
- * so it can attach its own listeners.
+ * A custom collector implements this to attach its own listeners. `DebugBar::addCollector()`
+ * calls `subscribe()` when the bar has an events manager. The built-in collectors
+ * do not use it: the bridges feed them.
  */
 interface Subscriber
 {

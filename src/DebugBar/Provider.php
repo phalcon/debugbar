@@ -22,6 +22,7 @@ use Phalcon\DebugBar\History\FilesystemHistory;
 use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\HistoryOptions;
+use Phalcon\DebugBar\Mvc\Bridge;
 use Phalcon\DebugBar\Mvc\HistoryListener;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Di\DiInterface;
@@ -84,11 +85,14 @@ class Provider
             $this->historyCookie
         );
 
-        if (null === $eventsManager || null === $listener) {
+        $bar           = Debug::getBar();
+
+        if (null === $eventsManager || null === $listener || null === $bar) {
             return;
         }
 
         $eventsManager->attach('application:beforeSendResponse', $listener);
+        (new Bridge($bar))->subscribe($eventsManager);
     }
 
     /**

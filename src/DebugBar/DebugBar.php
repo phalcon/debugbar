@@ -18,8 +18,10 @@ use Phalcon\DebugBar\Contracts\ExceptionAware;
 use Phalcon\DebugBar\Contracts\LoggerAware;
 use Phalcon\DebugBar\Contracts\MessageAware;
 use Phalcon\DebugBar\Contracts\Renderable;
+use Phalcon\DebugBar\Contracts\Subscriber;
 use Phalcon\DebugBar\Contracts\TimeAware;
 use Phalcon\DebugBar\Exceptions\Exception;
+use Phalcon\Events\ManagerInterface;
 use Throwable;
 
 use function count;
@@ -52,12 +54,22 @@ class DebugBar
 
     protected ?Throwable $lastException = null;
 
+    public function __construct(protected ?ManagerInterface $eventsManager = null)
+    {
+    }
+
     /**
-     * Registers (or replaces) a collector under its name.
+     * Registers (or replaces) a collector under its name. A collector that
+     * implements `Subscriber` attaches its listeners when the bar has an events
+     * manager.
      */
     public function addCollector(Collector $collector): static
     {
         $this->collectors[$collector->getName()] = $collector;
+
+        if (null !== $this->eventsManager && $collector instanceof Subscriber) {
+            $collector->subscribe($this->eventsManager);
+        }
 
         return $this;
     }
