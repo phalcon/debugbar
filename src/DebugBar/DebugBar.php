@@ -50,6 +50,8 @@ class DebugBar
         'meta' => [],
     ];
 
+    protected ?Throwable $lastException = null;
+
     /**
      * Registers (or replaces) a collector under its name.
      */
@@ -62,6 +64,8 @@ class DebugBar
 
     public function addException(Throwable $throwable): static
     {
+        $this->lastException = $throwable;
+
         $collector = $this->collectors['exceptions'] ?? null;
         if ($collector instanceof ExceptionAware) {
             $collector->addThrowable($throwable);
@@ -156,6 +160,11 @@ class DebugBar
     public function getData(): array
     {
         return $this->data;
+    }
+
+    public function getLastException(): ?Throwable
+    {
+        return $this->lastException;
     }
 
     public function hasCollector(string $name): bool

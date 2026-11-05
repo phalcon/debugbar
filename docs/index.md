@@ -31,6 +31,8 @@ use Phalcon\Debug;
 (new Debug())->listen();
 ```
 
+`listen()` does not see the exceptions of an ADR application, because the application catches them first. For an ADR application, see [ADR](#adr).
+
 The remainder of this document covers the debug bar.
 
 ## Registering the Debug Bar
@@ -213,6 +215,33 @@ The provider decorates the router (`Phalcon\Contracts\ADR\Router\Router`) with `
 
    Do not resolve the router during registration. `extend()` on a resolved service throws `CannotExtendResolved`. In a blocked environment, the provider does not change the router.
 
+The `debug_page` key shows the debug page (`Phalcon\Debug`) for a server error. It is off by default. The provider reads the exception from the bar, so add `ExceptionAdapter` to your logger.
+
+```php
+<?php
+
+use Phalcon\DebugBar\ADR\Provider as DebugBarProvider;
+
+(new DebugBarProvider(['debug_page' => true]))->provide($container);
+```
+
+The debug page replaces the content of the response when the status is 500 or higher, the response is an HTML page and the access gate allows the client. The status does not change. A JSON response, an AJAX request and a 404 response keep their content. The bar is not in the debug page. If the debug page fails, the response keeps the error page of the application.
+
+!!! warning "NOTE"
+
+   The debug page shows `$_SERVER`, which can hold passwords and keys. To remove these values, give a configured `Phalcon\Debug` to the provider.
+
+```php
+<?php
+
+use Phalcon\Debug;
+use Phalcon\DebugBar\ADR\Provider as DebugBarProvider;
+
+$debug = (new Debug())->setBlacklist(['server' => ['DB_PASSWORD', 'APP_CRYPT_SALT']]);
+
+(new DebugBarProvider(['debug_page' => $debug]))->provide($container);
+```
+
 These limits apply in an ADR application:
 
 - **One request for each process.** `Phalcon\ADR\Application::handle()` supports a reused request in a long-lived worker, but collectors have no reset method. In a worker, their data grows from request to request. `HistoryCookie::fromGlobals()` also reads only at boot.
@@ -252,7 +281,7 @@ if (null !== $listener) {
 
 ## Configuration
 
-The second argument to `Provider` is a nested array. Every key is optional. `Phalcon\DebugBar\ADR\Provider` and `Phalcon\DebugBar\Core` take the same array as their only argument. `Core` does not read the `history` keys.
+The second argument to `Provider` is a nested array. Every key is optional. `Phalcon\DebugBar\ADR\Provider` and `Phalcon\DebugBar\Core` take the same array as their only argument. `Core` does not read the `debug_page` and `history` keys.
 
 | Key                | Type                      | Default                  | Purpose                                                          |
 |--------------------|---------------------------|--------------------------|------------------------------------------------------------------|
@@ -260,6 +289,7 @@ The second argument to `Provider` is a nested array. Every key is optional. `Pha
 | `access.callback`  | `(Closure(): bool)\|null` | `null`                   | Extra gate. When present, it must also return `true`.            |
 | `assets.nonce`     | `string\|null`            | `null`                   | CSP nonce stamped on the injected `<style>` and `<script>` tags. |
 | `collectors`       | `array<string, bool>`     | all applicable enabled   | Per-collector switch, keyed by collector name.                   |
+| `debug_page`       | `bool\|Phalcon\Debug`     | `false`                  | Show the debug page for a server error. Only the ADR provider reads it. |
 | `enabled`          | `bool`                    | `true`                   | Master switch. When `false`, `boot()` returns after the gate.    |
 | `env.blocked`      | `list<string>`            | `['production', 'prod']` | Environment values that block the bar (case-insensitive).        |
 | `env.strict`       | `bool`                    | `false`                  | When `true`, `boot()` throws in a blocked/undefined environment instead of returning silently. |

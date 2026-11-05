@@ -18,16 +18,19 @@ use Phalcon\Contracts\Container\Service\Collection;
 use Phalcon\Contracts\Container\Service\Provider as ProviderContract;
 use Phalcon\Contracts\Events\Manager as ManagerContract;
 use Phalcon\Contracts\Http\AttributeRequest;
+use Phalcon\Debug as DebugPage;
 use Phalcon\DebugBar\Collector\HistoryCollector;
 use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\Core;
 use Phalcon\DebugBar\Debug;
+use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\DebugBar\History\FilesystemHistory;
 use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\DebugBar\History\HistoryOptions;
+use Phalcon\DebugBar\ResponseListener;
 use Phalcon\Events\ManagerInterface;
 use Phalcon\Http\RequestInterface;
 
@@ -46,6 +49,8 @@ final class Provider implements ProviderContract
 {
     private Core $core;
 
+    private bool | DebugPage $debugPage;
+
     private ?HistoryCookie $historyCookie = null;
 
     private ?HistoryEndpoint $historyEndpoint = null;
@@ -58,6 +63,7 @@ final class Provider implements ProviderContract
     public function __construct(array $config = [])
     {
         $this->core           = new Core($config);
+        $this->debugPage      = $config['debug_page'] ?? false;
         $this->historyOptions = HistoryOptions::fromConfig($config['history'] ?? []);
     }
 
@@ -89,7 +95,7 @@ final class Provider implements ProviderContract
             return;
         }
 
-        $eventsManager->attach('application:afterHandle', $listener);
+        $eventsManager->attach('application:afterHandle', $this->responseListener($listener, $bar, $request));
         (new Bridge($bar))->subscribe($eventsManager);
     }
 
@@ -142,5 +148,23 @@ final class Provider implements ProviderContract
     private function resolve(Collection $services, string $name): mixed
     {
         return $services->has($name) ? $services->get($name) : null;
+    }
+
+    private function responseListener(
+        ResponseListener $listener,
+        DebugBar $bar,
+        ?RequestInterface $request
+    ): DebugPageListener | ResponseListener {
+        if (false === $this->debugPage) {
+            return $listener;
+        }
+
+        return new DebugPageListener(
+            $listener,
+            $bar,
+            true === $this->debugPage ? new DebugPage() : $this->debugPage,
+            $this->core->getAccessGate(),
+            $request
+        );
     }
 }

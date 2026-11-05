@@ -75,6 +75,7 @@ namespace Phalcon\DebugBar;
  *     assets?: array{nonce?: string|null},
  *     access?: array{allow_ips?: list<string>, callback?: (\Closure(): bool)|null},
  *     collectors?: array<string, bool>,
+ *     debug_page?: bool|\Phalcon\Debug,
  *     headers?: bool,
  *     history?: history_config,
  *     redact?: array{mask?: list<string>, hidden?: list<string>}

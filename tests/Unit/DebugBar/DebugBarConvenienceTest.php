@@ -72,6 +72,31 @@ final class DebugBarConvenienceTest extends AbstractUnitTestCase
         );
     }
 
+    public function testLastExceptionIsKeptWithNoExceptionsCollector(): void
+    {
+        $exception = new RuntimeException('boom');
+        $bar       = new DebugBar();
+
+        $bar->addException($exception);
+
+        $this->assertSame($exception, $bar->getLastException());
+    }
+
+    public function testLastExceptionIsNullUntilAnExceptionIsAdded(): void
+    {
+        $this->assertNull((new DebugBar())->getLastException());
+    }
+
+    public function testLastExceptionIsTheMostRecentOne(): void
+    {
+        $last = new RuntimeException('second');
+        $bar  = new DebugBar();
+
+        $bar->addException(new RuntimeException('first'))->addException($last);
+
+        $this->assertSame($last, $bar->getLastException());
+    }
+
     public function testMessageAndLevelsDelegateToMessagesCollector(): void
     {
         $messages = new RecordingMessagesCollector();
