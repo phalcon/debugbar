@@ -37,8 +37,6 @@ final class RequestCollector extends AbstractCollector
 
     public const NAME = 'request';
 
-    protected string $icon = 'icon-request';
-
     protected string $label = 'Request';
 
     protected string $panel = 'grid';
@@ -62,7 +60,7 @@ final class RequestCollector extends AbstractCollector
         }
 
         $method = $this->request->getMethod();
-        $uri    = $this->request->getURI();
+        $uri    = $this->redactor->redactUri($this->request->getURI());
         $grid   = [
             'Method' => $method,
             'URI'    => $uri,

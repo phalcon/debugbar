@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar\Collector;
 
 use Phalcon\DebugBar\Collector\LoggerCollector;
+use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
 
@@ -25,7 +26,7 @@ final class LoggerCollectorTest extends AbstractUnitTestCase
 
     public function testContextIsCapturedAsJson(): void
     {
-        $collector = new LoggerCollector();
+        $collector = new LoggerCollector(new Redactor());
         $collector->addLog('user login', 'info', ['user_id' => 42, 'ip' => '10.0.0.1']);
 
         $context = $collector->collect()['panel'][0]['context'];
@@ -33,9 +34,24 @@ final class LoggerCollectorTest extends AbstractUnitTestCase
         $this->assertSame(['user_id' => 42, 'ip' => '10.0.0.1'], json_decode($context, true));
     }
 
+    public function testContextIsRedacted(): void
+    {
+        $collector = new LoggerCollector(new Redactor(['password'], ['internal']));
+        $collector->addLog(
+            'user login',
+            'info',
+            ['user' => 'sarah', 'password' => 'hunter2', 'internal' => 'gone', 'nested' => ['password' => 'hunter3']]
+        );
+
+        $this->assertSame(
+            ['user' => 'sarah', 'password' => '***', 'nested' => ['password' => '***']],
+            json_decode($collector->collect()['panel'][0]['context'], true)
+        );
+    }
+
     public function testEmptyContextIsAnEmptyString(): void
     {
-        $collector = new LoggerCollector();
+        $collector = new LoggerCollector(new Redactor());
         $collector->addLog('ping', 'debug');
 
         $this->assertSame('', $collector->collect()['panel'][0]['context']);
@@ -43,7 +59,7 @@ final class LoggerCollectorTest extends AbstractUnitTestCase
 
     public function testLogsAccumulateWithLevelAsLabel(): void
     {
-        $collector = new LoggerCollector();
+        $collector = new LoggerCollector(new Redactor());
         $collector->addLog('user created', 'info');
         $collector->addLog('disk full', 'error');
 
@@ -58,7 +74,7 @@ final class LoggerCollectorTest extends AbstractUnitTestCase
 
     public function testNameAndPanelContract(): void
     {
-        $collector = new LoggerCollector();
+        $collector = new LoggerCollector(new Redactor());
         $collector->addLog('x', 'debug', ['k' => 'v']);
 
         $this->assertSame('logger', $collector->getName());

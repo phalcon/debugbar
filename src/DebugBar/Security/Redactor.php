@@ -13,15 +13,22 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Security;
 
+use function http_build_query;
 use function in_array;
 use function is_array;
 use function mb_strtolower;
+use function parse_str;
+use function rawurlencode;
+use function str_replace;
+use function strpos;
+use function substr;
 
 /**
  * Guards data before it leaves PHP, matching keys case-insensitively through
  * nested arrays. Sensitive keys are masked (key shown, value replaced); "hidden"
  * keys are dropped entirely - mirroring the blacklist `Debug` already applies.
- * Applied by the Request/Session/Config collectors.
+ * Applied by the Request/Session/Config/Logger collectors, and to the URI that
+ * request history stores.
  */
 final class Redactor
 {
@@ -84,6 +91,29 @@ final class Redactor
         }
 
         return $result;
+    }
+
+    /**
+     * Applies the same rule to the query of a URI. A URI that has nothing to redact
+     * stays unchanged. A rebuilt query can encode other values in a different way.
+     */
+    public function redactUri(string $uri): string
+    {
+        $position = strpos($uri, '?');
+        if (false === $position) {
+            return $uri;
+        }
+
+        parse_str(substr($uri, $position + 1), $values);
+        $redacted = $this->redact($values);
+        if ($redacted === $values) {
+            return $uri;
+        }
+
+        $path  = substr($uri, 0, $position);
+        $query = str_replace(rawurlencode(self::MASK), self::MASK, http_build_query($redacted));
+
+        return '' === $query ? $path : $path . '?' . $query;
     }
 
     /**
