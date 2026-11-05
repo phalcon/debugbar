@@ -54,17 +54,8 @@ class Provider
      */
     public function __construct(private readonly Application $app, array $config = [])
     {
-        $history = $config['history'] ?? [];
-
         $this->core           = new Core($config);
-        $this->historyOptions = new HistoryOptions(
-            $history['enabled'] ?? false,
-            $history['url'] ?? '/_debugbar/open',
-            $history['path'] ?? '',
-            $history['max_requests'] ?? 100,
-            $history['ttl_seconds'] ?? 86400,
-            $history['max_browsers'] ?? 10
-        );
+        $this->historyOptions = HistoryOptions::fromConfig($config['history'] ?? []);
     }
 
     /**

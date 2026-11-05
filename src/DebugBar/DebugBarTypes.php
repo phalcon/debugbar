@@ -60,6 +60,15 @@ namespace Phalcon\DebugBar;
  * @phpstan-type view_pending array{path: string, start: int|float}
  * @phpstan-type view_render array{path: string, time: int|float}
  * @phpstan-type request_context array{0: string|null, 1: bool}
+ * @phpstan-type history_config array{
+ *     enabled?: bool,
+ *     url?: string,
+ *     path?: string,
+ *     max_requests?: int,
+ *     ttl_seconds?: int,
+ *     max_browsers?: int,
+ *     base_uri?: string
+ * }
  * @phpstan-type provider_config array{
  *     env?: array{var?: string, blocked?: list<string>, strict?: bool},
  *     enabled?: bool,
@@ -67,14 +76,7 @@ namespace Phalcon\DebugBar;
  *     access?: array{allow_ips?: list<string>, callback?: (\Closure(): bool)|null},
  *     collectors?: array<string, bool>,
  *     headers?: bool,
- *     history?: array{
- *         enabled?: bool,
- *         url?: string,
- *         path?: string,
- *         max_requests?: int,
- *         ttl_seconds?: int,
- *         max_browsers?: int
- *     },
+ *     history?: history_config,
  *     redact?: array{mask?: list<string>, hidden?: list<string>}
  * }
  */

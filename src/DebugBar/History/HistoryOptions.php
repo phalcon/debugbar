@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\History;
 
 use InvalidArgumentException;
+use Phalcon\DebugBar\DebugBarTypes;
 
 use function max;
 use function parse_url;
@@ -30,6 +31,8 @@ use const PHP_URL_SCHEME;
 
 /**
  * Immutable request-history configuration shared by the provider and storage.
+ *
+ * @phpstan-import-type history_config from DebugBarTypes
  */
 final class HistoryOptions
 {
@@ -47,13 +50,30 @@ final class HistoryOptions
         string $path = '',
         int $maxRequests = 100,
         int $ttlSeconds = 86400,
-        int $maxBrowsers = 10
+        int $maxBrowsers = 10,
+        public readonly string $baseUri = '/'
     ) {
         $path              = trim($path);
         $this->path        = $this->trimTrailingSeparators($path);
         $this->maxRequests = max(1, $maxRequests);
         $this->ttlSeconds  = max(1, $ttlSeconds);
         $this->maxBrowsers = max(1, $maxBrowsers);
+    }
+
+    /**
+     * @param history_config $config
+     */
+    public static function fromConfig(array $config): self
+    {
+        return new self(
+            $config['enabled'] ?? false,
+            $config['url'] ?? '/_debugbar/open',
+            $config['path'] ?? '',
+            $config['max_requests'] ?? 100,
+            $config['ttl_seconds'] ?? 86400,
+            $config['max_browsers'] ?? 10,
+            $config['base_uri'] ?? '/'
+        );
     }
 
     public function validate(): void
