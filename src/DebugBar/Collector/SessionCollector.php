@@ -37,8 +37,6 @@ final class SessionCollector extends AbstractCollector
 
     public const NAME = 'session';
 
-    protected string $icon = 'icon-session';
-
     protected string $label = 'Session';
 
     protected string $panel = 'grid';

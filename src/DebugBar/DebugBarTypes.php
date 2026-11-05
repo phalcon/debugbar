@@ -14,9 +14,12 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar;
 
 /**
- * Central home for the phpdoc array-shape aliases shared across the debug bar.
+ * Central home for the phpdoc array-shape aliases shared across the debug bar: the
+ * payload that the browser client reads and the configuration. A shape that only
+ * one class uses stays in that class.
  * Pull what you need with `@phpstan-import-type <name> from \Phalcon\DebugBar\DebugBarTypes`.
  *
+ * @phpstan-type panel_type 'code'|'exceptions'|'grid'|'history'|'html'|'list'|'logs'
  * @phpstan-type list_row array{label: string, message: string}
  * @phpstan-type list_panel list<list_row>
  * @phpstan-type grid_panel array<string, scalar>
@@ -28,8 +31,7 @@ namespace Phalcon\DebugBar;
  * @phpstan-type request_widget array{method: list<string>, uri: list<string>}
  * @phpstan-type widget array{
  *     label: string,
- *     icon: string,
- *     panel: string,
+ *     panel: panel_type,
  *     indicator?: indicator,
  *     request?: request_widget
  * }
@@ -52,14 +54,9 @@ namespace Phalcon\DebugBar;
  * @phpstan-type exception_envelope array{panel: exception_panel, badge: scalar|null, summary?: collector_summary}
  * @phpstan-type log_envelope array{panel: log_panel, badge: scalar|null, summary?: collector_summary}
  * @phpstan-type payload array{data: array<string, envelope>, meta: array<string, mixed>}
- * @phpstan-type db_query array{sql: string, bindings: array<array-key, mixed>, time: int|float}
  * @phpstan-type database_row array{label: string, message: string, occurrences: int|null}
  * @phpstan-type database_panel list<database_row>
  * @phpstan-type database_envelope array{panel: database_panel, badge: int, summary: collector_summary}
- * @phpstan-type time_measure array{label: string, start: int|float, end: int|float|null}
- * @phpstan-type view_pending array{path: string, start: int|float}
- * @phpstan-type view_render array{path: string, time: int|float}
- * @phpstan-type request_context array{0: string|null, 1: bool}
  * @phpstan-type history_config array{
  *     enabled?: bool,
  *     url?: string,

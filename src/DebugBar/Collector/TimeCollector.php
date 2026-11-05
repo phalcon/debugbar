@@ -26,15 +26,13 @@ use function microtime;
  *
  * @phpstan-import-type list_envelope from DebugBarTypes
  * @phpstan-import-type list_row from DebugBarTypes
- * @phpstan-import-type time_measure from DebugBarTypes
+ * @phpstan-type time_measure array{label: string, start: int|float, end: int|float|null}
  */
 final class TimeCollector extends AbstractCollector implements TimeAware
 {
     use FormatsDuration;
 
     public const NAME = 'time';
-
-    protected string $icon = 'icon-time';
 
     protected ?array $indicator = [
         'icon'  => 'clock',

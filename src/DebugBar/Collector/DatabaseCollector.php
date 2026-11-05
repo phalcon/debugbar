@@ -25,8 +25,8 @@ use function trim;
  * Records SQL queries. `startQuery()` starts the time, and `finishQuery()` takes
  * the statement and the bindings.
  *
- * @phpstan-import-type db_query from DebugBarTypes
  * @phpstan-import-type database_envelope from DebugBarTypes
+ * @phpstan-type db_query array{sql: string, bindings: array<array-key, mixed>, time: int|float}
  */
 final class DatabaseCollector extends AbstractCollector
 {
@@ -34,8 +34,6 @@ final class DatabaseCollector extends AbstractCollector
     use FormatsDuration;
 
     public const NAME = 'database';
-
-    protected string $icon = 'icon-database';
 
     protected string $label = 'Database';
 

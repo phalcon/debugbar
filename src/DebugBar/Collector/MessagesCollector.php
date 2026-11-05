@@ -34,8 +34,6 @@ final class MessagesCollector extends AbstractCollector implements MessageAware
 
     public const NAME = 'messages';
 
-    protected string $icon = 'icon-messages';
-
     protected string $label = 'Messages';
 
     protected string $panel = 'list';

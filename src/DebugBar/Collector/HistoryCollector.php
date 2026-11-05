@@ -23,8 +23,6 @@ final class HistoryCollector extends AbstractCollector
 {
     public const NAME = 'history';
 
-    protected string $icon = 'icon-history';
-
     protected string $label = 'History';
 
     protected string $panel = 'history';

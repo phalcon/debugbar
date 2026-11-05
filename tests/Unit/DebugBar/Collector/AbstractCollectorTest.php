@@ -43,11 +43,7 @@ final class AbstractCollectorTest extends AbstractUnitTestCase
     {
         $collector = new GridCollector();
 
-        $widget = $collector->getWidget();
-
-        $this->assertSame('Grid', $widget['label']);
-        $this->assertSame('icon-grid', $widget['icon']);
-        $this->assertSame('grid', $widget['panel']);
+        $this->assertSame(['label' => 'Grid', 'panel' => 'grid'], $collector->getWidget());
     }
 
     public function testImplementsTheContracts(): void

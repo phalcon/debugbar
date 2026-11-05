@@ -27,8 +27,6 @@ final class CacheCollector extends AbstractCollector
 {
     public const NAME = 'cache';
 
-    protected string $icon = 'icon-cache';
-
     protected string $label = 'Cache';
 
     protected string $panel = 'list';

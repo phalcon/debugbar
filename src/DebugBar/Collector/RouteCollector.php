@@ -27,8 +27,6 @@ final class RouteCollector extends AbstractCollector
 {
     public const NAME = 'route';
 
-    protected string $icon = 'icon-route';
-
     protected string $label = 'Route';
 
     protected string $panel = 'grid';

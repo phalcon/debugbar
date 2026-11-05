@@ -30,8 +30,6 @@ final class ConfigCollector extends AbstractCollector
 
     public const NAME = 'config';
 
-    protected string $icon = 'icon-config';
-
     protected string $label = 'Config';
 
     protected string $panel = 'grid';
