@@ -17,8 +17,8 @@ use Phalcon\DebugBar\DebugBarTypes;
 
 /**
  * A collector that also describes its tab/panel. The `panel` value selects the
- * client renderer ('grid' | 'list' | 'code' | 'html'); the tab count comes from
- * `collect()['badge']`, not from here.
+ * client renderer (`panel_type` in `DebugBarTypes` lists the values); the tab count
+ * comes from `collect()['badge']`, not from here.
  *
  * @phpstan-import-type widget from DebugBarTypes
  */

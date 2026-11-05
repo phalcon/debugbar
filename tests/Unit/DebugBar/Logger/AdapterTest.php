@@ -15,8 +15,10 @@ namespace Phalcon\Tests\Unit\DebugBar\Logger;
 
 use DateTimeImmutable;
 use Phalcon\DebugBar\Collector\LoggerCollector;
+use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\Logger\Adapter;
+use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Logger\Item;
 use Phalcon\Logger\Logger;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
@@ -25,20 +27,42 @@ use function json_decode;
 
 final class AdapterTest extends AbstractUnitTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Debug::setBar(null);
+    }
+
+    protected function tearDown(): void
+    {
+        Debug::setBar(null);
+
+        parent::tearDown();
+    }
+
+    public function testAdapterCreatedBeforeTheBarBootsForwardsToTheBar(): void
+    {
+        $logger = new Logger('debug', ['debugbar' => new Adapter()]);
+
+        $collector = $this->bootBar();
+        $logger->info('after boot');
+
+        $this->assertSame('after boot', $collector->collect()['panel'][0]['message']);
+    }
+
     public function testCloseReturnsTrue(): void
     {
-        $adapter = new Adapter(new DebugBar());
+        $adapter = new Adapter();
 
         $this->assertTrue($adapter->close());
     }
 
     public function testLoggerContextIsForwarded(): void
     {
-        $collector = new LoggerCollector();
-        $bar       = new DebugBar();
-        $bar->addCollector($collector);
+        $collector = $this->bootBar();
 
-        $logger = new Logger('debug', ['debugbar' => new Adapter($bar)]);
+        $logger = new Logger('debug', ['debugbar' => new Adapter()]);
         $logger->info('user login', ['user_id' => 7]);
 
         $row = $collector->collect()['panel'][0];
@@ -49,11 +73,9 @@ final class AdapterTest extends AbstractUnitTestCase
 
     public function testLoggingThroughRealLoggerPopulatesTheCollector(): void
     {
-        $collector = new LoggerCollector();
-        $bar       = new DebugBar();
-        $bar->addCollector($collector);
+        $collector = $this->bootBar();
 
-        $logger = new Logger('debug', ['debugbar' => new Adapter($bar)]);
+        $logger = new Logger('debug', ['debugbar' => new Adapter()]);
         $logger->info('hello');
         $logger->error('nope');
 
@@ -67,13 +89,20 @@ final class AdapterTest extends AbstractUnitTestCase
         $this->assertSame('nope', $panel[1]['message']);
     }
 
+    public function testProcessDoesNothingWhenNoBarIsActive(): void
+    {
+        $adapter = new Adapter();
+
+        $adapter->process(new Item('boom', 'error', 3, new DateTimeImmutable()));
+
+        $this->assertNull(Debug::getBar());
+    }
+
     public function testProcessForwardsMessageLevelAndContext(): void
     {
-        $collector = new LoggerCollector();
-        $bar       = new DebugBar();
-        $bar->addCollector($collector);
+        $collector = $this->bootBar();
 
-        $adapter = new Adapter($bar);
+        $adapter = new Adapter();
         $adapter->process(
             new Item('boom', 'error', 3, new DateTimeImmutable(), ['request_id' => 'abc'])
         );
@@ -85,12 +114,11 @@ final class AdapterTest extends AbstractUnitTestCase
         $this->assertSame(['request_id' => 'abc'], json_decode($row['context'], true));
     }
 
-    public function testProcessNoOpsWhenBarIsNull(): void
+    private function bootBar(): LoggerCollector
     {
-        $adapter = new Adapter(null);
+        $collector = new LoggerCollector(new Redactor());
+        Debug::setBar((new DebugBar())->addCollector($collector));
 
-        $adapter->process(new Item('boom', 'error', 3, new DateTimeImmutable()));
-
-        $this->assertTrue($adapter->close());
+        return $collector;
     }
 }

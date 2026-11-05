@@ -19,6 +19,8 @@ use Phalcon\Http\RequestInterface;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
 
+use function is_array;
+
 final class RequestCollectorTest extends AbstractUnitTestCase
 {
     use PanelContractTrait;
@@ -52,6 +54,22 @@ final class RequestCollectorTest extends AbstractUnitTestCase
 
         $this->assertSame('GET', $panel['Method']);
         $this->assertArrayNotHasKey('Query.0', $panel);
+    }
+
+    public function testQueryValuesInTheUriAreRedacted(): void
+    {
+        $request = $this->createMock(RequestInterface::class);
+        $request->method('getMethod')->willReturn('GET');
+        $request->method('getURI')->willReturn('/reset?token=abc&page=2');
+        $request->method('getHeaders')->willReturn([]);
+
+        $collected = (new RequestCollector($request, new Redactor()))->collect();
+        if (!is_array($collected['panel']) || !isset($collected['metrics'])) {
+            $this->fail('Expected a grid panel and the request metrics.');
+        }
+
+        $this->assertSame('/reset?token=***&page=2', $collected['panel']['URI']);
+        $this->assertSame('/reset?token=***&page=2', $collected['metrics'][RequestCollector::METRIC_URI]);
     }
 
     public function testRequestDataIsFlattenedAndRedacted(): void

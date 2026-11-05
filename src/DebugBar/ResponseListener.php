@@ -13,21 +13,13 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
-use DateTimeImmutable;
-use DateTimeZone;
-use Phalcon\DebugBar\Contracts\History;
-use Phalcon\DebugBar\History\HistoryCookie;
-use Phalcon\DebugBar\History\HistoryEndpoint;
-use Phalcon\DebugBar\History\RequestMetadata;
+use Phalcon\DebugBar\History\HistoryRecorder;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Events\EventInterface;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
 
 use function count;
-use function is_float;
-use function is_string;
-use function sprintf;
 
 /**
  * The response listener: MVC attaches it to `application:beforeSendResponse` and
@@ -35,9 +27,6 @@ use function sprintf;
  * aggregates the bar, sets the diagnostic headers, and - for an injectable HTML
  * response - renders and splices the bar in. `handle()` does the same work with
  * no event.
- *
- * @phpstan-import-type request_context from DebugBarTypes
- * @phpstan-import-type payload from DebugBarTypes
  */
 final class ResponseListener
 {
@@ -48,9 +37,7 @@ final class ResponseListener
         private readonly AccessGate $accessGate,
         private readonly ?RequestInterface $request,
         private readonly BarOptions $options,
-        private readonly ?History $history = null,
-        private readonly ?HistoryEndpoint $historyEndpoint = null,
-        private readonly ?HistoryCookie $historyCookie = null
+        private readonly ?HistoryRecorder $history = null
     ) {
     }
 
@@ -65,87 +52,29 @@ final class ResponseListener
 
     public function handle(ResponseInterface $response): void
     {
-        if ($this->historyEndpoint?->matches()) {
+        if ($this->history?->isEndpointRequest()) {
             return;
         }
 
-        [$clientIp, $isAjax] = $this->requestContext();
-        if (true !== $this->accessGate->allows($clientIp)) {
+        $context = RequestContext::fromRequest($this->request);
+        if (true !== $this->accessGate->allows($context->clientIp)) {
             return;
         }
 
         $collected = $this->bar->collect();
 
-        $this->record($collected, $response, $isAjax);
-        if (null !== $this->history) {
-            $this->historyCookie?->queue(
-                $this->historyEndpoint?->cookiePath() ?? '/',
-                $this->request?->isSecure() ?? false
-            );
-        }
+        $this->history?->record($collected, $response, $this->request, $context);
 
         if (true === $this->options->headers) {
             $response->setHeader('X-Debug-Bar', (string) count($collected['data']));
         }
 
-        if (true === $this->injector->shouldInject($response, $isAjax)) {
+        if (true === $this->injector->shouldInject($response, $context->isAjax)) {
             $this->injector->inject(
                 $response,
                 $this->renderer->renderHead($this->options->nonce),
                 $this->renderer->render($collected, $this->options->nonce)
             );
         }
-    }
-
-    /**
-     * @param payload $collected
-     */
-    private function record(array $collected, ResponseInterface $response, bool $isAjax): void
-    {
-        if (null === $this->history || null === $this->request) {
-            return;
-        }
-
-        $uri = $this->request->getURI();
-        $this->history->save(
-            $collected,
-            new RequestMetadata(
-                $this->request->getMethod(),
-                $uri,
-                $response->getStatusCode() ?? 200,
-                $isAjax,
-                $this->requestedAt()
-            )
-        );
-    }
-
-    /**
-     * @return request_context
-     */
-    private function requestContext(): array
-    {
-        if (null === $this->request) {
-            return [null, false];
-        }
-
-        $clientIp = $this->request->getClientAddress();
-
-        return [is_string($clientIp) ? $clientIp : null, $this->request->isAjax()];
-    }
-
-    private function requestedAt(): ?DateTimeImmutable
-    {
-        $timestamp = $_SERVER['REQUEST_TIME_FLOAT'] ?? null;
-        if (!is_float($timestamp)) {
-            return null;
-        }
-
-        $requestedAt = DateTimeImmutable::createFromFormat(
-            'U.u',
-            sprintf('%.6F', $timestamp),
-            new DateTimeZone('UTC')
-        );
-
-        return false === $requestedAt ? null : $requestedAt;
     }
 }

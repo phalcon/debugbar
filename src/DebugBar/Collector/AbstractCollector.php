@@ -18,17 +18,16 @@ use Phalcon\DebugBar\DebugBarTypes;
 
 /**
  * Optional base for collectors. Supplies the `NAME` wiring and `getWidget()`
- * scaffolding from three protected members, so a subclass only sets its icon,
- * label, panel type, and `collect()`.
+ * scaffolding from protected members, so a subclass only sets its label, panel
+ * type, and `collect()`.
  *
  * @phpstan-import-type widget from DebugBarTypes
  * @phpstan-import-type indicator from DebugBarTypes
+ * @phpstan-import-type panel_type from DebugBarTypes
  */
 abstract class AbstractCollector implements Renderable
 {
     public const NAME = '';
-
-    protected string $icon = '';
 
     /**
      * @var indicator|null
@@ -37,6 +36,9 @@ abstract class AbstractCollector implements Renderable
 
     protected string $label = '';
 
+    /**
+     * @var panel_type
+     */
     protected string $panel = 'grid';
 
     public function getName(): string
@@ -54,7 +56,6 @@ abstract class AbstractCollector implements Renderable
     {
         $widget = [
             'label' => ('' !== $this->label) ? $this->label : $this->getName(),
-            'icon'  => $this->icon,
             'panel' => $this->panel,
         ];
 

@@ -15,6 +15,7 @@ namespace Phalcon\Tests\Unit\DebugBar;
 
 use Phalcon\DebugBar\Collector\LoggerCollector;
 use Phalcon\DebugBar\DebugBar;
+use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\Fixtures\RecordingExceptionsCollector;
 use Phalcon\Tests\Support\DebugBar\Fixtures\RecordingMessagesCollector;
@@ -38,7 +39,7 @@ final class DebugBarConvenienceTest extends AbstractUnitTestCase
 
     public function testAddLogDelegatesToLoggerCollector(): void
     {
-        $logger = new LoggerCollector();
+        $logger = new LoggerCollector(new Redactor());
         $bar    = new DebugBar();
         $bar->addCollector($logger);
 

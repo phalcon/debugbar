@@ -31,8 +31,6 @@ final class MemoryCollector extends AbstractCollector
 
     public const NAME = 'memory';
 
-    protected string $icon = 'icon-memory';
-
     protected ?array $indicator = [
         'icon'  => 'cogs',
         'label' => 'Current memory usage',

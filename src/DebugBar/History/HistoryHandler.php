@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\History;
 
 use Phalcon\DebugBar\Contracts\History;
+use Phalcon\DebugBar\RequestContext;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
@@ -81,8 +82,7 @@ final class HistoryHandler
      */
     private function handle(string $expectedMethod, callable $action): ResponseInterface
     {
-        $clientIp = $this->request->getClientAddress();
-        if (!$this->accessGate->allows(is_string($clientIp) ? $clientIp : null)) {
+        if (!$this->accessGate->allows(RequestContext::fromRequest($this->request)->clientIp)) {
             return $this->json(['error' => 'Not found.'], 404);
         }
 

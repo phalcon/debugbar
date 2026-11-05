@@ -51,6 +51,20 @@ final class Injector
     }
 
     /**
+     * Whether the response is an HTML page. A response with no content type counts
+     * as HTML.
+     */
+    public function isHtml(ResponseInterface $response): bool
+    {
+        $contentType = $response->getHeaders()->get('Content-Type');
+        if (!is_string($contentType)) {
+            return true;
+        }
+
+        return str_contains(mb_strtolower($contentType), 'text/html');
+    }
+
+    /**
      * Whether the bar may be injected: HTML content, not a redirect, not AJAX.
      */
     public function shouldInject(ResponseInterface $response, bool $isAjax = false): bool
@@ -64,11 +78,6 @@ final class Injector
             return false;
         }
 
-        $contentType = $response->getHeaders()->get('Content-Type');
-        if (!is_string($contentType)) {
-            return true;
-        }
-
-        return str_contains(mb_strtolower($contentType), 'text/html');
+        return $this->isHtml($response);
     }
 }

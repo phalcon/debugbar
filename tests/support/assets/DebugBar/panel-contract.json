@@ -1,0 +1,252 @@
+{
+    "payload": {
+        "data": {
+            "version": {
+                "panel": {
+                    "PHP": "8.0.0",
+                    "Phalcon": "6.0.0"
+                },
+                "badge": null
+            },
+            "messages": {
+                "panel": [
+                    {
+                        "label": "info",
+                        "message": "user resolved"
+                    }
+                ],
+                "badge": 1
+            },
+            "logger": {
+                "panel": [
+                    {
+                        "label": "info",
+                        "message": "user login",
+                        "context": "{\n    \"user_id\": 7\n}"
+                    },
+                    {
+                        "label": "debug",
+                        "message": "ping",
+                        "context": ""
+                    }
+                ],
+                "badge": 2
+            },
+            "exceptions": {
+                "panel": [
+                    {
+                        "label": "RuntimeException",
+                        "message": "boom (file.php:1)",
+                        "trace": "#0 {main}"
+                    }
+                ],
+                "badge": 1
+            },
+            "time": {
+                "panel": [
+                    {
+                        "label": "Request",
+                        "message": "1ms"
+                    },
+                    {
+                        "label": "Render",
+                        "message": "1ms"
+                    }
+                ],
+                "badge": "1ms"
+            },
+            "memory": {
+                "panel": {
+                    "Current usage": "1MB",
+                    "Peak usage": "1MB"
+                },
+                "badge": "1MB",
+                "metrics": {
+                    "current_usage": "1MB"
+                }
+            },
+            "database": {
+                "panel": [
+                    {
+                        "label": "1ms",
+                        "message": "SELECT * FROM orders WHERE id = :id  {\"id\":42}",
+                        "occurrences": 2
+                    },
+                    {
+                        "label": "1ms",
+                        "message": "SELECT * FROM orders WHERE id = :id  {\"id\":42}",
+                        "occurrences": 2
+                    },
+                    {
+                        "label": "1ms",
+                        "message": "SELECT 1",
+                        "occurrences": null
+                    }
+                ],
+                "badge": 3,
+                "summary": [
+                    {
+                        "label": "queries",
+                        "value": 3
+                    },
+                    {
+                        "label": "duplicate_runs",
+                        "value": 1
+                    },
+                    {
+                        "label": "total_time",
+                        "value": "1ms"
+                    }
+                ]
+            },
+            "view": {
+                "panel": [
+                    {
+                        "label": "1ms",
+                        "message": "orders/index"
+                    }
+                ],
+                "badge": 1
+            },
+            "route": {
+                "panel": {
+                    "Action": "GetOrders",
+                    "Attributes": "{\"id\":\"42\"}"
+                },
+                "badge": null
+            },
+            "cache": {
+                "panel": [
+                    {
+                        "label": "Get",
+                        "message": "orders"
+                    }
+                ],
+                "badge": 1
+            },
+            "request": {
+                "panel": {
+                    "Method": "GET",
+                    "URI": "/orders?page=2",
+                    "Query.page": "2",
+                    "Headers.Accept": "text/html"
+                },
+                "badge": null,
+                "metrics": {
+                    "method": "GET",
+                    "uri": "/orders?page=2"
+                }
+            },
+            "config": {
+                "panel": {
+                    "app.name": "demo"
+                },
+                "badge": null
+            },
+            "history": {
+                "panel": {
+                    "url": "/_debugbar/open"
+                },
+                "badge": null
+            }
+        },
+        "meta": {
+            "collectors": 13,
+            "widgets": {
+                "version": {
+                    "label": "Version",
+                    "panel": "grid"
+                },
+                "messages": {
+                    "label": "Messages",
+                    "panel": "list"
+                },
+                "logger": {
+                    "label": "Logs",
+                    "panel": "logs"
+                },
+                "exceptions": {
+                    "label": "Exceptions",
+                    "panel": "exceptions"
+                },
+                "time": {
+                    "label": "Time",
+                    "panel": "list",
+                    "indicator": {
+                        "icon": "clock",
+                        "label": "Request time",
+                        "path": [
+                            "badge"
+                        ]
+                    }
+                },
+                "memory": {
+                    "label": "Memory",
+                    "panel": "grid",
+                    "indicator": {
+                        "icon": "cogs",
+                        "label": "Current memory usage",
+                        "path": [
+                            "metrics",
+                            "current_usage"
+                        ]
+                    }
+                },
+                "database": {
+                    "label": "Database",
+                    "panel": "list"
+                },
+                "view": {
+                    "label": "View",
+                    "panel": "list"
+                },
+                "route": {
+                    "label": "Route",
+                    "panel": "grid"
+                },
+                "cache": {
+                    "label": "Cache",
+                    "panel": "list"
+                },
+                "request": {
+                    "label": "Request",
+                    "panel": "grid",
+                    "request": {
+                        "method": [
+                            "metrics",
+                            "method"
+                        ],
+                        "uri": [
+                            "metrics",
+                            "uri"
+                        ]
+                    }
+                },
+                "config": {
+                    "label": "Config",
+                    "panel": "grid"
+                },
+                "history": {
+                    "label": "History",
+                    "panel": "history"
+                }
+            }
+        }
+    },
+    "storedEntry": {
+        "version": 1,
+        "meta": {
+            "requested_at": "2026-01-02T03:04:05+00:00",
+            "method": "GET",
+            "uri": "/orders?page=2",
+            "status": 200,
+            "ajax": false,
+            "id": "20260102030405-000000-deadbeef",
+            "stored_at": "2026-01-02T03:04:06+00:00"
+        },
+        "payload": {
+            "data": [],
+            "meta": []
+        }
+    }
+}

@@ -15,6 +15,7 @@ namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Contracts\LoggerAware;
 use Phalcon\DebugBar\DebugBarTypes;
+use Phalcon\DebugBar\Security\Redactor;
 
 use function count;
 use function is_string;
@@ -30,8 +31,8 @@ use const JSON_UNESCAPED_UNICODE;
  * tagged application log, not the manual `Debug::info()`/`debug()`/… messages
  * the developer drops in by hand.
  *
- * Each entry carries the log level, the message, and the PSR-3 context, which
- * the `logs` panel shows as a collapsible detail per row.
+ * Each entry carries the log level, the message, and the redacted PSR-3 context,
+ * which the `logs` panel shows as a collapsible detail per row.
  *
  * @phpstan-import-type log_envelope from DebugBarTypes
  * @phpstan-import-type log_panel from DebugBarTypes
@@ -39,8 +40,6 @@ use const JSON_UNESCAPED_UNICODE;
 final class LoggerCollector extends AbstractCollector implements LoggerAware
 {
     public const NAME = 'logger';
-
-    protected string $icon = 'icon-messages';
 
     protected string $label = 'Logs';
 
@@ -51,6 +50,10 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
      */
     private array $logs = [];
 
+    public function __construct(private readonly Redactor $redactor)
+    {
+    }
+
     /**
      * @param array<array-key, mixed> $context
      */
@@ -59,7 +62,7 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
         $this->logs[] = [
             'label'   => $level,
             'message' => $message,
-            'context' => $this->stringifyContext($context),
+            'context' => $this->stringifyContext($this->redactor->redact($context)),
         ];
     }
 

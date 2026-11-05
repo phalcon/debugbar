@@ -39,6 +39,36 @@ final class InjectorTest extends AbstractUnitTestCase
         $this->assertSame('<html><body>hi<assets><bar></body></html>', $response->getContent());
     }
 
+    public function testIsHtmlForAnHtmlContentType(): void
+    {
+        $response = new Response();
+        $response->setContentType('text/html', 'UTF-8');
+
+        $this->assertTrue((new Injector())->isHtml($response));
+    }
+
+    public function testIsHtmlForARedirectThatTheBarSkips(): void
+    {
+        $response = new Response();
+        $response->setStatusCode(302);
+        $response->setContentType('text/html');
+
+        $this->assertTrue((new Injector())->isHtml($response));
+    }
+
+    public function testIsHtmlWhenThereIsNoContentType(): void
+    {
+        $this->assertTrue((new Injector())->isHtml(new Response()));
+    }
+
+    public function testIsNotHtmlForJson(): void
+    {
+        $response = new Response();
+        $response->setContentType('application/json');
+
+        $this->assertFalse((new Injector())->isHtml($response));
+    }
+
     public function testShouldInjectForClientErrorStatus(): void
     {
         $response = new Response();

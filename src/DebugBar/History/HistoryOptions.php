@@ -30,7 +30,7 @@ use const PHP_URL_QUERY;
 use const PHP_URL_SCHEME;
 
 /**
- * Immutable request-history configuration shared by the provider and storage.
+ * Immutable request-history configuration shared by `Core` and storage.
  *
  * @phpstan-import-type history_config from DebugBarTypes
  */

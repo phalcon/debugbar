@@ -19,7 +19,7 @@ use Phalcon\DebugBar\Controllers\HistoryController;
 use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
-use Phalcon\DebugBar\History\HistoryEndpoint;
+use Phalcon\DebugBar\Mvc\HistoryListener;
 use Phalcon\DebugBar\Provider;
 use Phalcon\Di\Di;
 use Phalcon\Di\DiInterface;
@@ -534,7 +534,7 @@ final class ProviderTest extends AbstractUnitTestCase
         $container->setShared('request', $finalRequest);
         $em->fire('application:beforeHandleRequest', $app, $dispatcher);
 
-        $this->assertSame(HistoryEndpoint::CONTROLLER_NAMESPACE, $dispatcher->getNamespaceName());
+        $this->assertSame(HistoryListener::CONTROLLER_NAMESPACE, $dispatcher->getNamespaceName());
     }
 
     public function testHistoryUsesTheFinalUrlServiceRegisteredAfterBoot(): void
@@ -616,6 +616,18 @@ final class ProviderTest extends AbstractUnitTestCase
         ]))->boot();
 
         $this->assertFalse($container->has(HistoryController::class));
+        $this->assertFalse($this->bootedBar()->hasCollector('history'));
+    }
+
+    public function testHistoryWithoutEventsManagerDoesNotValidateTheOptions(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        (new Provider(new Application(new FactoryDefault()), [
+            'env'     => ['var' => self::ENV_VAR],
+            'history' => ['enabled' => true],
+        ]))->boot();
+
         $this->assertFalse($this->bootedBar()->hasCollector('history'));
     }
 

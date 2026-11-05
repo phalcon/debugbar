@@ -22,8 +22,6 @@ final class GridCollector extends AbstractCollector
 {
     public const NAME = 'grid_fixture';
 
-    protected string $icon = 'icon-grid';
-
     protected string $label = 'Grid';
 
     protected string $panel = 'grid';

@@ -36,7 +36,7 @@ final class HistoryListenerTest extends AbstractUnitTestCase
         (new HistoryListener($endpoint))(new Event('beforeHandleRequest', $this), null, $dispatcher);
 
         $this->assertTrue($endpoint->matches());
-        $this->assertSame(HistoryEndpoint::CONTROLLER_NAMESPACE, $dispatcher->getNamespaceName());
+        $this->assertSame(HistoryListener::CONTROLLER_NAMESPACE, $dispatcher->getNamespaceName());
         $this->assertSame('Phalcon\\DebugBar\\Controllers\\HistoryController', $dispatcher->getControllerClass());
         $this->assertSame('open', $dispatcher->getActionName());
         $this->assertSame('Action', $dispatcher->getActionSuffix());

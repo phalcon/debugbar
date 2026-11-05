@@ -25,16 +25,14 @@ use function hrtime;
  * partials are timed correctly.
  *
  * @phpstan-import-type list_envelope from DebugBarTypes
- * @phpstan-import-type view_pending from DebugBarTypes
- * @phpstan-import-type view_render from DebugBarTypes
+ * @phpstan-type view_pending array{path: string, start: int|float}
+ * @phpstan-type view_render array{path: string, time: int|float}
  */
 final class ViewCollector extends AbstractCollector
 {
     use FormatsDuration;
 
     public const NAME = 'view';
-
-    protected string $icon = 'icon-view';
 
     protected string $label = 'View';
 

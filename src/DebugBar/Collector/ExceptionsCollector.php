@@ -33,8 +33,6 @@ final class ExceptionsCollector extends AbstractCollector implements ExceptionAw
 {
     public const NAME = 'exceptions';
 
-    protected string $icon = 'icon-exception';
-
     protected string $label = 'Exceptions';
 
     protected string $panel = 'exceptions';

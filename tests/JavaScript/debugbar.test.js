@@ -38,6 +38,10 @@ function errorResponse(status) {
     return {ok: false, status: status};
 }
 
+function panelContract() {
+    return JSON.parse(fs.readFileSync(require.resolve('../support/assets/DebugBar/panel-contract.json'), 'utf8'));
+}
+
 function deferred() {
     var reject;
     var resolve;
@@ -514,6 +518,105 @@ test('indicator collectors render once on the right and open their panels', func
     metrics[0].click();
     assert.equal(metrics[0].classList.contains('is-active'), false);
     assert.equal(dom.findByClass(mount, 'phalcon-debugbar-body').style.display, 'none');
+});
+
+test('the client renders the output of the real collectors', function () {
+    var dataNode = new dom.TestElement('script');
+    var mount = new dom.TestElement('div');
+    dataNode.textContent = JSON.stringify(panelContract().payload);
+    global.document = dom.createDocument({
+        'phalcon-debugbar': mount,
+        'phalcon-debugbar-data': dataNode
+    });
+    global.window = {
+        localStorage: {
+            getItem: function () {
+                return null;
+            },
+            setItem: function () {}
+        }
+    };
+
+    require(debugbarPath);
+
+    var tabs = mount.querySelectorAll('.phalcon-debugbar-tab');
+    var labels = tabs.map(function (tab) {
+        return dom.findByClass(tab, 'phalcon-debugbar-tab-label').textContent;
+    });
+    var body = dom.findByClass(mount, 'phalcon-debugbar-body');
+    var metrics = mount.querySelectorAll('.phalcon-debugbar-metric');
+    function panelText(label) {
+        tabs[labels.indexOf(label)].click();
+
+        return body.textContent;
+    }
+
+    assert.deepEqual(
+        labels,
+        ['Version', 'Messages', 'Logs', 'Exceptions', 'Database', 'View', 'Route', 'Cache', 'Request', 'Config']
+    );
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-indicators').textContent, '1ms1MBGET/orders?page=2');
+    assert.ok(dom.findByClass(mount, 'is-history-trigger'));
+    assert.equal(panelText('Version'), 'PHP8.0.0Phalcon6.0.0');
+    assert.equal(panelText('Messages'), 'infouser resolved');
+    assert.equal(panelText('Logs'), 'infouser login{\n    "user_id": 7\n}debugping');
+    assert.equal(panelText('Exceptions'), 'RuntimeExceptionboom (file.php:1)#0 {main}');
+    assert.equal(
+        panelText('Database'),
+        'Queries3Duplicate Runs1Total Time1ms'
+            + '1msSELECT * FROM orders WHERE id = :id  {"id":42}Executed 2 times'
+            + '1msSELECT * FROM orders WHERE id = :id  {"id":42}Executed 2 times'
+            + '1msSELECT 1'
+    );
+    assert.equal(panelText('View'), '1msorders/index');
+    assert.equal(panelText('Route'), 'ActionGetOrdersAttributes{"id":"42"}');
+    assert.equal(panelText('Cache'), 'Getorders');
+    assert.equal(
+        panelText('Request'),
+        'MethodGETURI/orders?page=2Query.page2Headers.Accepttext/html'
+    );
+    assert.equal(panelText('Config'), 'app.namedemo');
+    metrics[0].click();
+    assert.equal(body.textContent, 'Request1msRender1ms');
+    metrics[1].click();
+    assert.equal(body.textContent, 'Current usage1MBPeak usage1MB');
+});
+
+test('the client accepts the stored entry of the real history code', async function () {
+    var contract = panelContract();
+    var selected = null;
+    global.document = dom.createDocument();
+    global.window = {
+        fetch: function (url) {
+            return Promise.resolve(response(
+                url.includes('?id=')
+                    ? {request: contract.storedEntry}
+                    : {requests: [contract.storedEntry.meta]}
+            ));
+        }
+    };
+    var mount = new dom.TestElement('div');
+
+    renderHistoryBrowser(mount, contract.payload.data.history.panel, '', function (payload, metadata, id) {
+        selected = {payload: payload, metadata: metadata, id: id};
+    }, function () {}, function () {
+        return true;
+    });
+    await dom.flushPromises();
+
+    var request = dom.findByClass(mount, 'phalcon-debugbar-history-request');
+    assert.equal(
+        request.textContent,
+        'GET/orders?page=2200' + contract.storedEntry.meta.requested_at
+    );
+    request.click();
+    await dom.flushPromises();
+
+    assert.deepEqual(selected, {
+        payload: contract.storedEntry.payload,
+        metadata: contract.storedEntry.meta,
+        id: contract.storedEntry.meta.id
+    });
 });
 
 test('request metrics use widget metadata when the collector has a different name', function () {

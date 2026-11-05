@@ -26,6 +26,7 @@ use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\DebugBar\History\HistoryCookie;
+use Phalcon\DebugBar\History\HistoryRecorder;
 use Phalcon\DebugBar\ResponseListener;
 use Phalcon\Events\Manager;
 use Phalcon\Http\ResponseInterface;
@@ -167,7 +168,14 @@ final class ProviderHistoryTest extends AbstractUnitTestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('history.path is required');
 
+        $this->container(['env' => ['var' => self::ENV_VAR], 'history' => ['enabled' => true]]);
+    }
+
+    public function testEventsManagerMissingDoesNotValidateTheOptions(): void
+    {
         (new Provider(['env' => ['var' => self::ENV_VAR], 'history' => ['enabled' => true]]))->provide(new Container());
+
+        $this->assertFalse($this->bar()->hasCollector('history'));
     }
 
     public function testHistoryRequestIsNotRecorded(): void
@@ -187,7 +195,7 @@ final class ProviderHistoryTest extends AbstractUnitTestCase
         $this->assertFalse($response->getHeaders()->has('X-Debug-Bar'));
     }
 
-    public function testListenerReceivesTheHistoryCookie(): void
+    public function testListenerReceivesTheHistoryRecorder(): void
     {
         $provider  = new Provider($this->config());
         $container = new Container();
@@ -201,8 +209,8 @@ final class ProviderHistoryTest extends AbstractUnitTestCase
         $this->assertInstanceOf(ResponseListener::class, $listener);
 
         $this->assertInstanceOf(
-            HistoryCookie::class,
-            (new ReflectionProperty(ResponseListener::class, 'historyCookie'))->getValue($listener)
+            HistoryRecorder::class,
+            (new ReflectionProperty(ResponseListener::class, 'history'))->getValue($listener)
         );
     }
 

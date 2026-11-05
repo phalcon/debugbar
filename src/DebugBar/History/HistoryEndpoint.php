@@ -30,8 +30,6 @@ use const PHP_URL_PATH;
  */
 final class HistoryEndpoint
 {
-    public const CONTROLLER_NAMESPACE = 'Phalcon\\DebugBar\\Controllers';
-
     /**
      * @param Closure(): ?RequestInterface $request
      * @param Closure(): string            $baseUri
