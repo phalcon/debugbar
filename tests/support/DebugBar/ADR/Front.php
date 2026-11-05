@@ -28,7 +28,6 @@ use Phalcon\Contracts\Logger\Logger as LoggerContract;
 use Phalcon\Contracts\View\Renderer;
 use Phalcon\DataMapper\Pdo\Connection;
 use Phalcon\DebugBar\ADR\Provider;
-use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\DebugBar\Logger\ExceptionAdapter;
 use Phalcon\Events\ManagerInterface;
@@ -133,7 +132,7 @@ final class Front extends AbstractHttpFront
 
     private function newLogger(): Logger
     {
-        return new Logger('adr', ['debugbar' => new ExceptionAdapter(Debug::getBar())]);
+        return new Logger('adr', ['debugbar' => new ExceptionAdapter()]);
     }
 
     private function newRenderer(Container $container): Simple

@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Logger;
 
-use Phalcon\DebugBar\DebugBar;
+use Phalcon\DebugBar\Debug;
 use Phalcon\Logger\Adapter\AbstractAdapter;
 use Phalcon\Logger\Item;
 use Throwable;
@@ -23,14 +23,11 @@ use Throwable;
  * to the debug bar's `ExceptionsCollector`. `Phalcon\ADR\ErrorResponder` logs each
  * exception in this form and fires no event. Keep this class separate from
  * `Adapter`: an MVC application that logs an exception would record it two times.
- * The bar is nullable because `Debug::getBar()` returns `null` until the bar boots.
+ * The adapter reads the active bar each time the logger writes, so you can create
+ * it before the bar boots.
  */
 final class ExceptionAdapter extends AbstractAdapter
 {
-    public function __construct(private readonly ?DebugBar $bar = null)
-    {
-    }
-
     public function close(): bool
     {
         return true;
@@ -40,7 +37,7 @@ final class ExceptionAdapter extends AbstractAdapter
     {
         $exception = $item->getContext()['exception'] ?? null;
         if ($exception instanceof Throwable) {
-            $this->bar?->addException($exception);
+            Debug::getBar()?->addException($exception);
         }
     }
 }
