@@ -630,6 +630,8 @@ Time and Memory appear as compact indicators on the right instead of duplicate t
 Their indicators remain available whether History is enabled or disabled.
 Each participating collector declares its own indicator and semantic value path;
 the History collector does not depend on the Time or Memory payload shape.
+The `icon` of an indicator must be `clock`, `cogs`, or `search`. With any other name,
+the indicator shows its value and no icon.
 The rightmost control combines
 a search icon with the current HTTP method and URI; it opens or closes request
 history instead of using a dedicated History tab. The history browser and collector

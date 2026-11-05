@@ -40,6 +40,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - A collector no longer sends `widget.icon` and `AbstractCollector` has no `$icon` property, because the browser client never read them. `indicator.icon` does not change. [#62](https://github.com/phalcon/debugbar/issues/62)
 - `DebugBarTypes` holds the wire contract and the config shapes, and it lists the panel names, so static analysis rejects an unknown panel name. [#62](https://github.com/phalcon/debugbar/issues/62)
 - The debug page in ADR applications uses `Injector::isHtml()` and no longer depends on the injection rules of the bar. [#62](https://github.com/phalcon/debugbar/issues/62)
+- `DebugBarTypes` lists the icon names as `icon_type`, so static analysis rejects an unknown `indicator.icon`. A test keeps the list equal to the drawings in `debugbar.js`. An indicator with an unknown icon name now shows no icon, not the gears. [#64](https://github.com/phalcon/debugbar/issues/64)
 
 ### Fixed
 

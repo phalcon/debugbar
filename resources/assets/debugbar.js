@@ -46,51 +46,60 @@
         return node;
     }
 
+    function gear(cx, cy, radius) {
+        var group = svgElement('g', {});
+        group.appendChild(svgElement('circle', {cx: cx, cy: cy, r: radius}));
+        group.appendChild(svgElement('circle', {cx: cx, cy: cy, r: radius / 3}));
+        for (var index = 0; index < 8; index++) {
+            var angle = index * Math.PI / 4;
+            group.appendChild(svgElement('line', {
+                x1: cx + Math.cos(angle) * radius,
+                y1: cy + Math.sin(angle) * radius,
+                x2: cx + Math.cos(angle) * (radius + 1.5),
+                y2: cy + Math.sin(angle) * (radius + 1.5)
+            }));
+        }
+        return group;
+    }
+
+    // `icon_type` in DebugBarTypes.php lists the same names, and a test compares the two.
+    var ICONS = {
+        clock: function (svg) {
+            svg.appendChild(svgElement('circle', {cx: '9', cy: '9', r: '6.5'}));
+            svg.appendChild(svgElement('path', {d: 'M9 5.2V9l2.8 1.7'}));
+        },
+        cogs: function (svg) {
+            svg.appendChild(gear(6.2, 10.5, 3.1));
+            svg.appendChild(gear(12.2, 6.2, 2.4));
+        },
+        search: function (svg) {
+            svg.appendChild(svgElement('circle', {cx: '7.5', cy: '7.5', r: '4.5'}));
+            svg.appendChild(svgElement('path', {d: 'M10.8 10.8l4 4'}));
+        }
+    };
+
     function indicatorIcon(name) {
+        if (!Object.prototype.hasOwnProperty.call(ICONS, name)) {
+            return null;
+        }
+
         var svg = svgElement('svg', {
             'aria-hidden': 'true',
             'class': 'phalcon-debugbar-indicator-icon',
             'viewBox': '0 0 18 18'
         });
-
-        if (name === 'clock') {
-            svg.appendChild(svgElement('circle', {cx: '9', cy: '9', r: '6.5'}));
-            svg.appendChild(svgElement('path', {d: 'M9 5.2V9l2.8 1.7'}));
-            return svg;
-        }
-
-        if (name === 'search') {
-            svg.appendChild(svgElement('circle', {cx: '7.5', cy: '7.5', r: '4.5'}));
-            svg.appendChild(svgElement('path', {d: 'M10.8 10.8l4 4'}));
-            return svg;
-        }
-
-        function gear(cx, cy, radius) {
-            var group = svgElement('g', {});
-            group.appendChild(svgElement('circle', {cx: cx, cy: cy, r: radius}));
-            group.appendChild(svgElement('circle', {cx: cx, cy: cy, r: radius / 3}));
-            for (var index = 0; index < 8; index++) {
-                var angle = index * Math.PI / 4;
-                group.appendChild(svgElement('line', {
-                    x1: cx + Math.cos(angle) * radius,
-                    y1: cy + Math.sin(angle) * radius,
-                    x2: cx + Math.cos(angle) * (radius + 1.5),
-                    y2: cy + Math.sin(angle) * (radius + 1.5)
-                }));
-            }
-            svg.appendChild(group);
-        }
-
-        gear(6.2, 10.5, 3.1);
-        gear(12.2, 6.2, 2.4);
+        ICONS[name](svg);
         return svg;
     }
 
     function metricIndicator(icon, label, value) {
         var indicator = el('button', 'phalcon-debugbar-indicator phalcon-debugbar-metric');
+        var drawing = indicatorIcon(icon);
         indicator.type = 'button';
         indicator.title = label;
-        indicator.appendChild(indicatorIcon(icon));
+        if (drawing) {
+            indicator.appendChild(drawing);
+        }
         indicator.appendChild(el('span', 'phalcon-debugbar-indicator-value', scalar(value)));
         return indicator;
     }
@@ -590,6 +599,7 @@
         if (typeof module !== 'undefined' && module.exports) {
             module.exports = {
                 createHistoryRequestGuard: createHistoryRequestGuard,
+                iconNames: Object.keys(ICONS),
                 renderHistoryBrowser: renderHistoryBrowser
             };
         }
