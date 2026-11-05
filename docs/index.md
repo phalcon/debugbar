@@ -410,7 +410,7 @@ placement does not depend on request history.
 A collector reads its data in one of four ways:
 
 - **Snapshot** - reads state when the response is assembled.
-- **Streamed** - subscribes to framework events and accumulates as they fire.
+- **Streamed** - fed from framework events by a bridge, and accumulates as they fire.
 - **Manual** - fed through the `Debug` facade.
 - **Adapter** - captured from a `Phalcon\Logger` through the debug bar's logger adapter.
 
@@ -430,7 +430,61 @@ A collector reads its data in one of four ways:
 | `time`       | Total request time and named measures                    | manual + snapshot |
 | `view`       | Rendered view paths and timings                          | streamed          |
 
-Streamed collectors read their data off the event source (the connection, view, router, or cache handed to them by the event). They never resolve a service from the container.
+The bridges read the data off the event source (the connection, view, router, or cache handed to them by the event). They never resolve a service from the container. `Phalcon\DebugBar\ServiceBridge` handles the `db:*`, `view:*` and `cache:*` events in all applications. `Phalcon\DebugBar\Mvc\Bridge` and `Phalcon\DebugBar\ADR\Bridge` handle the events of their application type.
+
+## Custom Collectors
+
+To add a panel, extend `Phalcon\DebugBar\Collector\AbstractCollector` and set `NAME`, `$label` and `$panel`. `collect()` returns the data of the panel and the badge. To get data from events, also implement `Phalcon\DebugBar\Contracts\Subscriber` and attach your listeners in `subscribe()`.
+
+```php
+<?php
+
+use Phalcon\DebugBar\Collector\AbstractCollector;
+use Phalcon\DebugBar\Contracts\Subscriber;
+use Phalcon\Events\EventInterface;
+use Phalcon\Events\ManagerInterface;
+
+final class OrdersCollector extends AbstractCollector implements Subscriber
+{
+    public const NAME = 'orders';
+
+    protected string $label = 'Orders';
+
+    protected string $panel = 'list';
+
+    /**
+     * @var list<array{label: string, message: string}>
+     */
+    private array $rows = [];
+
+    public function collect(): array
+    {
+        return ['panel' => $this->rows, 'badge' => count($this->rows)];
+    }
+
+    public function subscribe(ManagerInterface $eventsManager): void
+    {
+        $eventsManager->attach(
+            'orders:afterCreate',
+            function (EventInterface $event, mixed $source, mixed $id): void {
+                $this->rows[] = ['label' => 'Created', 'message' => is_string($id) ? $id : ''];
+            }
+        );
+    }
+}
+```
+
+Add the collector after the provider boots and before the response event. `getBar()` returns `null` when the bar did not boot, for example in a blocked environment.
+
+```php
+<?php
+
+use Phalcon\DebugBar\Debug;
+
+Debug::getBar()?->addCollector(new OrdersCollector());
+```
+
+`addCollector()` calls `subscribe()` when the bar has an events manager. A collector with no events does not implement `Subscriber`, and you add it the same way. A collector with the name of a built-in collector replaces it. The bridges do not feed the replacement, so it must attach its own listeners.
 
 ## Sharing the Events Manager
 
@@ -488,7 +542,7 @@ try {
 | `startMeasure(string $name, ?string $label = null)`         | `time`       | Opens a named measure.                         |
 | `stopMeasure(string $name)`                                 | `time`       | Closes the named measure.                      |
 
-The `exceptions` collector also captures throwables automatically. It subscribes to `dispatch:beforeException`, records the throwable, and leaves it to bubble - the bar never handles or swallows it. A throwable appears in the panel only when the request still finishes with a rendered response; a caught exception, or one the application forwards to an error page, qualifies, while a fully unhandled one aborts before the bar renders.
+The `exceptions` collector also captures throwables automatically. In an MVC application, `Phalcon\DebugBar\Mvc\Bridge` listens to `dispatch:beforeException`, records the throwable, and leaves it to bubble - the bar never handles or swallows it. A throwable appears in the panel only when the request still finishes with a rendered response; a caught exception, or one the application forwards to an error page, qualifies, while a fully unhandled one aborts before the bar renders.
 
 ## Capturing Logs
 
