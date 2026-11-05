@@ -20,6 +20,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - `History\HistoryEndpoint` takes the request and the base URI with no DI container, and `Mvc\HistoryListener` selects the MVC controller. [#41](https://github.com/phalcon/debugbar/issues/41)
 - `History\HistoryHandler` lists, reads and clears the request history with no MVC types. [#42](https://github.com/phalcon/debugbar/issues/42)
 - Request history in ADR applications, with the `history.base_uri` option. [#43](https://github.com/phalcon/debugbar/issues/43)
+- The `debug_page` option shows the debug page for a server error in ADR applications. [#48](https://github.com/phalcon/debugbar/issues/48)
 
 ### Fixed
 
