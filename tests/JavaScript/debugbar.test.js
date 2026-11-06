@@ -97,6 +97,18 @@ function deferred() {
     return {promise: promise, reject: reject, resolve: resolve};
 }
 
+function historyOptions(overrides) {
+    return Object.assign({
+        panel: {url: '/_debugbar/open'},
+        selectedId: '',
+        onSelect: function () {},
+        onClear: function () {},
+        isCurrent: function () {
+            return true;
+        }
+    }, overrides);
+}
+
 test('browser execution does not replace a host CommonJS export', function () {
     var hostExports = {host: true};
     var context = {
@@ -188,9 +200,7 @@ test('empty request history renders its empty state', async function () {
     };
     var mount = new dom.TestElement('div');
 
-    renderHistoryBrowser(mount, {url: '/_debugbar/open'}, '', function () {}, function () {}, function () {
-        return true;
-    });
+    renderHistoryBrowser(mount, historyOptions());
     await dom.flushPromises();
 
     assert.equal(dom.findByClass(mount, 'phalcon-debugbar-history-empty').textContent, 'No stored requests');
@@ -215,16 +225,7 @@ test('request history renders request metadata and selection', async function ()
     };
     var mount = new dom.TestElement('div');
 
-    renderHistoryBrowser(
-        mount,
-        {url: '/_debugbar/open'},
-        'request-one',
-        function () {},
-        function () {},
-        function () {
-            return true;
-        }
-    );
+    renderHistoryBrowser(mount, historyOptions({selectedId: 'request-one'}));
     await dom.flushPromises();
 
     assert.equal(dom.findByClass(mount, 'phalcon-debugbar-history-method').textContent, 'POST');
@@ -258,11 +259,11 @@ test('selecting a request loads and exposes its stored payload', async function 
     };
     var mount = new dom.TestElement('div');
 
-    renderHistoryBrowser(mount, {url: '/_debugbar/open'}, '', function (payload, metadata, id) {
-        selected = {payload: payload, id: id};
-    }, function () {}, function () {
-        return true;
-    });
+    renderHistoryBrowser(mount, historyOptions({
+        onSelect: function (payload, metadata, id) {
+            selected = {payload: payload, id: id};
+        }
+    }));
     await dom.flushPromises();
 
     var request = dom.findByClass(mount, 'phalcon-debugbar-history-request');
@@ -296,11 +297,11 @@ test('selecting a request rejects an incompatible stored payload version', async
     };
     var mount = new dom.TestElement('div');
 
-    renderHistoryBrowser(mount, {url: '/_debugbar/open'}, '', function () {
-        selected = true;
-    }, function () {}, function () {
-        return true;
-    });
+    renderHistoryBrowser(mount, historyOptions({
+        onSelect: function () {
+            selected = true;
+        }
+    }));
     await dom.flushPromises();
 
     var request = dom.findByClass(mount, 'phalcon-debugbar-history-request');
@@ -326,9 +327,7 @@ test('refresh replaces the rendered request list', async function () {
     };
     var mount = new dom.TestElement('div');
 
-    renderHistoryBrowser(mount, {url: '/_debugbar/open'}, '', function () {}, function () {}, function () {
-        return true;
-    });
+    renderHistoryBrowser(mount, historyOptions());
     await dom.flushPromises();
 
     dom.findByClass(mount, 'phalcon-debugbar-history-action').click();
@@ -363,11 +362,11 @@ test('clear blocks interaction and refreshes after deletion', async function () 
     };
     var mount = new dom.TestElement('div');
 
-    renderHistoryBrowser(mount, {url: '/_debugbar/open'}, '', function () {}, function () {
-        cleared++;
-    }, function () {
-        return true;
-    });
+    renderHistoryBrowser(mount, historyOptions({
+        onClear: function () {
+            cleared++;
+        }
+    }));
     await dom.flushPromises();
 
     var refresh = dom.findByClass(mount, 'phalcon-debugbar-history-action');
@@ -399,9 +398,7 @@ test('request history reports list failures and restores refresh', async functio
     };
     var mount = new dom.TestElement('div');
 
-    renderHistoryBrowser(mount, {url: '/_debugbar/open'}, '', function () {}, function () {}, function () {
-        return true;
-    });
+    renderHistoryBrowser(mount, historyOptions());
     await dom.flushPromises();
 
     assert.equal(
@@ -429,11 +426,11 @@ test('request history restores a row after a detail failure', async function () 
     };
     var mount = new dom.TestElement('div');
 
-    renderHistoryBrowser(mount, {url: '/_debugbar/open'}, '', function () {
-        selected = true;
-    }, function () {}, function () {
-        return true;
-    });
+    renderHistoryBrowser(mount, historyOptions({
+        onSelect: function () {
+            selected = true;
+        }
+    }));
     await dom.flushPromises();
 
     var request = dom.findByClass(mount, 'phalcon-debugbar-history-request');
@@ -466,11 +463,11 @@ test('request history reports clear failures and restores controls', async funct
     };
     var mount = new dom.TestElement('div');
 
-    renderHistoryBrowser(mount, {url: '/_debugbar/open'}, '', function () {}, function () {
-        cleared = true;
-    }, function () {
-        return true;
-    });
+    renderHistoryBrowser(mount, historyOptions({
+        onClear: function () {
+            cleared = true;
+        }
+    }));
     await dom.flushPromises();
 
     var refresh = dom.findByClass(mount, 'phalcon-debugbar-history-action');
@@ -683,11 +680,12 @@ test('the client accepts the stored entry of the real history code', async funct
     };
     var mount = new dom.TestElement('div');
 
-    renderHistoryBrowser(mount, contract.payload.data.history.panel, '', function (payload, metadata, id) {
-        selected = {payload: payload, metadata: metadata, id: id};
-    }, function () {}, function () {
-        return true;
-    });
+    renderHistoryBrowser(mount, historyOptions({
+        panel: contract.payload.data.history.panel,
+        onSelect: function (payload, metadata, id) {
+            selected = {payload: payload, metadata: metadata, id: id};
+        }
+    }));
     await dom.flushPromises();
 
     var request = dom.findByClass(mount, 'phalcon-debugbar-history-request');

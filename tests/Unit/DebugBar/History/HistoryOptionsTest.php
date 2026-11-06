@@ -62,6 +62,14 @@ final class HistoryOptionsTest extends AbstractUnitTestCase
         $this->assertSame('/', $root->path);
     }
 
+    public function testEnabledHistoryRejectsTheRootUrl(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('history.url must not be "/".');
+
+        (new HistoryOptions(true, '/', '/var/debugbar'))->validate();
+    }
+
     public function testEnabledHistoryRequiresAnAbsoluteStoragePath(): void
     {
         $this->expectException(InvalidArgumentException::class);

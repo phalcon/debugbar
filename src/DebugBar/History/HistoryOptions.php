@@ -95,6 +95,12 @@ final class HistoryOptions
                 'history.url must be an absolute path without a scheme, host, query, or fragment.'
             );
         }
+
+        if ('/' === $this->url) {
+            throw new InvalidArgumentException(
+                'history.url must not be "/". The endpoint would replace the home page of the application.'
+            );
+        }
     }
 
     private function isAbsolutePath(string $path): bool

@@ -29,7 +29,8 @@ final class HistoryCookieTest extends AbstractUnitTestCase
                 $call = [$name, $value, $options];
 
                 return true;
-            }
+            },
+            fn (): bool => false
         );
 
         $cookie->queue('/app/', true);
@@ -46,6 +47,25 @@ final class HistoryCookieTest extends AbstractUnitTestCase
             ],
             $call[2]
         );
+    }
+
+    public function testSentHeadersSkipTheCookieWriter(): void
+    {
+        $called = false;
+        $cookie = new HistoryCookie(
+            null,
+            function () use (&$called): bool {
+                $called = true;
+
+                return true;
+            },
+            fn (): bool => true
+        );
+
+        $cookie->queue('/', false);
+
+        $this->assertFalse($called);
+        $this->assertNull($cookie->id());
     }
 
     public function testValidCookieIsReusedWithoutCallingTheCookieWriter(): void

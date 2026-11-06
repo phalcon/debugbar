@@ -116,10 +116,7 @@
         return value;
     }
 
-    function renderIndicators(mount, data, widgets, onHistoryToggle, historyOpen, requestMetadata, bindPanel) {
-        mount.innerHTML = '';
-        var historyTrigger = null;
-
+    function renderMetricIndicators(mount, data, widgets, bindPanel) {
         Object.keys(widgets).forEach(function (collector) {
             var definition = (widgets[collector] || {}).indicator;
             if (!definition || !data[collector]) {
@@ -134,15 +131,21 @@
             bindPanel(collector, indicator);
             mount.appendChild(indicator);
         });
+    }
 
+    function renderRequestControl(mount, options) {
+        var widgets = options.widgets;
+        var onHistoryToggle = options.onHistoryToggle;
+        var historyOpen = options.historyOpen;
+        var historyTrigger = null;
         var requestName = Object.keys(widgets).find(function (name) {
             return widgets[name] && widgets[name].request;
         });
         var requestDefinition = requestName ? widgets[requestName].request : {};
-        var request = requestName ? (data[requestName] || {}) : {};
+        var request = requestName ? (options.data[requestName] || {}) : {};
         var method = scalar(valueAtPath(request, requestDefinition.method || []));
         var uri = scalar(valueAtPath(request, requestDefinition.uri || []));
-        requestMetadata = requestMetadata || {};
+        var requestMetadata = options.requestMetadata || {};
         method = method || scalar(requestMetadata.method);
         uri = uri || scalar(requestMetadata.uri);
         if (method || uri || onHistoryToggle) {
@@ -423,9 +426,10 @@
         };
     }
 
-    function renderHistoryBrowser(mount, panel, selectedId, onSelect, onClear, isCurrent) {
+    function renderHistoryBrowser(mount, options) {
         mount.innerHTML = '';
 
+        var panel = options.panel;
         var url = panel && typeof panel.url === 'string' ? panel.url : '';
         if (!url || typeof window.fetch !== 'function') {
             mount.style.display = 'none';
@@ -439,7 +443,7 @@
         var refreshButton = el('button', 'phalcon-debugbar-history-action', 'Refresh');
         var clearButton = el('button', 'phalcon-debugbar-history-action is-danger', 'Clear');
         var content = el('div', 'phalcon-debugbar-history-content');
-        var requestGuard = createHistoryRequestGuard(isCurrent);
+        var requestGuard = createHistoryRequestGuard(options.isCurrent);
         refreshButton.type = 'button';
         clearButton.type = 'button';
         clearButton.disabled = true;
@@ -483,7 +487,7 @@
                     var id = scalar(request.id);
                     var button = el('button', 'phalcon-debugbar-history-request');
                     button.type = 'button';
-                    if (id === selectedId) {
+                    if (id === options.selectedId) {
                         button.classList.add('is-selected');
                     }
 
@@ -522,7 +526,7 @@
                                     }
                                 );
                                 button.classList.add('is-selected');
-                                onSelect(detail.request.payload, detail.request.meta || {}, id);
+                                options.onSelect(detail.request.payload, detail.request.meta || {}, id);
                             }
                             button.disabled = false;
                         }).catch(function () {
@@ -565,7 +569,7 @@
                     return;
                 }
 
-                onClear();
+                options.onClear();
                 refresh();
             }).catch(function () {
                 if (requestGuard.finishClear(generation)) {
@@ -657,24 +661,23 @@
             }
 
             var generation = ++historyRenderGeneration;
-            renderHistoryBrowser(
-                historyBrowser,
-                historyPanel,
-                selectedHistoryId,
-                function (storedPayload, storedMetadata, id) {
+            renderHistoryBrowser(historyBrowser, {
+                panel: historyPanel,
+                selectedId: selectedHistoryId,
+                onSelect: function (storedPayload, storedMetadata, id) {
                     var preferredActive = activeBeforeHistory;
                     selectedHistoryId = id;
                     setHistoryOpen(false);
                     activeBeforeHistory = null;
                     renderData(storedPayload, preferredActive, storedMetadata);
                 },
-                function () {
+                onClear: function () {
                     selectedHistoryId = '';
                 },
-                function () {
+                isCurrent: function () {
                     return historyOpen && generation === historyRenderGeneration;
                 }
-            );
+            });
         }
 
         function setHistoryOpen(open) {
@@ -786,21 +789,21 @@
                 tabs.appendChild(tab);
             });
 
-            historyTrigger = renderIndicators(
-                indicators,
-                data,
-                widgets,
-                historyPanel ? function () {
+            indicators.innerHTML = '';
+            renderMetricIndicators(indicators, data, widgets, bindPanel);
+            historyTrigger = renderRequestControl(indicators, {
+                data: data,
+                widgets: widgets,
+                requestMetadata: requestMetadata,
+                historyOpen: historyOpen,
+                onHistoryToggle: historyPanel ? function () {
                     if (!historyOpen) {
                         activeBeforeHistory = active;
                         closePanel();
                     }
                     setHistoryOpen(!historyOpen);
-                } : null,
-                historyOpen,
-                requestMetadata,
-                bindPanel
-            );
+                } : null
+            });
 
             if (preferred) {
                 activate(preferred[0], preferred[1], preferred[2], preferred[3]);
