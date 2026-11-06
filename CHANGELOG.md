@@ -28,6 +28,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - `RequestContext` holds the client address and the AJAX and HTTPS flags for each decision, and `Injector::isHtml()` tells if a response is an HTML page. [#62](https://github.com/phalcon/debugbar/issues/62)
 - `Security\Redactor::redactUri()` applies the redaction rule to the query of a URI. [#62](https://github.com/phalcon/debugbar/issues/62)
 - A shared fixture, `tests/support/assets/DebugBar/panel-contract.json`, makes the PHP and JavaScript tests use the same payload. [#62](https://github.com/phalcon/debugbar/issues/62)
+- `redact.unmask` takes patterns for masked keys whose values show, and `Security\Redactor` takes them as an optional third argument. A pattern matches the whole key, and `*` matches zero or more characters. A hidden key stays hidden. [#67](https://github.com/phalcon/debugbar/issues/67)
 
 ### Changed
 
@@ -41,6 +42,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - `DebugBarTypes` holds the wire contract and the config shapes, and it lists the panel names, so static analysis rejects an unknown panel name. [#62](https://github.com/phalcon/debugbar/issues/62)
 - The debug page in ADR applications uses `Injector::isHtml()` and no longer depends on the injection rules of the bar. [#62](https://github.com/phalcon/debugbar/issues/62)
 - `DebugBarTypes` lists the icon names as `icon_type`, so static analysis rejects an unknown `indicator.icon`. A test keeps the list equal to the drawings in `debugbar.js`. An indicator with an unknown icon name now shows no icon, not the gears. [#64](https://github.com/phalcon/debugbar/issues/64)
+- `redact.mask` and `redact.hidden` also match the word parts of a key. The redactor splits a key at `_`, `-`, `.` and camelCase, so `token` now masks `reset_token` and `accessToken`. Some values that showed before now show `***`. [#67](https://github.com/phalcon/debugbar/issues/67)
 
 ### Fixed
 
@@ -48,6 +50,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - The browser asset exports test helpers only outside a DOM, and no longer hard-codes the request collector name.
 - The `request` panel and request history no longer show or store a query value under a masked key in the URI. [#62](https://github.com/phalcon/debugbar/issues/62)
 - The documentation states the effect of a long-lived worker on request history. [#62](https://github.com/phalcon/debugbar/issues/62)
+- The documentation states that `access.callback` can run more than once for a request. [#66](https://github.com/phalcon/debugbar/issues/66)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
