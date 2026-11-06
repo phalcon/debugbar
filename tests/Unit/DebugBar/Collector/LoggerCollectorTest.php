@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Unit\DebugBar\Collector;
 
+use JsonSerializable;
 use Phalcon\DebugBar\Collector\LoggerCollector;
 use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
@@ -45,6 +46,32 @@ final class LoggerCollectorTest extends AbstractUnitTestCase
 
         $this->assertSame(
             ['user' => 'sarah', 'password' => '***', 'nested' => ['password' => '***']],
+            json_decode($collector->collect()['panel'][0]['context'], true)
+        );
+    }
+
+    public function testContextObjectsAreRedacted(): void
+    {
+        $collector = new LoggerCollector(new Redactor(['password']));
+        $collector->addLog(
+            'user login',
+            'info',
+            [
+                'user'    => (object) ['name' => 'sarah', 'password' => 'hunter2'],
+                'account' => new class () implements JsonSerializable {
+                    /**
+                     * @return array<string, string>
+                     */
+                    public function jsonSerialize(): array
+                    {
+                        return ['password' => 'hunter3'];
+                    }
+                },
+            ]
+        );
+
+        $this->assertSame(
+            ['user' => ['name' => 'sarah', 'password' => '***'], 'account' => ['password' => '***']],
             json_decode($collector->collect()['panel'][0]['context'], true)
         );
     }
