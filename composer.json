@@ -47,7 +47,8 @@
             "Phalcon\\Tests\\Support\\": "tests/support/"
         },
         "exclude-from-classmap": [
-            "tests/support/assets/"
+            "tests/support/assets/",
+            "tests/_output/"
         ]
     },
     "config": {

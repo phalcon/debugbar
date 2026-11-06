@@ -47,6 +47,16 @@ final class ValueDumperTest extends AbstractUnitTestCase
         $this->assertStringContainsString('resource (closed)', (string) $dumper->dumpArray([$resource]));
     }
 
+    public function testDumpArrayEscapesKeys(): void
+    {
+        $dumper = new ValueDumper();
+
+        $this->assertSame(
+            '[&lt;img src=x onerror=alert(1)&gt;] =&gt; 1',
+            $dumper->dumpArray(['<img src=x onerror=alert(1)>' => 1])
+        );
+    }
+
     public function testDumpBranches(): void
     {
         $dumper = new ValueDumper();
