@@ -19,6 +19,7 @@ use Phalcon\Di\Di;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\Support\Dump\ClassProperties;
 use Phalcon\Tests\Support\Support\Dump\SampleMethods;
+use stdClass;
 
 final class OutputBranchesTest extends AbstractUnitTestCase
 {
@@ -45,6 +46,14 @@ final class OutputBranchesTest extends AbstractUnitTestCase
         $actual = $dump->variables(new SampleMethods(), new SampleMethods());
 
         $this->assertStringContainsString('[already listed]', $actual);
+    }
+
+    public function testArrayKeyIsEscaped(): void
+    {
+        $actual = (new Dump())->variable(['<img src=x onerror=alert(1)>' => 'value']);
+
+        $this->assertStringContainsString('&lt;img src=x onerror=alert(1)&gt;', $actual);
+        $this->assertStringNotContainsString('<img', $actual);
     }
 
     public function testArrayLogicalConditionsAllRequired(): void
@@ -141,6 +150,17 @@ final class OutputBranchesTest extends AbstractUnitTestCase
     public function testNumericString(): void
     {
         $this->assertStringContainsString('Numeric String', (new Dump())->variable('12345'));
+    }
+
+    public function testPublicPropertyNameIsEscaped(): void
+    {
+        $object                                   = new stdClass();
+        $object->{'<img src=x onerror=alert(1)>'} = 'value';
+
+        $actual = (new Dump())->variable($object);
+
+        $this->assertStringContainsString('&lt;img src=x onerror=alert(1)&gt;', $actual);
+        $this->assertStringNotContainsString('<img', $actual);
     }
 
     public function testResolvesParentClassAndMethodNames(): void

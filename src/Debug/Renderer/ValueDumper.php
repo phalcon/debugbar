@@ -87,7 +87,7 @@ class ValueDumper
                 $varDump = gettype($argument);
             }
 
-            $dump[] = '[' . $index . '] =&gt; ' . $varDump;
+            $dump[] = '[' . $this->escape((string) $index) . '] =&gt; ' . $varDump;
         }
 
         return implode(', ', $dump);

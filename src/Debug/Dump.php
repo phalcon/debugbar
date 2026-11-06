@@ -34,6 +34,7 @@ use function get_class_methods;
 use function get_object_vars;
 use function get_parent_class;
 use function htmlentities;
+use function htmlspecialchars;
 use function implode;
 use function is_array;
 use function is_bool;
@@ -47,6 +48,7 @@ use function nl2br;
 use function str_repeat;
 
 use const ENT_IGNORE;
+use const ENT_QUOTES;
 use const JSON_PRETTY_PRINT;
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
@@ -309,7 +311,7 @@ class Dump implements TemplateAware
             $message = $this->getTemplate('arrayKey');
             $context = [
                 'style' => $this->getStyle('arr'),
-                'key'   => $key,
+                'key'   => htmlspecialchars((string) $key, ENT_QUOTES, 'utf-8'),
             ];
             $output  .= $this->toInterpolate($message, $context);
 
@@ -488,7 +490,7 @@ class Dump implements TemplateAware
             $message = $this->getTemplate('objectProperty');
             $context = [
                 'style' => $this->getStyle('obj'),
-                'key'   => $key,
+                'key'   => htmlspecialchars((string) $key, ENT_QUOTES, 'utf-8'),
                 'type'  => 'public',
             ];
 
