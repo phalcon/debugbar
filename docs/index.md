@@ -607,7 +607,7 @@ use Phalcon\DebugBar\Provider;
 
 A key matches an entry when it has the same name, or when it contains the word parts of the entry next to each other. The redactor splits a name into word parts at `_`, `-`, `.` and camelCase. For example, `token` matches `reset_token` and `accessToken`, and `card_number` matches `customer_card_number`. `token` does not match `tokens`, and `key` does not match `monkey`.
 
-The default masked keys are `authorization`, `cookie`, `csrf`, `key`, `password`, `secret`, and `token`. Add other keys to `redact.mask`, and keys to drop to `redact.hidden`.
+The default masked keys are `authorization`, `cookie`, `csrf`, `key`, `passwd`, `password`, `php-auth`, `pw`, `pwd`, `secret`, and `token`. `php-auth` masks the `Php-Auth-User`, `Php-Auth-Pw` and `Php-Auth-Digest` headers that Phalcon adds for Basic and Digest auth. Add other keys to `redact.mask`, and keys to drop to `redact.hidden`.
 
 A word part can mask a key that is not sensitive, such as `primary_key`. To show its value, add a pattern to `redact.unmask`. A pattern must match the whole key, and the match is not case-sensitive. `*` matches zero or more characters, and each other character matches only itself. For example, `card` matches only `card`, `card*` also matches `card_number`, and `*card*` also matches `customer_card_number` and `discard`. A pattern does not use word parts. A hidden key stays hidden, even when a pattern matches it. A pattern of `*` alone shows all masked values.
 

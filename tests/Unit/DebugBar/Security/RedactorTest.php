@@ -48,6 +48,11 @@ final class RedactorTest extends AbstractUnitTestCase
             'two parts'             => ['client_secret'],
             'header name'           => ['Set-Cookie'],
             'three parts'           => ['x-csrf-token'],
+            'basic auth password'   => ['Php-Auth-Pw'],
+            'basic auth user'       => ['Php-Auth-User'],
+            'digest auth'           => ['Php-Auth-Digest'],
+            'short password'        => ['pwd'],
+            'unix password'         => ['passwd'],
         ];
     }
 

@@ -48,7 +48,11 @@ final class Redactor
         'cookie',
         'csrf',
         'key',
+        'passwd',
         'password',
+        'php-auth',
+        'pw',
+        'pwd',
         'secret',
         'token',
     ];
