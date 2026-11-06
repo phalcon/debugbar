@@ -57,6 +57,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Escape array keys and property names in the debug page. [#70](https://github.com/phalcon/debugbar/issues/70)
 - Mask the `Php-Auth-*` headers and the `pw`, `pwd` and `passwd` keys by default. [#71](https://github.com/phalcon/debugbar/issues/71)
 - Redact objects in the log context. [#72](https://github.com/phalcon/debugbar/issues/72)
+- Hide the CSRF token in the session panel when the session has a `uniqueId`. [#73](https://github.com/phalcon/debugbar/issues/73)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
