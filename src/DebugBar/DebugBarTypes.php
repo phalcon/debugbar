@@ -76,7 +76,7 @@ namespace Phalcon\DebugBar;
  *     debug_page?: bool|\Phalcon\Debug,
  *     headers?: bool,
  *     history?: history_config,
- *     redact?: array{mask?: list<string>, hidden?: list<string>}
+ *     redact?: array{mask?: list<string>, hidden?: list<string>, unmask?: list<string>}
  * }
  */
 final class DebugBarTypes

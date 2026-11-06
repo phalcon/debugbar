@@ -312,6 +312,7 @@ The second argument to `Provider` is a nested array. Every key is optional. `Pha
 | `history.ttl_seconds` | `int`                  | `86400`                  | Lifetime in seconds; active-browser entries are checked immediately. |
 | `redact.hidden`    | `list<string>`            | `[]`                     | Keys dropped from the output entirely.                           |
 | `redact.mask`      | `list<string>`            | `[]`                     | Extra keys whose values are masked (added to the defaults).      |
+| `redact.unmask`    | `list<string>`            | `[]`                     | Patterns for masked keys whose values show. `*` matches any characters. |
 
 ```php
 <?php
@@ -329,7 +330,7 @@ use Phalcon\DebugBar\Provider;
         'max_browsers' => 10,
         'ttl_seconds'  => 86400,
     ],
-    'redact'     => ['mask' => ['api_key'], 'hidden' => ['secret_question']],
+    'redact'     => ['mask' => ['iban'], 'hidden' => ['secret_question'], 'unmask' => ['primary_key']],
 ]))->boot();
 ```
 
@@ -494,7 +495,7 @@ Debug::getBar()?->addCollector(new OrdersCollector());
 
 `addCollector()` calls `subscribe()` when the bar has an events manager. A collector with no events does not implement `Subscriber`, and you add it the same way. A collector with the name of a built-in collector replaces it. The bridges do not feed the replacement, so it must attach its own listeners.
 
-The bar does not redact the data of a custom collector. Run sensitive data through `Phalcon\DebugBar\Security\Redactor` in the collector. The collector does not receive the `redact.mask` and `redact.hidden` values, so give them to its `Redactor`.
+The bar does not redact the data of a custom collector. Run sensitive data through `Phalcon\DebugBar\Security\Redactor` in the collector. The collector does not receive the `redact.mask`, `redact.hidden` and `redact.unmask` values, so give them to its `Redactor`.
 
 ## Sharing the Events Manager
 
@@ -598,13 +599,17 @@ use Phalcon\DebugBar\Provider;
 - **Masked** keys keep their key but replace the value with `***`.
 - **Hidden** keys are dropped entirely.
 
-The default masked keys are `authorization`, `cookie`, `csrf`, `key`, `password`, `secret`, and `token`. The redactor matches whole key names, so `token` does not match `reset_token`. Add other keys to `redact.mask`.
+A key matches an entry when it has the same name, or when it contains the word parts of the entry next to each other. The redactor splits a name into word parts at `_`, `-`, `.` and camelCase. For example, `token` matches `reset_token` and `accessToken`, and `card_number` matches `customer_card_number`. `token` does not match `tokens`, and `key` does not match `monkey`.
+
+The default masked keys are `authorization`, `cookie`, `csrf`, `key`, `password`, `secret`, and `token`. Add other keys to `redact.mask`, and keys to drop to `redact.hidden`.
+
+A word part can mask a key that is not sensitive, such as `primary_key`. To show its value, add a pattern to `redact.unmask`. A pattern must match the whole key, and the match is not case-sensitive. `*` matches zero or more characters, and each other character matches only itself. For example, `card` matches only `card`, `card*` also matches `card_number`, and `*card*` also matches `customer_card_number` and `discard`. A pattern does not use word parts. A hidden key stays hidden, even when a pattern matches it. A pattern of `*` alone shows all masked values.
 
 The `request`, `config`, `session`, and `logger` collectors run their data through the redactor. The `request` panel and request history also redact the query of the URI. When the redactor changes a value in a query, it rebuilds the query, so the encoding of the other values can change. The `session` collector also omits the raw session id and every `$PHALCON/*` internal key, including the CSRF token.
 
 The `database` panel and request history show and store query bindings as they are, because generated names such as `:APL0` do not match a key. The redactor does not change log messages, exception messages, or stack traces.
 
-`Phalcon\DebugBar\Security\AccessGate` decides who receives the bar within an allowed environment. An empty IP allowlist admits any client. When both an allowlist and a callback are given, both must pass.
+`Phalcon\DebugBar\Security\AccessGate` decides who receives the bar within an allowed environment. An empty IP allowlist admits any client. When both an allowlist and a callback are given, both must pass. The callback can run more than once for a request, for example for a server error in an ADR application with `debug_page` on. Do not put side effects in the callback.
 
 ```php
 <?php

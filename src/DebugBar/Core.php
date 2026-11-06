@@ -110,7 +110,8 @@ final class Core
         $this->historyOptions   = HistoryOptions::fromConfig($config['history'] ?? []);
         $this->redactor         = new Redactor(
             [...Redactor::DEFAULT_KEYS, ...($redact['mask'] ?? [])],
-            $redact['hidden'] ?? []
+            $redact['hidden'] ?? [],
+            $redact['unmask'] ?? []
         );
     }
 

@@ -183,14 +183,15 @@ final class CoreTest extends AbstractUnitTestCase
         $_ENV[self::ENV_VAR] = 'dev';
         $config              = new Config([
             'section' => [
-                'password' => 'sekret',
-                'maskme'   => 'mask-value',
-                'dropme'   => 'drop-value',
-                'plain'    => 'keepme',
+                'password'    => 'sekret',
+                'maskme'      => 'mask-value',
+                'dropme'      => 'drop-value',
+                'plain'       => 'keepme',
+                'primary_key' => 'id',
             ],
         ]);
 
-        $this->core(['redact' => ['mask' => ['maskme'], 'hidden' => ['dropme']]])
+        $this->core(['redact' => ['mask' => ['maskme'], 'hidden' => ['dropme'], 'unmask' => ['primary_key']]])
             ->boot(null, null, $config);
 
         $panel = $this->bootedBar()->collect()['data']['config']['panel'];
@@ -201,6 +202,7 @@ final class CoreTest extends AbstractUnitTestCase
         $this->assertSame('keepme', $panel['section.plain']);
         $this->assertSame('***', $panel['section.password']);
         $this->assertSame('***', $panel['section.maskme']);
+        $this->assertSame('id', $panel['section.primary_key']);
         $this->assertArrayNotHasKey('section.dropme', $panel);
     }
 
@@ -532,7 +534,7 @@ final class CoreTest extends AbstractUnitTestCase
      *     collectors?: array<string, bool>,
      *     headers?: bool,
      *     history?: array{enabled?: bool, path?: string, base_uri?: string},
-     *     redact?: array{mask?: list<string>, hidden?: list<string>}
+     *     redact?: array{mask?: list<string>, hidden?: list<string>, unmask?: list<string>}
      * } $config
      */
     private function core(array $config = []): Core
