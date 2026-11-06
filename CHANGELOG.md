@@ -54,6 +54,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 ### Fixed
 
 - The `request` panel and request history no longer show or store a query value under a masked key in the URI. [#62](https://github.com/phalcon/debugbar/issues/62)
+- Escape array keys and property names in the debug page. [#70](https://github.com/phalcon/debugbar/issues/70)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
