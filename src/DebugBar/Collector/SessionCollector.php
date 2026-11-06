@@ -19,7 +19,7 @@ use Phalcon\DebugBar\Security\Redactor;
 use function is_string;
 use function session_name;
 use function session_status;
-use function str_starts_with;
+use function str_contains;
 
 use const PHP_SESSION_ACTIVE;
 
@@ -74,7 +74,8 @@ final class SessionCollector extends AbstractCollector
     /**
      * Session data with Phalcon's internal keys (such as the CSRF token) removed
      * - those are framework internals, not application state, and must never be
-     * shown. The raw session id is likewise omitted (session-hijacking risk).
+     * shown. A session manager with a `uniqueId` adds `uniqueId#` before each
+     * key. The raw session id is likewise omitted (session-hijacking risk).
      *
      * @return array<array-key, mixed>
      */
@@ -82,7 +83,7 @@ final class SessionCollector extends AbstractCollector
     {
         $data = [];
         foreach ($_SESSION as $key => $value) {
-            if (is_string($key) && str_starts_with($key, '$PHALCON/')) {
+            if (is_string($key) && str_contains($key, '$PHALCON/')) {
                 continue;
             }
 

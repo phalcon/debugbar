@@ -66,4 +66,18 @@ final class SessionCollectorTest extends AbstractUnitTestCase
         $this->assertSame([], $collector->collect()['panel']);
         $this->assertPanelContract($collector);
     }
+
+    public function testInternalKeysWithAUniqueIdAreOmitted(): void
+    {
+        $_SESSION = [
+            'app#$PHALCON/CSRF$'     => 'token-value',
+            'app#$PHALCON/CSRF/KEY$' => 'token-key',
+            'app#user'               => 'sarah-connor',
+        ];
+
+        $this->assertSame(
+            ['app#user' => 'sarah-connor'],
+            $this->callProtectedMethod(new SessionCollector(new Redactor()), 'applicationData')
+        );
+    }
 }
