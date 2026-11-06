@@ -6,7 +6,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 
 ### Added
 
-- `memory` collector for current and peak PHP memory use. Time and Memory now open from indicators on the right, not from tabs.
+- `memory` collector for current and peak PHP memory use. Memory opens from an indicator on the right.
 - Optional collector summaries show headline metrics above a panel. The database panel shows total queries, duplicate runs and SQL time.
 - Request history for each browser, at `GET/DELETE /_debugbar/open`. It is disabled by default and needs an absolute, writable `history.path`.
 - `ResponseListener::handle()` injects the bar with no event. [#39](https://github.com/phalcon/debugbar/issues/39)
@@ -29,6 +29,11 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - `Security\Redactor::redactUri()` applies the redaction rule to the query of a URI. [#62](https://github.com/phalcon/debugbar/issues/62)
 - A shared fixture, `tests/support/assets/DebugBar/panel-contract.json`, makes the PHP and JavaScript tests use the same payload. [#62](https://github.com/phalcon/debugbar/issues/62)
 - `redact.unmask` takes patterns for masked keys whose values show, and `Security\Redactor` takes them as an optional third argument. A pattern matches the whole key, and `*` matches zero or more characters. A hidden key stays hidden. [#67](https://github.com/phalcon/debugbar/issues/67)
+- The documentation states the effect of a long-lived worker on request history. [#62](https://github.com/phalcon/debugbar/issues/62)
+- The documentation states that `access.callback` can run more than once for a request.
+- Request history does not set its cookie when output started before the response, so `setcookie()` gives no warning. [#32](https://github.com/phalcon/debugbar/issues/32)
+- `history.url` cannot be `/`. The documentation states that the history endpoint wins over an application route with the same path, for each HTTP method. [#32](https://github.com/phalcon/debugbar/issues/32)
+- The documentation states that a browser in request history is one history cookie, so all its windows and tabs count as one for `history.max_browsers`. [#32](https://github.com/phalcon/debugbar/issues/32)
 
 ### Changed
 
@@ -43,14 +48,12 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - The debug page in ADR applications uses `Injector::isHtml()` and no longer depends on the injection rules of the bar. [#62](https://github.com/phalcon/debugbar/issues/62)
 - `DebugBarTypes` lists the icon names as `icon_type`, so static analysis rejects an unknown `indicator.icon`. A test keeps the list equal to the drawings in `debugbar.js`. An indicator with an unknown icon name now shows no icon, not the gears. [#64](https://github.com/phalcon/debugbar/issues/64)
 - `redact.mask` and `redact.hidden` also match the word parts of a key. The redactor splits a key at `_`, `-`, `.` and camelCase, so `token` now masks `reset_token` and `accessToken`. Some values that showed before now show `***`. [#67](https://github.com/phalcon/debugbar/issues/67)
+- The Time panel opens from an indicator on the right, not from a tab.
+- The bar sends `meta.widgets`, so each tab shows the label of its collector and each panel uses its declared type. The `logger` tab now reads "Logs", not "Logger".
 
 ### Fixed
 
-- History: check storage at boot, remove empty browser directories, fix glob paths on Windows, add `nosniff` to JSON responses.
-- The browser asset exports test helpers only outside a DOM, and no longer hard-codes the request collector name.
 - The `request` panel and request history no longer show or store a query value under a masked key in the URI. [#62](https://github.com/phalcon/debugbar/issues/62)
-- The documentation states the effect of a long-lived worker on request history. [#62](https://github.com/phalcon/debugbar/issues/62)
-- The documentation states that `access.callback` can run more than once for a request. [#66](https://github.com/phalcon/debugbar/issues/66)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 

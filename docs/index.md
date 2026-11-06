@@ -192,7 +192,7 @@ $container->set(
 
 The adapter reads the active bar each time the logger writes, so you can create the logger before the provider boots the bar. An exception that the logger writes before the boot is lost. The adapter does not change the response and does not keep the exception from the error responder. The panel also shows `RouteNotFound` for a URL with no route, because the error responder logs this too. If the error responder itself fails, the application returns a bare 500 response and logs nothing, so the panel does not show the exception.
 
-The `history` keys turn on request history. You do not have to add a route. Set `history.base_uri` when the application is not at the root of the host, because an ADR application has no `url` service by default.
+The `history` keys turn on request history. You do not have to add a route. Set `history.base_uri` when the application is not at the root of the host, because an ADR application has no `url` service by default. The history URL wins over an application route with the same path, for each HTTP method.
 
 ```php
 <?php
@@ -308,7 +308,7 @@ The second argument to `Provider` is a nested array. Every key is optional. `Pha
 | `history.url`      | `string`                  | `/_debugbar/open`        | Internal GET/DELETE endpoint path, relative to the application's base URI. |
 | `history.path`     | `string`                  | required when enabled    | Absolute writable storage directory; keep it outside the document root. |
 | `history.max_requests` | `int`                 | `100`                    | Maximum stored requests per browser.                             |
-| `history.max_browsers` | `int`                 | `10`                     | Maximum browser directories; the least recently updated is evicted first. |
+| `history.max_browsers` | `int`                 | `10`                     | Maximum browsers with stored requests. A browser is one history cookie, so its windows and tabs count as one. The least recently updated is evicted first. |
 | `history.ttl_seconds` | `int`                  | `86400`                  | Lifetime in seconds; active-browser entries are checked immediately. |
 | `redact.hidden`    | `list<string>`            | `[]`                     | Keys dropped from the output entirely.                           |
 | `redact.mask`      | `list<string>`            | `[]`                     | Extra keys whose values are masked (added to the defaults).      |
@@ -343,7 +343,10 @@ providers and module services have registered their final definitions. If its
 base URI is `/app1/` or `https://example.test/app1/`, the endpoint path is
 `/app1/_debugbar/open`. The internal controller creates its own response instead
 of resolving the application's shared `response` during boot. `history.url` must
-start with `/` and cannot contain a scheme, host, query, or fragment.
+start with `/` and cannot contain a scheme, host, query, or fragment. It cannot be
+`/`, because the endpoint would replace the home page of the application. The
+endpoint wins over an application route with the same path, for each HTTP method,
+so use a path that the application does not use.
 The endpoint uses the application's normal MVC lifecycle, so
 module initialization and application event listeners still run. A GET
 without an `id` returns the recent request metadata; `?id=<request-id>` returns
@@ -391,13 +394,16 @@ cookie mechanism so it does not replace cookies queued by the application. The b
 never reads, starts, or changes the application's PHP session, so session ID
 regeneration does not hide earlier requests. The first allowed response for a
 browser sets the cookie but is not stored; storage begins with the next request
-carrying that cookie. Closing the browser discards the identity while its files
+carrying that cookie. If output starts before the response, the bar cannot set the
+history cookie, and request history does not start for that browser. Closing the browser discards the identity while its files
 remain eligible for cleanup until `history.ttl_seconds` expires. Clients that do
 not retain cookies never create storage directories. The number of browser
 directories is capped by `history.max_browsers`; creation is serialized and evicts
 the least recently updated browser directory before admitting another identity.
 This bounds forged or repeatedly rotated cookie identities even when the access
-allowlist is empty. Each stored
+allowlist is empty. A browser here is one history cookie. All the windows and
+tabs of a browser share the cookie, so they count as one browser. A private
+window gets its own cookie, so it counts as another browser. Each stored
 entry distinguishes the request start time (`requested_at`) from the time it was
 persisted (`stored_at`). If the server does not expose `REQUEST_TIME_FLOAT`, the
 persistence time is used for both values. Each payload has a small metadata sidecar,
