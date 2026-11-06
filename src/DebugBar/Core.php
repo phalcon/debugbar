@@ -44,10 +44,12 @@ use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
 use RuntimeException;
 
+use function array_map;
 use function getenv;
 use function in_array;
 use function is_string;
 use function mb_strtolower;
+use function trim;
 
 /**
  * Boots the debug bar with no framework application. All its inputs are optional:
@@ -100,7 +102,10 @@ final class Core
         $redact = $config['redact'] ?? [];
 
         $this->envVar           = $env['var'] ?? 'APP_ENV';
-        $this->blocked          = $env['blocked'] ?? ['production', 'prod'];
+        $this->blocked          = array_map(
+            static fn (string $value): string => mb_strtolower(trim($value)),
+            ['production', 'prod', ...($env['blocked'] ?? [])]
+        );
         $this->strict           = $env['strict'] ?? false;
         $this->enabled          = $config['enabled'] ?? true;
         $this->nonce            = $assets['nonce'] ?? null;
@@ -242,15 +247,17 @@ final class Core
 
     /**
      * Whether the resolved environment permits the bar (present and not blocked).
+     * `production` and `prod` are always blocked. The compare trims the values and
+     * is not case-sensitive.
      */
     public function isAllowed(): bool
     {
-        $value = $this->resolveEnv();
+        $value = mb_strtolower(trim($this->resolveEnv()));
         if ('' === $value) {
             return false;
         }
 
-        return !in_array(mb_strtolower($value), $this->blocked, true);
+        return !in_array($value, $this->blocked, true);
     }
 
     public function isCollectorEnabled(string $name): bool
