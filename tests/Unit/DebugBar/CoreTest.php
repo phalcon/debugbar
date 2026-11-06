@@ -107,6 +107,20 @@ final class CoreTest extends AbstractUnitTestCase
         $this->assertSame(self::HTML, $response->getContent());
     }
 
+    public function testBlockedValuesIgnoreCaseAndSpaces(): void
+    {
+        $core = new Core(['env' => ['var' => self::ENV_VAR, 'blocked' => [' Staging ']]]);
+
+        $_ENV[self::ENV_VAR] = 'staging';
+        $this->assertFalse($core->isAllowed());
+
+        $_ENV[self::ENV_VAR] = ' STAGING ';
+        $this->assertFalse($core->isAllowed());
+
+        $_ENV[self::ENV_VAR] = 'production ';
+        $this->assertFalse($core->isAllowed());
+    }
+
     public function testBootInjectsWithNoFrameworkObjects(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
@@ -334,6 +348,12 @@ final class CoreTest extends AbstractUnitTestCase
         $this->assertFalse($core->isAllowed());
 
         $_ENV[self::ENV_VAR] = 'production';
+        $this->assertFalse($core->isAllowed());
+
+        $_ENV[self::ENV_VAR] = 'prod';
+        $this->assertFalse($core->isAllowed());
+
+        $_ENV[self::ENV_VAR] = 'dev';
         $this->assertTrue($core->isAllowed());
     }
 

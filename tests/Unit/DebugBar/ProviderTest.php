@@ -220,7 +220,7 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertArrayNotHasKey('section.dropme', $panel);
     }
 
-    public function testCustomBlockedListReplacesDefault(): void
+    public function testCustomBlockedListAddsToTheDefaults(): void
     {
         $provider = new Provider(
             $this->application(new Manager()),
@@ -231,7 +231,7 @@ final class ProviderTest extends AbstractUnitTestCase
         $this->assertFalse($provider->isAllowed());
 
         $_ENV[self::ENV_VAR] = 'production';
-        $this->assertTrue($provider->isAllowed());
+        $this->assertFalse($provider->isAllowed());
     }
 
     public function testCustomCollectorGetsItsEvents(): void

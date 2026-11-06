@@ -56,7 +56,11 @@ echo $application->handle($_SERVER['REQUEST_URI'])->getContent();
 
 !!! warning "NOTE"
 
-   Outside a permitted environment the bar does nothing: `boot()` returns without registering anything, so it is safe to call unconditionally. Set `env.strict` to `true` to make it throw `Phalcon\DebugBar\Exceptions\CannotUseInProduction` instead. The environment is read from `APP_ENV` (`getenv()`, then `$_ENV`, then `$_SERVER`); the default blocked list is `production` and `prod`.
+   Outside a permitted environment the bar does nothing: `boot()` returns without registering anything, so it is safe to call unconditionally. Set `env.strict` to `true` to make it throw `Phalcon\DebugBar\Exceptions\CannotUseInProduction` instead. The environment is read from `APP_ENV` (`getenv()`, then `$_ENV`, then `$_SERVER`).
+
+!!! danger "WARNING"
+
+   `production` and `prod` are always blocked. `env.blocked` adds values to them. It cannot remove `production` or `prod`. The compare trims the values and is not case-sensitive, so `Production` and `" prod "` are also blocked.
 
 If the application has no events manager, `boot()` still registers the `Debug` facade but attaches no response listener, so nothing is injected. Set an events manager to enable the bar.
 
@@ -299,7 +303,7 @@ The second argument to `Provider` is a nested array. Every key is optional. `Pha
 | `collectors`       | `array<string, bool>`     | all applicable enabled   | Per-collector switch, keyed by collector name.                   |
 | `debug_page`       | `bool\|Phalcon\Debug`     | `false`                  | Show the debug page for a server error. Only the ADR provider reads it. |
 | `enabled`          | `bool`                    | `true`                   | Master switch. When `false`, `boot()` returns after the gate.    |
-| `env.blocked`      | `list<string>`            | `['production', 'prod']` | Environment values that block the bar (case-insensitive).        |
+| `env.blocked`      | `list<string>`            | `[]`                     | More environment values that block the bar. `production` and `prod` are always blocked. Trimmed, not case-sensitive. |
 | `env.strict`       | `bool`                    | `false`                  | When `true`, `boot()` throws in a blocked/undefined environment instead of returning silently. |
 | `env.var`          | `string`                  | `APP_ENV`                | Environment variable inspected by the gate.                      |
 | `headers`          | `bool`                    | `true`                   | Emit the `X-Debug-Bar` diagnostic header.                        |
@@ -320,7 +324,8 @@ The second argument to `Provider` is a nested array. Every key is optional. `Pha
 use Phalcon\DebugBar\Provider;
 
 (new Provider($application, [
-    'env'        => ['var' => 'APP_ENV', 'blocked' => ['production', 'staging']],
+    // `production` and `prod` are always blocked. `staging` is added to them.
+    'env'        => ['var' => 'APP_ENV', 'blocked' => ['staging']],
     'access'     => ['allow_ips' => ['127.0.0.1', '10.0.0.5']],
     'collectors' => ['cache' => false, 'view' => false],
     'history'    => [
