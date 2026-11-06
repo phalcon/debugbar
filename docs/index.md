@@ -5,7 +5,7 @@ Phalcon DebugBar provides two things from one install:
 - **The debug bar** - a status bar injected into your application's HTML that surfaces per-request diagnostics through collectors.
 - **The debug page** - the framework's exception/error page, migrated out of `Phalcon\Support\Debug` into this package as `Phalcon\Debug`.
 
-The bar runs only in development. It refuses to boot when the environment is undefined or blocked, and it renders nothing on non-HTML responses.
+The bar runs only in development. It refuses to boot when the environment is undefined or blocked, and it renders nothing on non-HTML responses. The bar goes in before the last `</body>` of an HTML page. A response with no `</body>`, such as a file download, an empty response, JSON, or an HTML fragment, does not change.
 
 ## Requirements
 
