@@ -18,7 +18,9 @@ use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\DebugBar\Security\Redactor;
 
 use function count;
+use function is_array;
 use function is_string;
+use function json_decode;
 use function json_encode;
 
 use const JSON_PRETTY_PRINT;
@@ -62,7 +64,7 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
         $this->logs[] = [
             'label'   => $level,
             'message' => $message,
-            'context' => $this->stringifyContext($this->redactor->redact($context)),
+            'context' => $this->stringifyContext($this->redactor->redact($this->normalize($context))),
         ];
     }
 
@@ -75,6 +77,22 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
             'panel' => $this->logs,
             'badge' => count($this->logs),
         ];
+    }
+
+    /**
+     * Changes the objects in the context to arrays, as `json_encode()` writes
+     * them, so that the redactor sees their keys. A context that cannot be
+     * encoded becomes an empty array.
+     *
+     * @param array<array-key, mixed> $context
+     *
+     * @return array<array-key, mixed>
+     */
+    private function normalize(array $context): array
+    {
+        $decoded = json_decode((string) json_encode($context), true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     /**
