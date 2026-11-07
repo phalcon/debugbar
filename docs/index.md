@@ -33,7 +33,7 @@ use Phalcon\Debug;
 
 `listen()` does not see the exceptions of an ADR application, because the application catches them first. For an ADR application, see [ADR](#adr).
 
-The page escapes every value it shows, including quotes, the class name and file paths. A byte that is not valid UTF-8 shows as `�` (U+FFFD), so the rest of the message still shows. A frame from `eval()`'d code, or from a file that cannot be read, shows no source lines. An exception that occurs while the page renders shows only its escaped message. `Phalcon\Debug\Dump` prints `*RECURSION*` for an object or an array that contains itself.
+The page escapes every value it shows, including quotes, the class name and file paths. A byte that is not valid UTF-8 shows as `�` (U+FFFD), so the rest of the message still shows. A frame from `eval()`'d code, or from a file that cannot be read, shows no source lines. An exception that occurs while the page renders shows only its escaped message. `Phalcon\Debug\Dump` prints `*RECURSION*` for an object or an array that contains itself, and `[uninitialized]` for a typed property that has no value yet. To show an object, the page calls its `dump()` method only if that method is public, is not static, and has no required parameters.
 
 The remainder of this document covers the debug bar.
 
