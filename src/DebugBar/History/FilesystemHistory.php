@@ -17,8 +17,8 @@ use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
 use Phalcon\DebugBar\Contracts\History;
+use Phalcon\DebugBar\Exceptions\StorageNotWritable;
 use Phalcon\DebugBar\Json;
-use RuntimeException;
 
 use function array_filter;
 use function array_shift;
@@ -208,7 +208,7 @@ final class FilesystemHistory implements History
     public function validateStorage(): void
     {
         if (!$this->ensureStorageRoot()) {
-            throw new RuntimeException('history.path must be writable by the web-server user.');
+            throw new StorageNotWritable('history.path must be writable by the web-server user.');
         }
     }
 
