@@ -14,13 +14,13 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar\History;
 
 use Phalcon\DebugBar\Contracts\History;
+use Phalcon\DebugBar\Json;
 use Phalcon\DebugBar\RequestContext;
 use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
 
 use function is_string;
-use function json_encode;
 use function strtoupper;
 
 use const JSON_UNESCAPED_SLASHES;
@@ -98,7 +98,7 @@ final class HistoryHandler
      */
     private function json(array $body, int $status = 200): ResponseInterface
     {
-        $json = json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $json = Json::encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         $this->response->setStatusCode($status);
         $this->response->setContentType('application/json', 'UTF-8');

@@ -19,7 +19,6 @@ use MatthiasMullie\Minify\JS as JsMinifier;
 use function array_keys;
 use function array_values;
 use function dirname;
-use function json_encode;
 use function str_replace;
 
 use const JSON_HEX_AMP;
@@ -54,7 +53,7 @@ class Renderer
      */
     public function render(array $collected, ?string $nonce = null): string
     {
-        $json = json_encode(
+        $json = Json::encode(
             $collected,
             JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP
             | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE

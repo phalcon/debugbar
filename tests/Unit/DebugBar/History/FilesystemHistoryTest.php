@@ -354,6 +354,26 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
     }
 
     #[RunInSeparateProcess]
+    public function testInvalidUtf8IsStoredWithAReplacementCharacter(): void
+    {
+        [$path, $sessionId] = $this->startSession();
+
+        try {
+            $history = new FilesystemHistory(new HistoryOptions(true, '/_debugbar/open', $path));
+            $id      = $history->save(
+                ['data' => ['request' => ['panel' => ['q' => "\xFF"], 'badge' => null]], 'meta' => []],
+                new RequestMetadata('GET', '/search', 200, false)
+            );
+
+            $this->assertIsString($id);
+            $this->assertStringContainsString('"q":"\ufffd"', (string) json_encode($history->get($id)));
+        } finally {
+            session_write_close();
+            $this->removeHistory($path, $sessionId);
+        }
+    }
+
+    #[RunInSeparateProcess]
     public function testListingOnlyCollectsTheActiveBrowser(): void
     {
         [$path, $firstSessionId] = $this->startSession();

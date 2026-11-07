@@ -131,6 +131,18 @@ final class HistoryHandlerTest extends AbstractUnitTestCase
         );
     }
 
+    public function testInvalidUtf8InTheBodyIsReplaced(): void
+    {
+        $history = $this->createMock(History::class);
+        $history->method('find')->willReturn([['uri' => "\xB1"]]);
+
+        $this->assertJsonResponse(
+            $this->handler($history, $this->request('GET'))->index(),
+            200,
+            ['requests' => [['uri' => "\u{FFFD}"]]]
+        );
+    }
+
     public function testMethodOverrideCannotClearTheHistory(): void
     {
         $history = $this->createMock(History::class);
@@ -194,7 +206,7 @@ final class HistoryHandlerTest extends AbstractUnitTestCase
     public function testUnencodableBodyGivesAnEmptyObject(): void
     {
         $history = $this->createMock(History::class);
-        $history->method('find')->willReturn([['uri' => "\xB1"]]);
+        $history->method('find')->willReturn([['uri' => NAN]]);
 
         $response = $this->handler($history, $this->request('GET'))->index();
 

@@ -667,6 +667,8 @@ Interactive tabs use the following panel types:
 - **code** panels render text in a `<pre>` block. A string panel with no panel type renders as `code`.
 - **html** panels put a string into the page as trusted HTML. Only custom collectors use this type. See [Custom Collectors](#custom-collectors).
 
+A byte that is not valid UTF-8 shows as the replacement character `�` (U+FFFD). The other data of the request still shows, and request history still stores it.
+
 Time and Memory open their panels from the indicators on the right.
 
 Collectors may expose a summary above their panel. The database collector reports the total query count, duplicate runs, and accumulated SQL time. A duplicate run is each execution of a normalized statement after its first execution: running the same statement three times contributes two duplicate runs. These metrics remain visible with zero values when no queries are executed. Duplicate detection deliberately ignores binding values; repeated statements are highlighted and show their total execution count.

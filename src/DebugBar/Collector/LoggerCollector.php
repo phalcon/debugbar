@@ -15,13 +15,13 @@ namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Contracts\LoggerAware;
 use Phalcon\DebugBar\DebugBarTypes;
+use Phalcon\DebugBar\Json;
 use Phalcon\DebugBar\Security\Redactor;
 
 use function count;
 use function is_array;
 use function is_string;
 use function json_decode;
-use function json_encode;
 
 use const JSON_PRETTY_PRINT;
 use const JSON_UNESCAPED_SLASHES;
@@ -90,7 +90,7 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
      */
     private function normalize(array $context): array
     {
-        $decoded = json_decode((string) json_encode($context), true);
+        $decoded = json_decode((string) Json::encode($context), true);
 
         return is_array($decoded) ? $decoded : [];
     }
@@ -108,7 +108,7 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
             return '';
         }
 
-        $json = json_encode(
+        $json = Json::encode(
             $context,
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
         );
