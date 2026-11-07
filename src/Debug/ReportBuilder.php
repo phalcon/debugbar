@@ -30,6 +30,8 @@ use function explode;
 use function file;
 use function get_class;
 use function get_included_files;
+use function is_file;
+use function is_readable;
 use function mb_strtolower;
 use function memory_get_peak_usage;
 use function memory_get_usage;
@@ -102,7 +104,7 @@ class ReportBuilder
 
     private function buildFragment(string $file, int $line, bool $showFileFragment): CodeFragment
     {
-        $lines = file($file);
+        $lines = (is_file($file) && is_readable($file)) ? file($file) : false;
         if (false === $lines) {
             $lines = [];
         }
@@ -209,7 +211,7 @@ class ReportBuilder
      */
     private function resolveClassLink(string $className): string | null
     {
-        if (str_starts_with($className, 'Phalcon')) {
+        if (str_starts_with($className, 'Phalcon\\')) {
             $parts = explode('\\', $className);
 
             return 'https://docs.phalcon.io/6.0/en/api/' . $parts[0] . '_' . $parts[1];

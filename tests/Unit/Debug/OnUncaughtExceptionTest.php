@@ -19,6 +19,7 @@ use Phalcon\Debug\Report\ExceptionReport;
 use Phalcon\Support\Exception;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use ReflectionProperty;
+use RuntimeException;
 
 final class OnUncaughtExceptionTest extends AbstractUnitTestCase
 {
@@ -46,6 +47,38 @@ final class OnUncaughtExceptionTest extends AbstractUnitTestCase
         $this->assertTrue($result);
         $this->assertStringContainsString('<!DOCTYPE html>', $actual);
         $this->assertStringContainsString($message, $actual);
+    }
+
+    public function testSupportDebugOnUncaughtExceptionResetsIsActiveWhenRenderingFails(): void
+    {
+        $renderer = new class () extends HtmlRenderer {
+            public function render(ExceptionReport $report): string
+            {
+                throw new RuntimeException('render failed');
+            }
+        };
+
+        $isActive = new ReflectionProperty(Debug::class, 'isActive');
+        $isActive->setValue(null, false);
+
+        $debug = new Debug();
+        $debug->setRenderer($renderer);
+
+        ob_start();
+        ob_start();
+        try {
+            $debug->onUncaughtException(new Exception(uniqid('var-'), 1234));
+            $this->fail('The render error must reach the caller.');
+        } catch (RuntimeException $error) {
+            $this->assertSame('render failed', $error->getMessage());
+        } finally {
+            ob_end_clean();
+        }
+
+        $activeAfter = (bool) $isActive->getValue();
+        $isActive->setValue(null, false);
+
+        $this->assertFalse($activeAfter);
     }
 
     /**
@@ -122,5 +155,22 @@ final class OnUncaughtExceptionTest extends AbstractUnitTestCase
 
         $this->assertFalse($result);
         $this->assertStringContainsString($message, $actual);
+    }
+
+    public function testSupportDebugOnUncaughtExceptionWhenAlreadyActiveEscapesTheMessage(): void
+    {
+        $debug    = new Debug();
+        $isActive = new ReflectionProperty(Debug::class, 'isActive');
+        $isActive->setValue(null, true);
+
+        ob_start();
+        ob_start();
+        $debug->onUncaughtException(new Exception('<img src=x onerror=alert(1)>', 1234));
+        /** @var string $actual */
+        $actual = ob_get_clean();
+
+        $isActive->setValue(null, false);
+
+        $this->assertSame('&lt;img src=x onerror=alert(1)&gt;', $actual);
     }
 }
