@@ -27,7 +27,8 @@ use function is_string;
 use function method_exists;
 use function str_replace;
 
-use const ENT_COMPAT;
+use const ENT_QUOTES;
+use const ENT_SUBSTITUTE;
 
 /**
  * Produces the compact, single-line HTML representation of a value used inside
@@ -101,7 +102,7 @@ class ValueDumper
     {
         return htmlentities(
             str_replace("\n", "\\n", $value),
-            ENT_COMPAT,
+            ENT_QUOTES | ENT_SUBSTITUTE,
             'utf-8'
         );
     }

@@ -33,6 +33,8 @@ use Phalcon\Debug;
 
 `listen()` does not see the exceptions of an ADR application, because the application catches them first. For an ADR application, see [ADR](#adr).
 
+The page escapes every value it shows, including quotes, the class name and file paths. A byte that is not valid UTF-8 shows as `�` (U+FFFD), so the rest of the message still shows.
+
 The remainder of this document covers the debug bar.
 
 ## Registering the Debug Bar

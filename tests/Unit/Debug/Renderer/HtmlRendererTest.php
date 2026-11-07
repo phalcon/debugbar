@@ -48,6 +48,33 @@ final class HtmlRendererTest extends AbstractUnitTestCase
         $this->assertSame($expected, (new HtmlRenderer())->getJsSources($uri));
     }
 
+    public function testRenderEscapesTheClassName(): void
+    {
+        $report = new ExceptionReport('Ex<b>', 'boom', '/app/x.php', 5, false, self::URI);
+
+        $actual = (new HtmlRenderer())->render($report);
+
+        $this->assertStringContainsString('<title>Ex&lt;b&gt;:boom</title>', $actual);
+        $this->assertStringContainsString("<span class='error-type'>Ex&lt;b&gt;</span>", $actual);
+    }
+
+    public function testRenderEscapesTheFilePath(): void
+    {
+        $file   = "/app/it's<x>.php";
+        $report = new ExceptionReport('My\\Ex', 'boom', $file, 5, true, self::URI);
+        $report->setBacktrace(
+            [
+                new BacktraceItem('methodA', null, null, null, null, false, [], $file, 5, null),
+            ]
+        );
+
+        $actual = (new HtmlRenderer())->render($report);
+
+        $this->assertStringContainsString("<code>/app/it&#039;s&lt;x&gt;.php</code>", $actual);
+        $this->assertStringContainsString("data-file='/app/it&#039;s&lt;x&gt;.php'", $actual);
+        $this->assertStringNotContainsString("it's<x>", $actual);
+    }
+
     public function testRenderExactBacktraceSections(): void
     {
         $actual = (new HtmlRenderer())->render($this->buildReport());
@@ -206,6 +233,34 @@ final class HtmlRendererTest extends AbstractUnitTestCase
         );
         $this->assertStringNotContainsString('data-tab=', $actual);
         $this->assertStringEndsWith('</html>', $actual);
+    }
+
+    public function testRenderReplacesInvalidUtf8InASourceLine(): void
+    {
+        $report = new ExceptionReport('My\\Ex', 'boom', '/app/x.php', 1, true, self::URI);
+        $report->setBacktrace(
+            [
+                new BacktraceItem(
+                    'methodA',
+                    null,
+                    null,
+                    null,
+                    null,
+                    false,
+                    [],
+                    '/app/x.php',
+                    1,
+                    new CodeFragment('fragment', 1, 1, 1, ["\$name = 'caf\xE9';\n"])
+                ),
+            ]
+        );
+
+        $actual = (new HtmlRenderer())->render($report);
+
+        $this->assertStringContainsString(
+            "<td class='src'>\$name = &#039;caf\u{FFFD}&#039;;</td>",
+            $actual
+        );
     }
 
     public function testRenderSignatureLinksAndArgs(): void

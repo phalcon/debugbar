@@ -30,7 +30,8 @@ use function rtrim;
 use function str_replace;
 use function strpos;
 
-use const ENT_COMPAT;
+use const ENT_QUOTES;
+use const ENT_SUBSTITUTE;
 use const PHP_VERSION;
 
 /**
@@ -96,7 +97,7 @@ class HtmlRenderer implements Renderer
 
     public function render(ExceptionReport $report): string
     {
-        $className      = $report->getClassName();
+        $className      = $this->values->escape($report->getClassName());
         $escapedMessage = $this->values->escape($report->getMessage());
 
         $html = $this->toInterpolate(
@@ -118,7 +119,7 @@ class HtmlRenderer implements Renderer
             [
                 'className'      => $className,
                 'escapedMessage' => $escapedMessage,
-                'file'           => $report->getFile(),
+                'file'           => $this->values->escape($report->getFile()),
                 'line'           => (string)$report->getLine(),
                 'phpVersion'     => PHP_VERSION,
             ]
@@ -192,7 +193,7 @@ class HtmlRenderer implements Renderer
                     'num'     => (string)$counter,
                     'src'     => htmlentities(
                         str_replace("\t", '  ', $currentLine),
-                        ENT_COMPAT,
+                        ENT_QUOTES | ENT_SUBSTITUTE,
                         'UTF-8'
                     ),
                 ]
@@ -341,7 +342,7 @@ class HtmlRenderer implements Renderer
             $html .= $this->toInterpolate(
                 $this->getTemplate('frameFile'),
                 [
-                    'file' => $item->getFile(),
+                    'file' => $this->values->escape((string)$item->getFile()),
                     'line' => (string)$item->getLine(),
                 ]
             );
