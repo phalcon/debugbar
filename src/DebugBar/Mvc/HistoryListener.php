@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Mvc;
 
+use Phalcon\DebugBar\Controllers\HistoryController;
 use Phalcon\DebugBar\History\HistoryEndpoint;
 use Phalcon\Events\EventInterface;
 use Phalcon\Mvc\DispatcherInterface;
@@ -36,10 +37,10 @@ final class HistoryListener
         }
 
         $dispatcher->setNamespaceName(self::CONTROLLER_NAMESPACE);
-        $dispatcher->setControllerName('history');
+        $dispatcher->setControllerName(HistoryController::NAME);
         $dispatcher->setControllerSuffix('Controller');
         $dispatcher->setActionSuffix('Action');
-        $dispatcher->setActionName('open');
+        $dispatcher->setActionName(HistoryController::ACTION);
         $dispatcher->setParams([]);
     }
 }

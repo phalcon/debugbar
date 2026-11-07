@@ -13,6 +13,10 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar;
 
+use Phalcon\DebugBar\Collector\ExceptionsCollector;
+use Phalcon\DebugBar\Collector\LoggerCollector;
+use Phalcon\DebugBar\Collector\MessagesCollector;
+use Phalcon\DebugBar\Collector\TimeCollector;
 use Phalcon\DebugBar\Contracts\Collector;
 use Phalcon\DebugBar\Contracts\ExceptionAware;
 use Phalcon\DebugBar\Contracts\LoggerAware;
@@ -78,7 +82,7 @@ class DebugBar
     {
         $this->lastException = $throwable;
 
-        $collector = $this->collectors['exceptions'] ?? null;
+        $collector = $this->collectors[ExceptionsCollector::NAME] ?? null;
         if ($collector instanceof ExceptionAware) {
             $collector->addThrowable($throwable);
         }
@@ -91,7 +95,7 @@ class DebugBar
      */
     public function addLog(string $message, string $level, array $context = []): static
     {
-        $collector = $this->collectors['logger'] ?? null;
+        $collector = $this->collectors[LoggerCollector::NAME] ?? null;
         if ($collector instanceof LoggerAware) {
             $collector->addLog($message, $level, $context);
         }
@@ -195,7 +199,7 @@ class DebugBar
 
     public function message(mixed $message, string $label = 'info'): static
     {
-        $collector = $this->collectors['messages'] ?? null;
+        $collector = $this->collectors[MessagesCollector::NAME] ?? null;
         if ($collector instanceof MessageAware) {
             $collector->addMessage($message, $label);
         }
@@ -221,7 +225,7 @@ class DebugBar
 
     public function startMeasure(string $name, ?string $label = null): static
     {
-        $collector = $this->collectors['time'] ?? null;
+        $collector = $this->collectors[TimeCollector::NAME] ?? null;
         if ($collector instanceof TimeAware) {
             $collector->startMeasure($name, $label);
         }
@@ -231,7 +235,7 @@ class DebugBar
 
     public function stopMeasure(string $name): static
     {
-        $collector = $this->collectors['time'] ?? null;
+        $collector = $this->collectors[TimeCollector::NAME] ?? null;
         if ($collector instanceof TimeAware) {
             $collector->stopMeasure($name);
         }

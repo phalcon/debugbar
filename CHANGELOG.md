@@ -76,6 +76,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Enable a history row again when its request fails after another row was clicked. [#89](https://github.com/phalcon/debugbar/issues/89)
 - Use the same JSON flags in each panel, show a `Throwable` in a log context, and keep the context when one value cannot be encoded. [#91](https://github.com/phalcon/debugbar/issues/91)
 - Redact the ADR request attributes in the route panel. [#93](https://github.com/phalcon/debugbar/issues/93)
+- Use the name constants of the collectors and the history controller, and inject the `Injector` into the ADR debug page listener. [#94](https://github.com/phalcon/debugbar/issues/94)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 

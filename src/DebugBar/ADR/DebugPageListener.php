@@ -39,7 +39,8 @@ final class DebugPageListener
         private readonly DebugBar $bar,
         private readonly Debug $debug,
         private readonly AccessGate $accessGate,
-        private readonly ?RequestInterface $request
+        private readonly ?RequestInterface $request,
+        private readonly Injector $injector = new Injector()
     ) {
     }
 
@@ -69,6 +70,6 @@ final class DebugPageListener
         return ($response->getStatusCode() ?? 0) >= 500
             && $this->accessGate->allows($context->clientIp)
             && !$context->isAjax
-            && (new Injector())->isHtml($response);
+            && $this->injector->isHtml($response);
     }
 }

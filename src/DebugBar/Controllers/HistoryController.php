@@ -25,6 +25,10 @@ use Phalcon\Mvc\ControllerInterface;
  */
 final class HistoryController implements ControllerInterface
 {
+    public const ACTION = 'open';
+
+    public const NAME = 'history';
+
     private HistoryHandler $handler;
 
     public function __construct(

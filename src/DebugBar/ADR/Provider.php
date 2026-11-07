@@ -24,6 +24,7 @@ use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\DebugBarTypes;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
 use Phalcon\DebugBar\History\HistoryRecorder;
+use Phalcon\DebugBar\Injector;
 use Phalcon\DebugBar\ResponseListener;
 use Phalcon\Events\ManagerInterface;
 use Phalcon\Http\RequestInterface;
@@ -136,7 +137,8 @@ final class Provider implements ProviderContract
             $bar,
             true === $this->debugPage ? new DebugPage() : $this->debugPage,
             $this->core->getAccessGate(),
-            $request
+            $request,
+            new Injector()
         );
     }
 }
