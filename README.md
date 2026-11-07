@@ -25,8 +25,8 @@ plus the migrated Phalcon debug/exception page.
 ## Requirements
 
 - PHP >= 8.1
-- Phalcon 5 (the `ext-phalcon` C extension) **or** Phalcon 6 (the
-  `phalcon/phalcon` package)
+- Phalcon 5 `v5.17.0` or later (the `ext-phalcon` C extension) **or**
+  Phalcon 6 (the `phalcon/phalcon` package)
 
 ## Installation
 
