@@ -24,7 +24,11 @@ use Phalcon\Traits\Support\Helper\Arr\GetTrait;
 use ReflectionException;
 use Throwable;
 
+use function htmlspecialchars;
 use function mb_strtolower;
+
+use const ENT_QUOTES;
+use const ENT_SUBSTITUTE;
 
 /**
  * Listens for uncaught exceptions and renders them. Acts as a thin coordinator
@@ -220,20 +224,22 @@ class Debug
              */
             self::$isActive = true;
 
-            /**
-             * Print the HTML, @TODO, add an option to store the HTML
-             */
-            echo $this->renderHtml($exception);
-
-            /**
-             * Unlock the exception renderer
-             */
-            self::$isActive = false;
+            try {
+                /**
+                 * Print the HTML, @TODO, add an option to store the HTML
+                 */
+                echo $this->renderHtml($exception);
+            } finally {
+                /**
+                 * Unlock the exception renderer, also when rendering fails
+                 */
+                self::$isActive = false;
+            }
 
             return true;
         }
 
-        echo $exception->getMessage();
+        echo htmlspecialchars($exception->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         return false;
     }

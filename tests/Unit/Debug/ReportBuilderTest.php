@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\Tests\Unit\Debug;
 
+use Closure;
+use ErrorException;
 use Phalcon\Debug\Report\BacktraceItem;
 use Phalcon\Debug\Report\CodeFragment;
 use Phalcon\Debug\Report\ReportOptions;
@@ -53,7 +55,9 @@ final class ReportBuilderTest extends AbstractUnitTestCase
         $method = new \ReflectionMethod(ReportBuilder::class, 'buildFragment');
 
         /** @var CodeFragment $fragment */
-        $fragment = @$method->invoke($builder, '/phalcon/no/such/file.php', 5, false);
+        $fragment = $this->withWarningsAsExceptions(
+            fn (): mixed => $method->invoke($builder, "/app/x.php(3) : eval()'d code", 5, false)
+        );
 
         $this->assertSame([], $fragment->getLines());
     }
@@ -151,6 +155,19 @@ final class ReportBuilderTest extends AbstractUnitTestCase
         $this->assertSame(1, $fragment->getFirstLine());
         $this->assertSame(20, $fragment->getLine());
         $this->assertSame(30, $fragment->getLastLine());
+    }
+
+    public function testGlobalClassThatStartsWithPhalconHasNoDocsLink(): void
+    {
+        if (!class_exists('PhalconHelper', false)) {
+            class_alias(self::class, 'PhalconHelper');
+        }
+
+        $method = new \ReflectionMethod(ReportBuilder::class, 'resolveClassLink');
+
+        $this->assertNull($this->withWarningsAsExceptions(
+            fn (): mixed => $method->invoke(new ReportBuilder(), 'PhalconHelper')
+        ));
     }
 
     public function testInternalFunctionLinkIsResolved(): void
@@ -259,5 +276,22 @@ final class ReportBuilderTest extends AbstractUnitTestCase
         $this->assertArrayHasKey('DATA_SERVER_TEST', $report->getServer());
         $this->assertGreaterThan(0, $report->getMemoryUsage());
         $this->assertGreaterThan(0, $report->getPeakMemoryUsage());
+    }
+
+    /**
+     * Runs the operation with an error handler that throws, as
+     * `Debug::listenLowSeverity()` does.
+     */
+    private function withWarningsAsExceptions(Closure $operation): mixed
+    {
+        set_error_handler(static function (int $severity, string $message): never {
+            throw new ErrorException($message, 0, $severity);
+        });
+
+        try {
+            return $operation();
+        } finally {
+            restore_error_handler();
+        }
     }
 }
