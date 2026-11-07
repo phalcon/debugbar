@@ -100,6 +100,19 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
         $this->assertSame('SELECT 1', $collector->collect()['panel'][0]['message']);
     }
 
+    public function testInvalidUtf8InABindingIsReplaced(): void
+    {
+        $collector = new DatabaseCollector();
+
+        $collector->startQuery();
+        $collector->finishQuery('SELECT * FROM users WHERE name = :name', ['name' => "\xFF"]);
+
+        $this->assertSame(
+            'SELECT * FROM users WHERE name = :name  {"name":"\ufffd"}',
+            $collector->collect()['panel'][0]['message']
+        );
+    }
+
     public function testLabelReflectsQueryDurationInMilliseconds(): void
     {
         $collector = new DatabaseCollector();

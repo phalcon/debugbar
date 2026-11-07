@@ -97,9 +97,9 @@ final class RendererTest extends AbstractUnitTestCase
 
     public function testRenderFallsBackToEmptyObjectWhenJsonFails(): void
     {
-        // Invalid UTF-8 makes json_encode() return false; the renderer must
-        // fall back to an empty JSON object rather than emitting the raw false.
-        $html = (new Renderer())->render(['bad' => "\xFF"]);
+        // NAN makes json_encode() return false; the renderer must fall back to
+        // an empty JSON object rather than emitting the raw false.
+        $html = (new Renderer())->render(['bad' => NAN]);
 
         $this->assertStringContainsString('>{}</script>', $html);
     }
@@ -130,6 +130,13 @@ final class RendererTest extends AbstractUnitTestCase
         $html = (new Renderer())->renderHead();
 
         $this->assertStringNotContainsString('#ffffff', $html);
+    }
+
+    public function testRenderReplacesInvalidUtf8(): void
+    {
+        $html = (new Renderer())->render(['data' => ['q' => "\xFF"]]);
+
+        $this->assertStringContainsString('{"data":{"q":"' . "\u{FFFD}" . '"}}', $html);
     }
 
     public function testTemplatesAreOverridable(): void

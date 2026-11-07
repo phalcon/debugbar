@@ -84,6 +84,14 @@ final class LoggerCollectorTest extends AbstractUnitTestCase
         $this->assertSame('', $collector->collect()['panel'][0]['context']);
     }
 
+    public function testInvalidUtf8InTheContextIsReplaced(): void
+    {
+        $collector = new LoggerCollector(new Redactor());
+        $collector->addLog('search', 'info', ['q' => "\xFF"]);
+
+        $this->assertSame(['q' => "\u{FFFD}"], json_decode($collector->collect()['panel'][0]['context'], true));
+    }
+
     public function testLogsAccumulateWithLevelAsLabel(): void
     {
         $collector = new LoggerCollector(new Redactor());

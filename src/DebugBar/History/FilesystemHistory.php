@@ -16,6 +16,7 @@ namespace Phalcon\DebugBar\History;
 use DateTimeImmutable;
 use DateTimeZone;
 use Phalcon\DebugBar\Contracts\History;
+use Phalcon\DebugBar\Json;
 use RuntimeException;
 
 use function array_shift;
@@ -26,7 +27,6 @@ use function count;
 use function hash;
 use function is_array;
 use function json_decode;
-use function json_encode;
 use function min;
 use function preg_match;
 use function preg_replace;
@@ -174,8 +174,8 @@ final class FilesystemHistory implements History
         $storedEntry = $entry->toArray();
 
         $flags        = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
-        $json         = json_encode($storedEntry, $flags);
-        $metadataJson = json_encode([
+        $json         = Json::encode($storedEntry, $flags);
+        $metadataJson = Json::encode([
             'version' => HistoryEntry::VERSION,
             'meta'    => $entry->metadata(),
         ], $flags);
