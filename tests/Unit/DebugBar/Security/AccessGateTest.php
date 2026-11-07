@@ -24,6 +24,14 @@ final class AccessGateTest extends AbstractUnitTestCase
         $this->assertFalse((new AccessGate([], fn (): bool => false))->allows('127.0.0.1'));
     }
 
+    public function testCallbackThatDoesNotReturnTrueDenies(): void
+    {
+        foreach ([null, 1, 'yes'] as $value) {
+            // @phpstan-ignore argument.type (the test checks a callback that breaks its contract)
+            $this->assertFalse((new AccessGate([], fn (): mixed => $value))->allows('127.0.0.1'));
+        }
+    }
+
     public function testEmptyAllowlistAllowsAnyClient(): void
     {
         $gate = new AccessGate();

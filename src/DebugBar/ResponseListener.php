@@ -18,6 +18,7 @@ use Phalcon\DebugBar\Security\AccessGate;
 use Phalcon\Events\EventInterface;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
+use Throwable;
 
 use function count;
 
@@ -26,7 +27,8 @@ use function count;
  * ADR to `application:afterHandle`. On the event it runs the access gate,
  * aggregates the bar, sets the diagnostic headers, and - for an injectable HTML
  * response - renders and splices the bar in. `handle()` does the same work with
- * no event.
+ * no event. An error in the access gate or in a collector fails closed: the
+ * response gets no bar.
  */
 final class ResponseListener
 {
@@ -57,11 +59,16 @@ final class ResponseListener
         }
 
         $context = RequestContext::fromRequest($this->request);
-        if (true !== $this->accessGate->allows($context->clientIp)) {
+
+        try {
+            if (true !== $this->accessGate->allows($context->clientIp)) {
+                return;
+            }
+
+            $collected = $this->bar->collect();
+        } catch (Throwable) {
             return;
         }
-
-        $collected = $this->bar->collect();
 
         $this->history?->record($collected, $response, $this->request, $context);
 

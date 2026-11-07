@@ -20,7 +20,7 @@ use function in_array;
 /**
  * Decides whether the current request may see the bar, even within an allowed
  * environment: an IP allowlist (empty = any) and/or a custom callback. Both, when
- * given, must pass.
+ * given, must pass. Only `true` from the callback allows the client.
  */
 final class AccessGate
 {
@@ -44,7 +44,7 @@ final class AccessGate
         }
 
         if (null !== $this->callback) {
-            return ($this->callback)();
+            return true === ($this->callback)();
         }
 
         return true;
