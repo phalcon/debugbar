@@ -100,11 +100,21 @@ final class ValueDumperTest extends AbstractUnitTestCase
         fclose($resource);
     }
 
+    public function testEscapeQuotes(): void
+    {
+        $this->assertSame('a&#039;b&quot;c', (new ValueDumper())->escape('a\'b"c'));
+    }
+
     public function testEscapeRendersNewlinesLiterally(): void
     {
         $dumper = new ValueDumper();
 
         $this->assertSame('a&lt;b', $dumper->escape('a<b'));
         $this->assertSame("line\\nbreak", $dumper->escape("line\nbreak"));
+    }
+
+    public function testEscapeReplacesInvalidUtf8(): void
+    {
+        $this->assertSame("bad \u{FFFD} byte", (new ValueDumper())->escape("bad \xE9 byte"));
     }
 }
