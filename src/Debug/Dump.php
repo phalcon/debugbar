@@ -26,6 +26,7 @@ use Reflection;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
+use ReflectionReference;
 use stdClass;
 
 use function array_merge;
@@ -45,6 +46,7 @@ use function is_object;
 use function is_string;
 use function mb_strlen;
 use function nl2br;
+use function spl_object_id;
 use function str_repeat;
 
 use const ENT_IGNORE;
@@ -253,6 +255,7 @@ class Dump implements TemplateAware
      * Prepare an HTML string of information about a single variable.
      *
      * @param array<class-string, bool> $seen
+     * @param array<int|string, bool>   $parents The ids of the objects and array references that contain this value
      *
      * @throws ReflectionException
      */
@@ -260,13 +263,14 @@ class Dump implements TemplateAware
         mixed $variable,
         string | null $name = null,
         int $tab = 1,
-        array &$seen = []
+        array &$seen = [],
+        array $parents = []
     ): string {
         $output = (!empty($name)) ? $name . ' ' : '';
 
         return $output . match (true) {
-            is_array($variable)   => $this->formatArray($variable, $name, $tab, $seen),
-            is_object($variable)  => $this->formatObject($variable, $tab, $seen),
+            is_array($variable)   => $this->formatArray($variable, $name, $tab, $seen, $parents),
+            is_object($variable)  => $this->formatObject($variable, $tab, $seen, $parents),
             is_int($variable)     => $this->formatInteger($variable),
             is_float($variable)   => $this->formatFloat($variable),
             is_numeric($variable) => $this->formatNumericString($variable),
@@ -292,11 +296,17 @@ class Dump implements TemplateAware
     /**
      * @param array<array-key, mixed>   $variable
      * @param array<class-string, bool> $seen
+     * @param array<int|string, bool>   $parents
      *
      * @throws ReflectionException
      */
-    private function formatArray(array $variable, string | null $name, int $tab, array &$seen): string
-    {
+    private function formatArray(
+        array $variable,
+        string | null $name,
+        int $tab,
+        array &$seen,
+        array $parents
+    ): string {
         $space   = '  ';
         $message = $this->getTemplate('arrayHeader') . PHP_EOL;
         $context = [
@@ -324,7 +334,18 @@ class Dump implements TemplateAware
                 continue;
             }
 
-            $output .= $this->formatValue($value, '', $tab + 1, $seen) . "\n";
+            /**
+             * An array can contain itself only through a reference
+             */
+            $id = ReflectionReference::fromArrayElement($variable, $key)?->getId();
+            if (null !== $id && isset($parents[$id])) {
+                $output .= "*RECURSION*\n";
+
+                continue;
+            }
+
+            $inner  = (null === $id) ? $parents : $parents + [$id => true];
+            $output .= $this->formatValue($value, '', $tab + 1, $seen, $inner) . "\n";
         }
 
         return $output . str_repeat($space, $tab - 1) . ')';
@@ -382,11 +403,19 @@ class Dump implements TemplateAware
 
     /**
      * @param array<class-string, bool> $seen
+     * @param array<int|string, bool>   $parents
      *
      * @throws ReflectionException
      */
-    private function formatObject(object $variable, int $tab, array &$seen): string
+    private function formatObject(object $variable, int $tab, array &$seen, array $parents): string
     {
+        $id = spl_object_id($variable);
+        if (isset($parents[$id])) {
+            return '*RECURSION*';
+        }
+
+        $parents[$id] = true;
+
         $space   = '  ';
         $message = $this->getTemplate('objectHeader');
         $context = [
@@ -405,7 +434,7 @@ class Dump implements TemplateAware
         }
 
         $output .= " (\n";
-        $output .= $this->formatObjectProperties($variable, $tab, $seen);
+        $output .= $this->formatObjectProperties($variable, $tab, $seen, $parents);
         $output .= $this->formatObjectMethods($variable, $tab, $seen);
 
         return $output . str_repeat($space, $tab - 1) . ")";
@@ -454,10 +483,11 @@ class Dump implements TemplateAware
 
     /**
      * @param array<class-string, bool> $seen
+     * @param array<int|string, bool>   $parents
      *
      * @throws ReflectionException
      */
-    private function formatObjectProperties(object $variable, int $tab, array &$seen): string
+    private function formatObjectProperties(object $variable, int $tab, array &$seen, array $parents): string
     {
         $space = '  ';
 
@@ -468,19 +498,20 @@ class Dump implements TemplateAware
 
         if (true !== $this->detailed || $variable instanceof stdClass) {
             // Debug only public properties
-            return $this->formatPublicProperties($variable, $tab, $seen);
+            return $this->formatPublicProperties($variable, $tab, $seen, $parents);
         }
 
         // Debug all properties
-        return $this->formatReflectedProperties($variable, $tab, $seen);
+        return $this->formatReflectedProperties($variable, $tab, $seen, $parents);
     }
 
     /**
      * @param array<class-string, bool> $seen
+     * @param array<int|string, bool>   $parents
      *
      * @throws ReflectionException
      */
-    private function formatPublicProperties(object $variable, int $tab, array &$seen): string
+    private function formatPublicProperties(object $variable, int $tab, array &$seen, array $parents): string
     {
         $space  = '  ';
         $output = '';
@@ -496,7 +527,7 @@ class Dump implements TemplateAware
 
             $output .= str_repeat($space, $tab)
                 . $this->toInterpolate($message, $context)
-                . $this->formatValue($value, '', $tab + 1, $seen)
+                . $this->formatValue($value, '', $tab + 1, $seen, $parents)
                 . "\n";
         }
 
@@ -505,10 +536,11 @@ class Dump implements TemplateAware
 
     /**
      * @param array<class-string, bool> $seen
+     * @param array<int|string, bool>   $parents
      *
      * @throws ReflectionException
      */
-    private function formatReflectedProperties(object $variable, int $tab, array &$seen): string
+    private function formatReflectedProperties(object $variable, int $tab, array &$seen, array $parents): string
     {
         $space   = '  ';
         $output  = '';
@@ -535,7 +567,7 @@ class Dump implements TemplateAware
 
             $output .= str_repeat($space, $tab)
                 . $this->toInterpolate($message, $context)
-                . $this->formatValue($property->getValue($variable), '', $tab + 1, $seen)
+                . $this->formatValue($property->getValue($variable), '', $tab + 1, $seen, $parents)
                 . "\n";
         }
 

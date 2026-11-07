@@ -73,6 +73,17 @@ final class OutputBranchesTest extends AbstractUnitTestCase
         $this->assertStringContainsString('keepme', $actual);
     }
 
+    public function testArrayRecursionIsMarked(): void
+    {
+        $variable         = ['x' => 1];
+        $variable['self'] = &$variable;
+
+        $actual = (new Dump())->variable($variable);
+
+        $this->assertStringContainsString('self</span>] => *RECURSION*', $actual);
+        $this->assertSame(1, substr_count($actual, '*RECURSION*'));
+    }
+
     public function testArraySelfReferenceContinuesNotBreaks(): void
     {
         $dump = new Dump();
@@ -128,6 +139,19 @@ final class OutputBranchesTest extends AbstractUnitTestCase
         );
     }
 
+    public function testDetailedObjectRecursionIsMarked(): void
+    {
+        $object       = new class () {
+            public ?object $self = null;
+        };
+        $object->self = $object;
+
+        $actual = (new Dump([], true))->variable($object);
+
+        $this->assertStringContainsString('public</span>) = *RECURSION*', $actual);
+        $this->assertSame(1, substr_count($actual, '*RECURSION*'));
+    }
+
     public function testDetailedObjectUsesReflection(): void
     {
         $dump   = new Dump([], true);
@@ -152,6 +176,20 @@ final class OutputBranchesTest extends AbstractUnitTestCase
         $this->assertStringContainsString('Numeric String', (new Dump())->variable('12345'));
     }
 
+    public function testObjectRecursionIsMarked(): void
+    {
+        $object       = new stdClass();
+        $object->self = $object;
+
+        $actual = (new Dump())->variable($object);
+
+        $this->assertStringContainsString(
+            'self</span> (<span style="color:purple">public</span>) = *RECURSION*',
+            $actual,
+        );
+        $this->assertSame(1, substr_count($actual, '*RECURSION*'));
+    }
+
     public function testPublicPropertyNameIsEscaped(): void
     {
         $object                                   = new stdClass();
@@ -161,6 +199,27 @@ final class OutputBranchesTest extends AbstractUnitTestCase
 
         $this->assertStringContainsString('&lt;img src=x onerror=alert(1)&gt;', $actual);
         $this->assertStringNotContainsString('<img', $actual);
+    }
+
+    public function testRepeatedObjectIsNotMarkedAsRecursion(): void
+    {
+        $shared = new stdClass();
+
+        $actual = (new Dump())->variable(['a' => $shared, 'b' => $shared]);
+
+        $this->assertStringNotContainsString('*RECURSION*', $actual);
+        $this->assertSame(2, substr_count($actual, '<b style="color:purple">Object</b> stdClass'));
+    }
+
+    public function testRepeatedReferenceIsNotMarkedAsRecursion(): void
+    {
+        $shared   = ['k' => 'shared-value'];
+        $variable = ['a' => &$shared, 'b' => &$shared];
+
+        $actual = (new Dump())->variable($variable);
+
+        $this->assertStringNotContainsString('*RECURSION*', $actual);
+        $this->assertSame(2, substr_count($actual, 'shared-value'));
     }
 
     public function testResolvesParentClassAndMethodNames(): void

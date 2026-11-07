@@ -66,6 +66,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Evict another browser from request history only after the new request is stored. [#79](https://github.com/phalcon/debugbar/issues/79)
 - Escape quotes, invalid UTF-8, the class name and file paths in the debug page. [#80](https://github.com/phalcon/debugbar/issues/80)
 - Stop warnings while the debug page renders, and escape its fallback message. [#81](https://github.com/phalcon/debugbar/issues/81)
+- Print `*RECURSION*` in `Dump` for an object or an array that contains itself. [#82](https://github.com/phalcon/debugbar/issues/82)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
