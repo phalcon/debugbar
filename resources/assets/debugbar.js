@@ -535,9 +535,7 @@
                             }
                             button.disabled = false;
                         }).catch(function () {
-                            if (requestGuard.isDetailCurrent(selection)) {
-                                button.disabled = false;
-                            }
+                            button.disabled = false;
                         });
                     });
 
