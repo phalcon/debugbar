@@ -51,6 +51,7 @@ use function session_regenerate_id;
 use function session_start;
 use function session_write_close;
 use function str_repeat;
+use function str_starts_with;
 use function stream_wrapper_register;
 use function stream_wrapper_unregister;
 use function sys_get_temp_dir;
@@ -73,6 +74,74 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
         } finally {
             session_write_close();
             $this->removeHistory($path, $sessionId);
+        }
+    }
+
+    public function testAFailedEncodeKeepsTheOtherBrowsers(): void
+    {
+        $path     = $this->temporaryPath();
+        $firstId  = str_repeat('4', 64);
+        $secondId = str_repeat('5', 64);
+        $options  = new HistoryOptions(true, '/_debugbar/open', $path, 10, 60, 1);
+
+        try {
+            $first = new FilesystemHistory($options, null, new HistoryCookie($firstId));
+            $this->assertIsString($first->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/first', 200, false)
+            ));
+
+            $second = new FilesystemHistory($options, null, new HistoryCookie($secondId));
+            $this->assertNull($second->save(
+                ['data' => ['invalid' => ['panel' => NAN, 'badge' => null]], 'meta' => []],
+                new RequestMetadata('GET', '/second', 200, false)
+            ));
+            $this->assertTrue(is_dir($path . '/' . hash('sha256', $firstId)));
+            $this->assertFalse(is_dir($path . '/' . hash('sha256', $secondId)));
+        } finally {
+            $this->removeHistory($path, $firstId);
+            $this->removeHistory($path, $secondId);
+        }
+    }
+
+    public function testAFailedWriteKeepsTheOtherBrowsers(): void
+    {
+        $path       = $this->temporaryPath();
+        $firstId    = str_repeat('6', 64);
+        $secondId   = str_repeat('7', 64);
+        $secondPath = $path . '/' . hash('sha256', $secondId);
+        $operations = new class ($secondPath) extends DelegatingHistoryFileOperations {
+            public function __construct(private readonly string $blocked)
+            {
+                parent::__construct();
+            }
+
+            public function write(string $file, string $contents): bool
+            {
+                return str_starts_with($file, $this->blocked . '/')
+                    ? false
+                    : parent::write($file, $contents);
+            }
+        };
+        $options = new HistoryOptions(true, '/_debugbar/open', $path, 10, 60, 1);
+
+        try {
+            $first = new FilesystemHistory($options, $operations, new HistoryCookie($firstId));
+            $this->assertIsString($first->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/first', 200, false)
+            ));
+
+            $second = new FilesystemHistory($options, $operations, new HistoryCookie($secondId));
+            $this->assertNull($second->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/second', 200, false)
+            ));
+            $this->assertTrue(is_dir($path . '/' . hash('sha256', $firstId)));
+            $this->assertFalse(is_dir($secondPath));
+        } finally {
+            $this->removeHistory($path, $firstId);
+            $this->removeHistory($path, $secondId);
         }
     }
 

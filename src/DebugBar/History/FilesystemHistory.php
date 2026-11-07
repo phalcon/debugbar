@@ -13,14 +13,17 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\History;
 
+use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
 use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\Json;
 use RuntimeException;
 
+use function array_filter;
 use function array_shift;
 use function array_slice;
+use function array_values;
 use function basename;
 use function bin2hex;
 use function count;
@@ -84,7 +87,7 @@ final class FilesystemHistory implements History
      */
     public function clear(): int
     {
-        $directory = $this->browserDirectory(false);
+        $directory = $this->browserDirectory();
         if (null === $directory) {
             return 0;
         }
@@ -111,7 +114,7 @@ final class FilesystemHistory implements History
      */
     public function find(): array
     {
-        $directory = $this->browserDirectory(false);
+        $directory = $this->browserDirectory();
         if (null === $directory) {
             return [];
         }
@@ -143,7 +146,7 @@ final class FilesystemHistory implements History
             return null;
         }
 
-        $directory = $this->browserDirectory(false);
+        $directory = $this->browserDirectory();
         if (null === $directory) {
             return null;
         }
@@ -163,11 +166,6 @@ final class FilesystemHistory implements History
      */
     public function save(array $payload, RequestMetadata $request): ?string
     {
-        $directory = $this->browserDirectory(true);
-        if (null === $directory) {
-            return null;
-        }
-
         $storedAt    = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $id          = $storedAt->format('YmdHis-u-') . bin2hex(random_bytes(4));
         $entry       = HistoryEntry::create($payload, $request, $id, $storedAt);
@@ -180,15 +178,24 @@ final class FilesystemHistory implements History
             'meta'    => $entry->metadata(),
         ], $flags);
         if (false === $json || false === $metadataJson) {
-            $this->removeDirectoryIfEmpty($directory);
-
             return null;
         }
 
-        $target = $directory . '/' . $id . '.json';
-        if (!$this->saveFiles($target, $json, $metadataJson)) {
-            $this->removeDirectoryIfEmpty($directory);
+        $write = fn (string $directory): bool => $this->saveFiles(
+            $directory . '/' . $id . '.json',
+            $json,
+            $metadataJson
+        );
 
+        $directory = $this->browserDirectory();
+        if (null === $directory) {
+            $directory = $this->createBrowserDirectory($write);
+        } elseif (!$write($directory)) {
+            $this->removeDirectoryIfEmpty($directory);
+            $directory = null;
+        }
+
+        if (null === $directory) {
             return null;
         }
 
@@ -221,7 +228,7 @@ final class FilesystemHistory implements History
         return $browserDirectories;
     }
 
-    private function browserDirectory(bool $create): ?string
+    private function browserDirectory(): ?string
     {
         $browserId = $this->cookie->id();
         if (null === $browserId) {
@@ -233,25 +240,49 @@ final class FilesystemHistory implements History
             return $this->fileOperations->isWritable($directory) ? $directory : null;
         }
 
-        if (!$create || !$this->ensureStorageRoot()) {
+        return null;
+    }
+
+    /**
+     * Creates the directory of a new browser and writes the first entry into it.
+     * Only after the write works, it removes the oldest other browsers to keep
+     * `max_browsers`. When that fails, the new directory is removed again.
+     *
+     * @param Closure(string): bool $write
+     */
+    private function createBrowserDirectory(Closure $write): ?string
+    {
+        $browserId = $this->cookie->id();
+        if (null === $browserId || !$this->ensureStorageRoot()) {
             return null;
         }
 
-        $created = $this->fileOperations->withExclusiveLock(
+        $directory = $this->options->path . '/' . hash('sha256', $browserId);
+        $created   = $this->fileOperations->withExclusiveLock(
             $this->options->path . '/' . self::LOCK_FILE,
-            function () use ($directory): bool {
-                if ($this->fileOperations->directoryExists($directory)) {
-                    return $this->fileOperations->isWritable($directory);
-                }
-
-                if (!$this->makeRoomForBrowser()) {
+            function () use ($directory, $write): bool {
+                $exists = $this->fileOperations->directoryExists($directory);
+                if (
+                    !$exists
+                    && !$this->fileOperations->createDirectory($directory, 0700, true)
+                    && !$this->fileOperations->directoryExists($directory)
+                ) {
                     return false;
                 }
 
-                return (
-                    $this->fileOperations->createDirectory($directory, 0700, true)
-                    || $this->fileOperations->directoryExists($directory)
-                ) && $this->fileOperations->isWritable($directory);
+                if (!$this->fileOperations->isWritable($directory) || !$write($directory)) {
+                    $this->removeDirectoryIfEmpty($directory);
+
+                    return false;
+                }
+
+                if ($exists || $this->makeRoomForBrowser($directory)) {
+                    return true;
+                }
+
+                $this->removeBrowserDirectory($directory);
+
+                return false;
             }
         );
 
@@ -328,9 +359,16 @@ final class FilesystemHistory implements History
         return false !== $modified && $modified < time() - $this->options->ttlSeconds;
     }
 
-    private function makeRoomForBrowser(): bool
+    /**
+     * Removes the oldest browsers other than `$keep` until `$keep` fits in
+     * `max_browsers`.
+     */
+    private function makeRoomForBrowser(string $keep): bool
     {
-        $directories = $this->browserDirectories();
+        $directories = array_values(array_filter(
+            $this->browserDirectories(),
+            static fn (string $directory): bool => basename($directory) !== basename($keep)
+        ));
         usort(
             $directories,
             function (string $left, string $right): int {
