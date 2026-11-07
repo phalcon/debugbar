@@ -456,6 +456,10 @@ The bridges read the data off the event source (the connection, view, router, or
 
 To add a panel, extend `Phalcon\DebugBar\Collector\AbstractCollector` and set `NAME`, `$label` and `$panel`. `collect()` returns the data of the panel and the badge. To get data from events, also implement `Phalcon\DebugBar\Contracts\Subscriber` and attach your listeners in `subscribe()`.
 
+!!! danger "WARNING"
+
+   The `html` panel type puts the string of the panel into the page as HTML, with no escaping. Use it only for HTML that your collector builds, and escape each value that comes from the request, the session, or the database, for example with `htmlspecialchars()`. Request history shows the panel again later. No other panel type puts HTML into the page. A collector that declares no panel type (it does not implement `Phalcon\DebugBar\Contracts\Renderable`) shows a string panel as text.
+
 ```php
 <?php
 
@@ -660,6 +664,8 @@ Interactive tabs use the following panel types:
 - **list** panels (time, messages, database, view, cache) render labelled rows.
 - **exceptions** panels render one collapsible entry per throwable; the summary line stays visible and expands to the stack trace.
 - **logs** panels (logger) render one entry per logged item; an entry with context is collapsible - the level and message stay visible and expand to the context.
+- **code** panels render text in a `<pre>` block. A string panel with no panel type renders as `code`.
+- **html** panels put a string into the page as trusted HTML. Only custom collectors use this type. See [Custom Collectors](#custom-collectors).
 
 Time and Memory open their panels from the indicators on the right.
 

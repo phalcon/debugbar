@@ -187,7 +187,7 @@
 
     function inferType(panel) {
         if (typeof panel === 'string') {
-            return 'html';
+            return 'code';
         }
         if (Array.isArray(panel)) {
             if (panel.length && panel[0] && typeof panel[0] === 'object') {
@@ -257,7 +257,12 @@
     }
 
     function renderCode(panel) {
-        var source = (panel && panel.source !== undefined) ? panel.source : '';
+        var source = '';
+        if (typeof panel === 'string') {
+            source = panel;
+        } else if (panel && panel.source !== undefined) {
+            source = panel.source;
+        }
         return el('pre', 'phalcon-debugbar-code', scalar(source));
     }
 

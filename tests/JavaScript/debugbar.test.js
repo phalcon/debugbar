@@ -665,6 +665,27 @@ test('the client renders the output of the real collectors', function () {
     assert.equal(body.textContent, 'Current usage1MBPeak usage1MB');
 });
 
+test('a string panel renders as text unless its widget sets html', function () {
+    var markup = '<img src=x onerror=alert(1)>';
+    var mount = renderPayload({
+        data: {
+            custom: {panel: markup, badge: null},
+            trusted: {panel: markup, badge: null}
+        },
+        meta: {widgets: {trusted: {label: 'Trusted', panel: 'html'}}}
+    });
+    var tabs = mount.querySelectorAll('.phalcon-debugbar-tab');
+    var body = dom.findByClass(mount, 'phalcon-debugbar-body');
+
+    tabs[0].click();
+    assert.equal(dom.findByClass(body, 'phalcon-debugbar-code').textContent, markup);
+    assert.equal(dom.findByClass(body, 'phalcon-debugbar-html'), null);
+
+    tabs[1].click();
+    assert.ok(dom.findByClass(body, 'phalcon-debugbar-html'));
+    assert.equal(dom.findByClass(body, 'phalcon-debugbar-code'), null);
+});
+
 test('the client accepts the stored entry of the real history code', async function () {
     var contract = panelContract();
     var selected = null;
