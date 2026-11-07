@@ -77,6 +77,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Use the same JSON flags in each panel, show a `Throwable` in a log context, and keep the context when one value cannot be encoded. [#91](https://github.com/phalcon/debugbar/issues/91)
 - Redact the ADR request attributes in the route panel. [#93](https://github.com/phalcon/debugbar/issues/93)
 - Use the name constants of the collectors and the history controller, and inject the `Injector` into the ADR debug page listener. [#94](https://github.com/phalcon/debugbar/issues/94)
+- Accept only `true` from the access callback, and leave the response without a bar when the callback or a collector fails. [#96](https://github.com/phalcon/debugbar/issues/96)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
