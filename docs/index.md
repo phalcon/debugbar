@@ -395,7 +395,11 @@ off through `collectors => ['history' => false]`; in that case no endpoint or st
 registered. `history.path` must be an absolute path, configured explicitly, and
 writable by the web-server user. The provider creates the directory when needed
 and verifies its writability during boot, after the environment and collector
-gates allow History to start. Storage is isolated by a SHA-256 hash
+gates allow History to start. A history option that is not valid throws
+`Phalcon\DebugBar\Exceptions\InvalidConfig`, and a `history.path` that cannot be
+written throws `Phalcon\DebugBar\Exceptions\StorageNotWritable`. Both implement
+`Phalcon\DebugBar\Contracts\DebugBarThrowable`, as every exception of the bar does.
+Storage is isolated by a SHA-256 hash
 of a random, HttpOnly, SameSite=Lax debug bar cookie. The cookie is also marked
 Secure on HTTPS and lasts for the browser session. It is sent through PHP's native
 cookie mechanism so it does not replace cookies queued by the application. The bar
