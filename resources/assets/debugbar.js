@@ -105,7 +105,7 @@
     }
 
     function valueAtPath(value, path) {
-        if (!Array.isArray(path)) {
+        if (!Array.isArray(path) || path.length === 0) {
             return undefined;
         }
 
