@@ -19,6 +19,7 @@ use Phalcon\DebugBar\ADR\Bridge;
 use Phalcon\DebugBar\Collector\DatabaseCollector;
 use Phalcon\DebugBar\Collector\RouteCollector;
 use Phalcon\DebugBar\DebugBar;
+use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Events\Manager;
 use Phalcon\Events\ManagerInterface;
 use Phalcon\Http\Request;
@@ -26,6 +27,7 @@ use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\ADR\Action\Page\GetPage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
+use stdClass;
 
 #[RequiresPhpExtension('pdo_sqlite')]
 final class BridgeTest extends AbstractUnitTestCase
@@ -42,6 +44,29 @@ final class BridgeTest extends AbstractUnitTestCase
         ];
     }
 
+    public function testActionEventMasksTheSensitiveAttributes(): void
+    {
+        $manager        = new Manager();
+        $collector      = $this->routeCollector($manager);
+        $user           = new stdClass();
+        $user->name     = 'alice';
+        $user->password = 'hunter2';
+        $request        = new Request();
+        $request->getAttributes()->set('id', 5);
+        $request->getAttributes()->set('token', 'abc');
+        $request->getAttributes()->set('user', $user);
+
+        $manager->fire('adr:beforeExecuteAction', new GetPage(), $request);
+
+        $this->assertSame(
+            [
+                'Action'     => GetPage::class,
+                'Attributes' => '{"id":5,"token":"***","user":{"name":"alice","password":"***"}}',
+            ],
+            $collector->collect()['panel']
+        );
+    }
+
     public function testActionEventShowsTheActionClassAndTheAttributes(): void
     {
         $manager   = new Manager();
@@ -53,6 +78,22 @@ final class BridgeTest extends AbstractUnitTestCase
 
         $this->assertSame(
             ['Action' => GetPage::class, 'Attributes' => '{"id":5}'],
+            $collector->collect()['panel']
+        );
+    }
+
+    public function testActionEventUsesTheGivenRedactor(): void
+    {
+        $manager   = new Manager();
+        $collector = new RouteCollector();
+        $request   = new Request();
+        $request->getAttributes()->set('iban', 'GR16');
+
+        (new Bridge((new DebugBar())->addCollector($collector), new Redactor(['iban'])))->subscribe($manager);
+        $manager->fire('adr:beforeExecuteAction', new GetPage(), $request);
+
+        $this->assertSame(
+            ['Action' => GetPage::class, 'Attributes' => '{"iban":"***"}'],
             $collector->collect()['panel']
         );
     }

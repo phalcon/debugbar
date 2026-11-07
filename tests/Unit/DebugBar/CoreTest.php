@@ -391,6 +391,16 @@ final class CoreTest extends AbstractUnitTestCase
         $this->assertSame($bar, $core->getBar());
     }
 
+    public function testGetRedactorUsesTheRedactConfig(): void
+    {
+        $redactor = $this->core(['redact' => ['mask' => ['iban'], 'hidden' => ['internal']]])->getRedactor();
+
+        $this->assertSame(
+            ['iban' => Redactor::MASK, 'token' => Redactor::MASK],
+            $redactor->redact(['iban' => 'GR16', 'token' => 'abc', 'internal' => 'x'])
+        );
+    }
+
     public function testHandleBeforeBootDoesNothing(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
