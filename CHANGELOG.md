@@ -61,6 +61,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - `env.blocked` always blocks `production` and `prod`, and ignores case and spaces. [#74](https://github.com/phalcon/debugbar/issues/74)
 - Render a string panel as text unless the collector sets the `html` panel type. [#75](https://github.com/phalcon/debugbar/issues/75)
 - Inject the bar only into HTML pages that have a `</body>` tag. [#76](https://github.com/phalcon/debugbar/issues/76)
+- Update `Content-Length` after injection, and skip compressed responses. [#77](https://github.com/phalcon/debugbar/issues/77)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
