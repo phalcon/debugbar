@@ -42,7 +42,7 @@ function panelContract() {
     return JSON.parse(fs.readFileSync(require.resolve('../support/assets/DebugBar/panel-contract.json'), 'utf8'));
 }
 
-function renderPayload(payload) {
+function renderPayload(payload, windowObject) {
     var dataNode = new dom.TestElement('script');
     var mount = new dom.TestElement('div');
     dataNode.textContent = JSON.stringify(payload);
@@ -50,7 +50,7 @@ function renderPayload(payload) {
         'phalcon-debugbar': mount,
         'phalcon-debugbar-data': dataNode
     });
-    global.window = {
+    global.window = windowObject || {
         localStorage: {
             getItem: function () {
                 return null;
@@ -63,6 +63,22 @@ function renderPayload(payload) {
     require(debugbarPath);
 
     return mount;
+}
+
+function htmlWrites(root) {
+    var writes = root.innerHTML ? [root.innerHTML] : [];
+    root.children.forEach(function (child) {
+        writes = writes.concat(htmlWrites(child));
+    });
+
+    return writes;
+}
+
+function messagesPayload() {
+    return {
+        data: {messages: {panel: []}},
+        meta: {widgets: {messages: {label: 'Messages', panel: 'list'}}}
+    };
 }
 
 function renderIndicator(icon) {
@@ -737,6 +753,46 @@ test('a string panel renders as text unless its widget sets html', function () {
     assert.equal(dom.findByClass(body, 'phalcon-debugbar-code'), null);
 });
 
+test('panel values with markup are never written as HTML', function () {
+    var markup = '<img src=x onerror=alert(1)>';
+    var mount = renderPayload({
+        data: {
+            list: {panel: [{label: 'info', message: markup}], badge: null},
+            grid: {panel: {key: markup}, badge: null},
+            code: {panel: markup, badge: null}
+        },
+        meta: {
+            widgets: {
+                list: {label: 'List', panel: 'list'},
+                grid: {label: 'Grid', panel: 'grid'},
+                code: {label: 'Code', panel: 'code'}
+            }
+        }
+    });
+    var body = dom.findByClass(mount, 'phalcon-debugbar-body');
+    var tabs = mount.querySelectorAll('.phalcon-debugbar-tab');
+
+    assert.equal(tabs.length, 3);
+    tabs.forEach(function (tab) {
+        tab.click();
+
+        assert.notEqual(body.textContent.indexOf(markup), -1);
+        assert.deepEqual(htmlWrites(mount), []);
+    });
+});
+
+test('an html panel writes its string as HTML', function () {
+    var markup = '<b>trusted</b>';
+    var mount = renderPayload({
+        data: {trusted: {panel: markup, badge: null}},
+        meta: {widgets: {trusted: {label: 'Trusted', panel: 'html'}}}
+    });
+
+    mount.querySelectorAll('.phalcon-debugbar-tab')[0].click();
+
+    assert.deepEqual(htmlWrites(mount), [markup]);
+});
+
 test('the client accepts the stored entry of the real history code', async function () {
     var contract = panelContract();
     var selected = null;
@@ -1087,4 +1143,43 @@ test('selecting stored data reopens the collector tab active before history', as
     })[0];
     assert.equal(storedDatabaseTab.classList.contains('is-active'), true);
     assert.equal(dom.findByClass(mount, 'phalcon-debugbar-body').textContent, 'StoredSELECT 2');
+});
+
+test('the collapse toggle restores and stores its state', function () {
+    var stored = [];
+    var mount = renderPayload(messagesPayload(), {
+        localStorage: {
+            getItem: function (key) {
+                return key === 'phalcon-debugbar-collapsed' ? '1' : null;
+            },
+            setItem: function (key, value) {
+                stored.push([key, value]);
+            }
+        }
+    });
+    var toggle = dom.findByClass(mount, 'phalcon-debugbar-toggle');
+
+    assert.equal(mount.classList.contains('is-collapsed'), true);
+    toggle.click();
+    assert.equal(mount.classList.contains('is-collapsed'), false);
+    toggle.click();
+    assert.equal(mount.classList.contains('is-collapsed'), true);
+    assert.deepEqual(stored, [['phalcon-debugbar-collapsed', '0'], ['phalcon-debugbar-collapsed', '1']]);
+});
+
+test('the collapse toggle works when localStorage throws', function () {
+    var mount = renderPayload(messagesPayload(), {
+        localStorage: {
+            getItem: function () {
+                throw new Error('denied');
+            },
+            setItem: function () {
+                throw new Error('denied');
+            }
+        }
+    });
+
+    assert.equal(mount.classList.contains('is-collapsed'), false);
+    dom.findByClass(mount, 'phalcon-debugbar-toggle').click();
+    assert.equal(mount.classList.contains('is-collapsed'), true);
 });
