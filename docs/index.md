@@ -635,7 +635,7 @@ The `request`, `config`, `session`, and `logger` collectors run their data throu
 
 The `database` panel and request history show and store query bindings as they are, because generated names such as `:APL0` do not match a key. The redactor does not change log messages, exception messages, or stack traces.
 
-`Phalcon\DebugBar\Security\AccessGate` decides who receives the bar within an allowed environment. An empty IP allowlist admits any client. When both an allowlist and a callback are given, both must pass. The callback can run more than once for a request, for example for a server error in an ADR application with `debug_page` on. Do not put side effects in the callback.
+`Phalcon\DebugBar\Security\AccessGate` decides who receives the bar within an allowed environment. An empty IP allowlist admits any client. When both an allowlist and a callback are given, both must pass. Only `true` from the callback allows the client. When the callback or a collector throws, that response gets no bar, and the page of the application does not change. The callback can run more than once for a request, for example for a server error in an ADR application with `debug_page` on. Do not put side effects in the callback.
 
 ```php
 <?php

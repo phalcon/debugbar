@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar;
 
 use Phalcon\DebugBar\BarOptions;
+use Phalcon\DebugBar\Collector\AbstractCollector;
 use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\History\FilesystemHistory;
@@ -34,6 +35,7 @@ use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\Fixtures\GridCollector;
 use Phalcon\Tests\Support\DebugBar\Fixtures\ListCollector;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use RuntimeException;
 
 use function bin2hex;
 use function file_exists;
@@ -50,6 +52,55 @@ use function unlink;
 
 final class ResponseListenerTest extends AbstractUnitTestCase
 {
+    public function testAccessCallbackErrorLeavesTheResponseUnchanged(): void
+    {
+        $gate     = new AccessGate([], static function (): bool {
+            throw new RuntimeException('callback failed');
+        });
+        $listener = new ResponseListener(
+            new DebugBar(),
+            new Renderer(),
+            new Injector(),
+            $gate,
+            null,
+            new BarOptions(true, null)
+        );
+        $response = new Response();
+        $response->setContent('<html><body>hi</body></html>');
+
+        $listener->handle($response);
+
+        $this->assertSame('<html><body>hi</body></html>', $response->getContent());
+        $this->assertFalse($response->hasHeader('X-Debug-Bar'));
+    }
+
+    public function testCollectorErrorLeavesTheResponseUnchanged(): void
+    {
+        $bar      = (new DebugBar())->addCollector(new class () extends AbstractCollector {
+            public const NAME = 'throwing';
+
+            public function collect(): array
+            {
+                throw new RuntimeException('collect failed');
+            }
+        });
+        $listener = new ResponseListener(
+            $bar,
+            new Renderer(),
+            new Injector(),
+            new AccessGate(),
+            null,
+            new BarOptions(true, null)
+        );
+        $response = new Response();
+        $response->setContent('<html><body>hi</body></html>');
+
+        $listener->handle($response);
+
+        $this->assertSame('<html><body>hi</body></html>', $response->getContent());
+        $this->assertFalse($response->hasHeader('X-Debug-Bar'));
+    }
+
     public function testDeniedByAccessGateIsNotInjected(): void
     {
         $listener = $this->listener(true, ['10.0.0.1']);
