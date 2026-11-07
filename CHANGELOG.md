@@ -63,6 +63,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Inject the bar only into HTML pages that have a `</body>` tag. [#76](https://github.com/phalcon/debugbar/issues/76)
 - Update `Content-Length` after injection, and skip compressed responses. [#77](https://github.com/phalcon/debugbar/issues/77)
 - Replace invalid UTF-8 with U+FFFD, so the bar and request history keep the data. [#78](https://github.com/phalcon/debugbar/issues/78)
+- Evict another browser from request history only after the new request is stored. [#79](https://github.com/phalcon/debugbar/issues/79)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 

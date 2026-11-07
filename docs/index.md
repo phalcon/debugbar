@@ -404,7 +404,9 @@ history cookie, and request history does not start for that browser. Closing the
 remain eligible for cleanup until `history.ttl_seconds` expires. Clients that do
 not retain cookies never create storage directories. The number of browser
 directories is capped by `history.max_browsers`; creation is serialized and evicts
-the least recently updated browser directory before admitting another identity.
+the least recently updated browser directory to admit another identity. The bar
+evicts only after the first request of the new identity is stored, so a request
+that cannot be stored does not remove the history of another browser.
 This bounds forged or repeatedly rotated cookie identities even when the access
 allowlist is empty. A browser here is one history cookie. All the windows and
 tabs of a browser share the cookie, so they count as one browser. A private
