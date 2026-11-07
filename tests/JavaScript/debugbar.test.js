@@ -582,6 +582,17 @@ test('the request control draws the search icon', function () {
     assert.equal(search.children[0].getAttribute('r'), '4.5');
 });
 
+test('the request control shows History when no widget defines the request', function () {
+    var mount = renderPayload({
+        data: {history: {panel: {url: '/_debugbar/open'}}},
+        meta: {widgets: {history: {label: 'History', panel: 'history'}}}
+    });
+    var control = dom.findByClass(mount, 'phalcon-debugbar-request-control');
+
+    assert.equal(control.textContent, 'History');
+    assert.equal(control.title, 'Open request history: History');
+});
+
 test('an indicator with an unknown icon name shows its value and no icon', function () {
     ['clcok', 'constructor', ''].forEach(function (name) {
         var mount = renderIndicator(name);
@@ -924,6 +935,49 @@ test('selecting stored data closes history and uses metadata without a request c
     assert.equal(storedTimeIndicator.textContent, '20ms');
     assert.equal(storedTimeIndicator.classList.contains('is-active'), true);
     assert.equal(dom.findByClass(mount, 'phalcon-debugbar-body').style.display, 'block');
+});
+
+test('stored data with no widget that defines the request uses the request metadata', async function () {
+    var dataNode = new dom.TestElement('script');
+    var mount = new dom.TestElement('div');
+    var historyPanel = {url: '/_debugbar/open'};
+    var widgets = {history: {label: 'History', panel: 'history'}};
+    dataNode.textContent = JSON.stringify({
+        data: {history: {panel: historyPanel}},
+        meta: {widgets: widgets}
+    });
+    global.document = dom.createDocument({
+        'phalcon-debugbar': mount,
+        'phalcon-debugbar-data': dataNode
+    });
+    var calls = 0;
+    global.window = {
+        fetch: function () {
+            calls++;
+            if (calls === 1) {
+                return Promise.resolve(response({
+                    requests: [{id: 'stored', method: 'POST', uri: '/stored', status: 200}]
+                }));
+            }
+
+            return Promise.resolve(response({
+                request: {
+                    version: 1,
+                    meta: {method: 'POST', uri: '/stored'},
+                    payload: {data: {history: {panel: historyPanel}}, meta: {widgets: widgets}}
+                }
+            }));
+        }
+    };
+
+    require(debugbarPath);
+    dom.findByClass(mount, 'phalcon-debugbar-request-control').click();
+    await dom.flushPromises();
+    dom.findByClass(mount, 'phalcon-debugbar-history-request').click();
+    await dom.flushPromises();
+
+    assert.equal(calls, 2);
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-request-control').textContent, 'POST/stored');
 });
 
 test('selecting stored data reopens the collector tab active before history', async function () {

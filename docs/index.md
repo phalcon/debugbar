@@ -386,7 +386,9 @@ panel is visible at a time. The browser provides refresh and clear controls.
 Selecting a stored request closes history, replaces the complete collector payload,
 and updates the controls, request time, current memory usage, method, and URI
 without navigating away from the page. The collector panel that was open before
-History is reopened with the selected request's data. If request metadata is unavailable, the
+History is reopened with the selected request's data. With no request panel, for example
+with `collectors => ['request' => false]`, the control shows the method and URI from the
+request metadata. If request metadata is unavailable, the
 history control uses `History` as its fallback label. An empty history displays
 `No stored requests` and leaves the clear control disabled.
 
