@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Phalcon\Tests\Unit\DebugBar\History;
 
 use InvalidArgumentException;
+use Phalcon\DebugBar\Contracts\DebugBarThrowable;
 use Phalcon\DebugBar\History\HistoryOptions;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -31,6 +32,19 @@ final class HistoryOptionsTest extends AbstractUnitTestCase
             'host'     => ['//example.com/_debugbar/open'],
             'query'    => ['/_debugbar/open?request=1'],
             'fragment' => ['/_debugbar/open#history'],
+        ];
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function invalidOptions(): array
+    {
+        return [
+            'no path'       => ['/_debugbar/open', ''],
+            'relative path' => ['/_debugbar/open', 'var/debugbar'],
+            'external url'  => ['https://example.com/_debugbar/open', '/var/debugbar'],
+            'root url'      => ['/', '/var/debugbar'],
         ];
     }
 
@@ -138,5 +152,13 @@ final class HistoryOptionsTest extends AbstractUnitTestCase
         $this->assertSame(1, $options->maxRequests);
         $this->assertSame(1, $options->ttlSeconds);
         $this->assertSame(1, $options->maxBrowsers);
+    }
+
+    #[DataProvider('invalidOptions')]
+    public function testInvalidOptionsThrowADebugBarThrowable(string $url, string $path): void
+    {
+        $this->expectException(DebugBarThrowable::class);
+
+        (new HistoryOptions(true, $url, $path))->validate();
     }
 }

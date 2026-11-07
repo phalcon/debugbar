@@ -71,6 +71,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Apply the debug page blacklist to nested keys too. [#84](https://github.com/phalcon/debugbar/issues/84)
 - Discard all output buffers that start after `Debug` is created, not only one. [#85](https://github.com/phalcon/debugbar/issues/85)
 - Require `phalcon/traits`, and document Phalcon `v5.17.0` as the minimum Phalcon 5 version. [#86](https://github.com/phalcon/debugbar/issues/86)
+- Throw `InvalidConfig` and `StorageNotWritable` for history errors, so every exception of the bar implements `DebugBarThrowable`. [#87](https://github.com/phalcon/debugbar/issues/87)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 

@@ -16,6 +16,7 @@ namespace Phalcon\Tests\Unit\DebugBar;
 use InvalidArgumentException;
 use Phalcon\Config\Config;
 use Phalcon\DebugBar\Collector\LoggerCollector;
+use Phalcon\DebugBar\Contracts\DebugBarThrowable;
 use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\Core;
 use Phalcon\DebugBar\Debug;
@@ -267,6 +268,16 @@ final class CoreTest extends AbstractUnitTestCase
         $this->expectExceptionMessage('history.path is required');
 
         $this->core(['history' => ['enabled' => true]])->createHistory(fn (): ?RequestInterface => null);
+    }
+
+    public function testCreateHistoryThrowsADebugBarThrowableForStorageThatCannotBeWritten(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $this->expectException(DebugBarThrowable::class);
+
+        $this->core(['history' => ['enabled' => true, 'path' => __FILE__]])
+            ->createHistory(fn (): ?RequestInterface => null);
     }
 
     public function testCreateHistoryUsesTheConfiguredBaseUriByDefault(): void

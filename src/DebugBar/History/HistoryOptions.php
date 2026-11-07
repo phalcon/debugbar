@@ -13,8 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\History;
 
-use InvalidArgumentException;
 use Phalcon\DebugBar\DebugBarTypes;
+use Phalcon\DebugBar\Exceptions\InvalidConfig;
 
 use function max;
 use function parse_url;
@@ -83,21 +83,21 @@ final class HistoryOptions
         }
 
         if ('' === $this->path) {
-            throw new InvalidArgumentException('history.path is required when request history is enabled.');
+            throw new InvalidConfig('history.path is required when request history is enabled.');
         }
 
         if (!$this->isAbsolutePath($this->path)) {
-            throw new InvalidArgumentException('history.path must be an absolute path.');
+            throw new InvalidConfig('history.path must be an absolute path.');
         }
 
         if (!$this->isInternalUrl($this->url)) {
-            throw new InvalidArgumentException(
+            throw new InvalidConfig(
                 'history.url must be an absolute path without a scheme, host, query, or fragment.'
             );
         }
 
         if ('/' === $this->url) {
-            throw new InvalidArgumentException(
+            throw new InvalidConfig(
                 'history.url must not be "/". The endpoint would replace the home page of the application.'
             );
         }

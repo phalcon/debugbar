@@ -14,7 +14,6 @@ declare(strict_types=1);
 namespace Phalcon\DebugBar;
 
 use Closure;
-use InvalidArgumentException;
 use Phalcon\Config\ConfigInterface;
 use Phalcon\DebugBar\Collector\CacheCollector;
 use Phalcon\DebugBar\Collector\ConfigCollector;
@@ -32,6 +31,8 @@ use Phalcon\DebugBar\Collector\VersionCollector;
 use Phalcon\DebugBar\Collector\ViewCollector;
 use Phalcon\DebugBar\Contracts\Collector;
 use Phalcon\DebugBar\Exceptions\CannotUseInProduction;
+use Phalcon\DebugBar\Exceptions\InvalidConfig;
+use Phalcon\DebugBar\Exceptions\StorageNotWritable;
 use Phalcon\DebugBar\History\FilesystemHistory;
 use Phalcon\DebugBar\History\HistoryCookie;
 use Phalcon\DebugBar\History\HistoryEndpoint;
@@ -42,7 +43,6 @@ use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Events\ManagerInterface;
 use Phalcon\Http\RequestInterface;
 use Phalcon\Http\ResponseInterface;
-use RuntimeException;
 
 use function array_map;
 use function getenv;
@@ -195,9 +195,9 @@ final class Core
      * @param Closure(): ?RequestInterface $request
      * @param (Closure(): string)|null     $baseUri
      *
-     * @throws CannotUseInProduction    When `env.strict` is set and the environment is blocked or undefined.
-     * @throws InvalidArgumentException When the `history` config is not valid.
-     * @throws RuntimeException         When the web-server user cannot write to `history.path`.
+     * @throws CannotUseInProduction When `env.strict` is set and the environment is blocked or undefined.
+     * @throws InvalidConfig         When the `history` config is not valid.
+     * @throws StorageNotWritable    When the web-server user cannot write to `history.path`.
      */
     public function createHistory(Closure $request, ?Closure $baseUri = null): ?HistoryRecorder
     {
