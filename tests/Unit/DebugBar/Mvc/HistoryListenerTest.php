@@ -23,6 +23,18 @@ use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
 final class HistoryListenerTest extends AbstractUnitTestCase
 {
+    public function testInternalRequestsReachAnExistingControllerAction(): void
+    {
+        $request = $this->createMock(RequestInterface::class);
+        $request->method('getURI')->willReturn('/_debugbar/open?id=entry');
+        $dispatcher = new Dispatcher();
+        $listener   = new HistoryListener($this->endpoint($request, '/'));
+
+        $listener(new Event('beforeHandleRequest', $this), null, $dispatcher);
+
+        $this->assertTrue(method_exists($dispatcher->getControllerClass(), $dispatcher->getActiveMethod()));
+    }
+
     public function testInternalRequestsUseThePackageControllerAndDiscardRouteParameters(): void
     {
         $request = $this->createMock(RequestInterface::class);
