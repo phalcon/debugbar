@@ -77,6 +77,47 @@ final class FilesystemHistoryTest extends AbstractUnitTestCase
         }
     }
 
+    public function testAFailedDirectoryCreationKeepsTheOtherBrowsers(): void
+    {
+        $path       = $this->temporaryPath();
+        $firstId    = str_repeat('8', 64);
+        $secondId   = str_repeat('9', 64);
+        $secondPath = $path . '/' . hash('sha256', $secondId);
+        $operations = new class ($secondPath) extends DelegatingHistoryFileOperations {
+            public function __construct(private readonly string $blocked)
+            {
+                parent::__construct();
+            }
+
+            public function createDirectory(string $directory, int $permissions, bool $recursive): bool
+            {
+                return $directory === $this->blocked
+                    ? false
+                    : parent::createDirectory($directory, $permissions, $recursive);
+            }
+        };
+        $options = new HistoryOptions(true, '/_debugbar/open', $path, 10, 60, 1);
+
+        try {
+            $first = new FilesystemHistory($options, $operations, new HistoryCookie($firstId));
+            $this->assertIsString($first->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/first', 200, false)
+            ));
+
+            $second = new FilesystemHistory($options, $operations, new HistoryCookie($secondId));
+            $this->assertNull($second->save(
+                ['data' => [], 'meta' => []],
+                new RequestMetadata('GET', '/second', 200, false)
+            ));
+            $this->assertTrue(is_dir($path . '/' . hash('sha256', $firstId)));
+            $this->assertFalse(is_dir($secondPath));
+        } finally {
+            $this->removeHistory($path, $firstId);
+            $this->removeHistory($path, $secondId);
+        }
+    }
+
     public function testAFailedEncodeKeepsTheOtherBrowsers(): void
     {
         $path     = $this->temporaryPath();
