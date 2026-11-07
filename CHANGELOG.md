@@ -69,6 +69,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Print `*RECURSION*` in `Dump` for an object or an array that contains itself. [#82](https://github.com/phalcon/debugbar/issues/82)
 - Print `[uninitialized]` in `Dump`, and skip a `dump()` method that the debug page cannot call. [#83](https://github.com/phalcon/debugbar/issues/83)
 - Apply the debug page blacklist to nested keys too. [#84](https://github.com/phalcon/debugbar/issues/84)
+- Discard all output buffers that start after `Debug` is created, not only one. [#85](https://github.com/phalcon/debugbar/issues/85)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
