@@ -18,12 +18,43 @@ use Phalcon\DebugBar\Collector\LoggerCollector;
 use Phalcon\DebugBar\Security\Redactor;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\PanelContractTrait;
+use RuntimeException;
 
 use function json_decode;
 
 final class LoggerCollectorTest extends AbstractUnitTestCase
 {
     use PanelContractTrait;
+
+    public function testAnInfiniteValueKeepsTheRestOfTheContext(): void
+    {
+        $collector = new LoggerCollector(new Redactor());
+        $collector->addLog('ratio', 'info', ['keep' => 'me', 'ratio' => INF]);
+
+        $this->assertSame(
+            ['keep' => 'me', 'ratio' => 0],
+            json_decode($collector->collect()['panel'][0]['context'], true)
+        );
+    }
+
+    public function testAThrowableInTheContextShowsItsClassMessageFileAndLine(): void
+    {
+        $exception = new RuntimeException('boom');
+        $collector = new LoggerCollector(new Redactor());
+        $collector->addLog('failed', 'error', ['exception' => $exception]);
+
+        $this->assertSame(
+            [
+                'exception' => [
+                    'class'   => RuntimeException::class,
+                    'message' => 'boom',
+                    'file'    => $exception->getFile(),
+                    'line'    => $exception->getLine(),
+                ],
+            ],
+            json_decode($collector->collect()['panel'][0]['context'], true)
+        );
+    }
 
     public function testContextIsCapturedAsJson(): void
     {

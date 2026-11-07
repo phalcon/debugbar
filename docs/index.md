@@ -604,7 +604,7 @@ $logger->info('user login', ['user_id' => 42]);
 $logger->error('payment declined', ['order_id' => 1001]);
 ```
 
-Each entry keeps its log level as the label and its message beside it. An entry logged with PSR-3 context becomes collapsible: the level and message stay visible and expand to the context, rendered as pretty-printed JSON. An entry logged without context renders as a plain row. The context is redacted. Objects in the context are changed to arrays first, the same way `json_encode()` writes them, so their keys are redacted too.
+Each entry keeps its log level as the label and its message beside it. An entry logged with PSR-3 context becomes collapsible: the level and message stay visible and expand to the context, rendered as pretty-printed JSON. An entry logged without context renders as a plain row. The context is redacted. Objects in the context are changed to arrays first, the same way `json_encode()` writes them, so their keys are redacted too. A `Throwable` in the context shows its class, message, file and line. A value that JSON cannot hold, such as `INF`, shows as `0`, and the rest of the context stays. Each panel shows `/` and Unicode characters as they are.
 
 The `logger` collector is registered by default. Disable it, like any collector, through the `collectors` key:
 

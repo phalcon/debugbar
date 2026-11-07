@@ -22,6 +22,32 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
 {
     use PanelContractTrait;
 
+    public function testAnInfiniteBindingKeepsTheOtherBindings(): void
+    {
+        $collector = new DatabaseCollector();
+
+        $collector->startQuery();
+        $collector->finishQuery('SELECT * FROM t WHERE a = :a AND r = :r', ['a' => 'b', 'r' => INF]);
+
+        $this->assertSame(
+            'SELECT * FROM t WHERE a = :a AND r = :r  {"a":"b","r":0}',
+            $collector->collect()['panel'][0]['message']
+        );
+    }
+
+    public function testBindingsShowSlashesAndUnicodeAsTheLogsPanelDoes(): void
+    {
+        $collector = new DatabaseCollector();
+
+        $collector->startQuery();
+        $collector->finishQuery('SELECT * FROM t WHERE p = :p AND n = :n', ['p' => '/x/y', 'n' => 'café']);
+
+        $this->assertSame(
+            'SELECT * FROM t WHERE p = :p AND n = :n  {"p":"/x/y","n":"café"}',
+            $collector->collect()['panel'][0]['message']
+        );
+    }
+
     public function testDuplicateDetectionIgnoresBindingsButNotDifferentStatements(): void
     {
         $collector = new DatabaseCollector();
@@ -108,7 +134,7 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
         $collector->finishQuery('SELECT * FROM users WHERE name = :name', ['name' => "\xFF"]);
 
         $this->assertSame(
-            'SELECT * FROM users WHERE name = :name  {"name":"\ufffd"}',
+            'SELECT * FROM users WHERE name = :name  {"name":"' . "\u{FFFD}" . '"}',
             $collector->collect()['panel'][0]['message']
         );
     }

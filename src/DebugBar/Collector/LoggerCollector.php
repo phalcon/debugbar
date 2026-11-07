@@ -15,17 +15,15 @@ namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\Contracts\LoggerAware;
 use Phalcon\DebugBar\DebugBarTypes;
-use Phalcon\DebugBar\Json;
 use Phalcon\DebugBar\Security\Redactor;
+use Throwable;
 
+use function array_walk_recursive;
 use function count;
 use function is_array;
-use function is_string;
 use function json_decode;
 
 use const JSON_PRETTY_PRINT;
-use const JSON_UNESCAPED_SLASHES;
-use const JSON_UNESCAPED_UNICODE;
 
 /**
  * Accumulates entries captured from a `Phalcon\Logger` through the logger
@@ -41,6 +39,8 @@ use const JSON_UNESCAPED_UNICODE;
  */
 final class LoggerCollector extends AbstractCollector implements LoggerAware
 {
+    use EncodesJson;
+
     public const NAME = 'logger';
 
     protected string $label = 'Logs';
@@ -80,9 +80,10 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
     }
 
     /**
-     * Changes the objects in the context to arrays, as `json_encode()` writes
-     * them, so that the redactor sees their keys. A context that cannot be
-     * encoded becomes an empty array.
+     * Changes each `Throwable` in the context to its class, message, file and
+     * line. Changes the other objects to arrays, as `json_encode()` writes them,
+     * so that the redactor sees their keys. A context that cannot be encoded
+     * becomes an empty array.
      *
      * @param array<array-key, mixed> $context
      *
@@ -90,7 +91,18 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
      */
     private function normalize(array $context): array
     {
-        $decoded = json_decode((string) Json::encode($context), true);
+        array_walk_recursive($context, static function (mixed &$value): void {
+            if ($value instanceof Throwable) {
+                $value = [
+                    'class'   => $value::class,
+                    'message' => $value->getMessage(),
+                    'file'    => $value->getFile(),
+                    'line'    => $value->getLine(),
+                ];
+            }
+        });
+
+        $decoded = json_decode($this->jsonOrEmpty($context), true);
 
         return is_array($decoded) ? $decoded : [];
     }
@@ -108,11 +120,6 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
             return '';
         }
 
-        $json = Json::encode(
-            $context,
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-        );
-
-        return is_string($json) ? $json : '';
+        return $this->jsonOrEmpty($context, JSON_PRETTY_PRINT);
     }
 }
