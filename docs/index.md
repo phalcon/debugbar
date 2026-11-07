@@ -10,8 +10,9 @@ The bar runs only in development. It refuses to boot when the environment is und
 ## Requirements
 
 - PHP 8.1 or later.
-- A Phalcon runtime: the Phalcon 5 C extension, or the Phalcon 6 PHP implementation (`phalcon/phalcon`). ADR support needs Phalcon `v5.18.0` or later, or Phalcon 6. The Database panel in an ADR application needs Phalcon `v5.19.0` or later, or Phalcon 6.
+- A Phalcon runtime: the Phalcon 5 C extension `v5.17.0` or later, or the Phalcon 6 PHP implementation (`phalcon/phalcon`). ADR support needs Phalcon `v5.18.0` or later, or Phalcon 6. The Database panel in an ADR application needs Phalcon `v5.19.0` or later, or Phalcon 6.
 - `matthiasmullie/minify`, pulled in automatically by Composer. It minifies the bar's CSS and JavaScript before they are inlined.
+- `phalcon/traits`, pulled in automatically by Composer. The debug page uses its traits.
 
 ## Installation
 
