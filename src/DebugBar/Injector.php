@@ -18,6 +18,7 @@ use Phalcon\Http\ResponseInterface;
 use function is_string;
 use function mb_strtolower;
 use function str_contains;
+use function stripos;
 use function strripos;
 use function substr;
 
@@ -29,8 +30,8 @@ use function substr;
 final class Injector
 {
     /**
-     * Inserts the head assets and bar body just before the last `</body>`
-     * (or appends them when there is no body tag).
+     * Inserts the head assets and bar body just before the last `</body>`.
+     * Content with no `</body>` does not change.
      */
     public function inject(ResponseInterface $response, string $head, string $body): ResponseInterface
     {
@@ -38,14 +39,14 @@ final class Injector
         $position = strripos($content, '</body>');
 
         if (false === $position) {
-            $content .= $head . $body;
-        } else {
-            $content = substr($content, 0, $position)
-                . $head . $body
-                . substr($content, $position);
+            return $response;
         }
 
-        $response->setContent($content);
+        $response->setContent(
+            substr($content, 0, $position)
+            . $head . $body
+            . substr($content, $position)
+        );
 
         return $response;
     }
@@ -65,7 +66,9 @@ final class Injector
     }
 
     /**
-     * Whether the bar may be injected: HTML content, not a redirect, not AJAX.
+     * Whether the bar may be injected: an HTML page with a `</body>` tag, not a
+     * redirect, not AJAX. A file download, an empty response, JSON and an HTML
+     * fragment have no `</body>`.
      */
     public function shouldInject(ResponseInterface $response, bool $isAjax = false): bool
     {
@@ -78,6 +81,7 @@ final class Injector
             return false;
         }
 
-        return $this->isHtml($response);
+        return $this->isHtml($response)
+            && false !== stripos($response->getContent(), '</body>');
     }
 }

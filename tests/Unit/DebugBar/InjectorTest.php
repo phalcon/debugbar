@@ -19,14 +19,14 @@ use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
 final class InjectorTest extends AbstractUnitTestCase
 {
-    public function testInjectAppendsWhenNoBodyTag(): void
+    public function testInjectLeavesContentWithNoBodyTag(): void
     {
         $response = new Response();
         $response->setContent('plain');
 
         (new Injector())->inject($response, 'H', 'B');
 
-        $this->assertSame('plainHB', $response->getContent());
+        $this->assertSame('plain', $response->getContent());
     }
 
     public function testInjectSplicesBeforeTheLastBodyTag(): void
@@ -73,6 +73,7 @@ final class InjectorTest extends AbstractUnitTestCase
     {
         $response = new Response();
         $response->setStatusCode(400);
+        $response->setContent('<html><body></body></html>');
 
         $this->assertTrue((new Injector())->shouldInject($response));
     }
@@ -89,8 +90,33 @@ final class InjectorTest extends AbstractUnitTestCase
     {
         $response = new Response();
         $response->setStatusCode(200);
+        $response->setContent('<html><body></body></html>');
 
         $this->assertTrue((new Injector())->shouldInject($response));
+    }
+
+    public function testShouldNotInjectAFileDownload(): void
+    {
+        $response = new Response();
+        $response->setFileToSend(__FILE__);
+
+        $this->assertFalse((new Injector())->shouldInject($response));
+    }
+
+    public function testShouldNotInjectAFragment(): void
+    {
+        $response = new Response();
+        $response->setContent('<div>row</div>');
+
+        $this->assertFalse((new Injector())->shouldInject($response));
+    }
+
+    public function testShouldNotInjectAnEmptyResponse(): void
+    {
+        $response = new Response();
+        $response->setStatusCode(204);
+
+        $this->assertFalse((new Injector())->shouldInject($response));
     }
 
     public function testShouldNotInjectForAjax(): void
@@ -118,6 +144,15 @@ final class InjectorTest extends AbstractUnitTestCase
     {
         $response = new Response();
         $response->setStatusCode(302);
+
+        $this->assertFalse((new Injector())->shouldInject($response));
+    }
+
+    public function testShouldNotInjectJsonWithALowercaseHeader(): void
+    {
+        $response = new Response();
+        $response->setHeader('content-type', 'application/json');
+        $response->setContent('{"id":1}');
 
         $this->assertFalse((new Injector())->shouldInject($response));
     }

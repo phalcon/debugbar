@@ -60,6 +60,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Hide the CSRF token in the session panel when the session has a `uniqueId`. [#73](https://github.com/phalcon/debugbar/issues/73)
 - `env.blocked` always blocks `production` and `prod`, and ignores case and spaces. [#74](https://github.com/phalcon/debugbar/issues/74)
 - Render a string panel as text unless the collector sets the `html` panel type. [#75](https://github.com/phalcon/debugbar/issues/75)
+- Inject the bar only into HTML pages that have a `</body>` tag. [#76](https://github.com/phalcon/debugbar/issues/76)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
