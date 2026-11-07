@@ -18,6 +18,7 @@ function TestElement(tagName) {
     this.type = '';
     this.attributes = {};
     this._className = '';
+    this._innerHTML = '';
     this._listeners = {};
     this._textContent = '';
 }
@@ -65,13 +66,15 @@ Object.defineProperty(TestElement.prototype, 'classList', {
     }
 });
 
+// Keep the last written value, so that a test can find each HTML write.
 Object.defineProperty(TestElement.prototype, 'innerHTML', {
     get: function () {
-        return '';
+        return this._innerHTML;
     },
-    set: function () {
+    set: function (value) {
         this.children = [];
         this._textContent = '';
+        this._innerHTML = String(value);
     }
 });
 
@@ -84,6 +87,7 @@ Object.defineProperty(TestElement.prototype, 'textContent', {
     },
     set: function (value) {
         this.children = [];
+        this._innerHTML = '';
         this._textContent = String(value || '');
     }
 });
@@ -93,7 +97,8 @@ TestElement.prototype._classes = function () {
 };
 
 TestElement.prototype.addEventListener = function (name, listener) {
-    this._listeners[name] = listener;
+    this._listeners[name] = this._listeners[name] || [];
+    this._listeners[name].push(listener);
 };
 
 TestElement.prototype.appendChild = function (child) {
@@ -105,7 +110,9 @@ TestElement.prototype.appendChild = function (child) {
 
 TestElement.prototype.click = function () {
     if (!this.disabled && this._listeners.click) {
-        this._listeners.click();
+        this._listeners.click.forEach(function (listener) {
+            listener();
+        });
     }
 };
 
