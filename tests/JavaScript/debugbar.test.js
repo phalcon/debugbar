@@ -442,6 +442,46 @@ test('request history restores a row after a detail failure', async function () 
     assert.equal(request.classList.contains('is-selected'), false);
 });
 
+test('request history restores a superseded row after its detail fails', async function () {
+    var failFirst = null;
+    global.document = dom.createDocument();
+    global.window = {
+        fetch: function (url) {
+            if (url.includes('?id=first')) {
+                return new Promise(function (resolve, reject) {
+                    failFirst = reject;
+                });
+            }
+            if (url.includes('?id=second')) {
+                return Promise.resolve(response({
+                    request: {version: 1, payload: {data: {route: {panel: '/second'}}}}
+                }));
+            }
+
+            return Promise.resolve(response({
+                requests: [
+                    {id: 'first', method: 'GET', uri: '/first', status: 200},
+                    {id: 'second', method: 'GET', uri: '/second', status: 200}
+                ]
+            }));
+        }
+    };
+    var mount = new dom.TestElement('div');
+
+    renderHistoryBrowser(mount, historyOptions());
+    await dom.flushPromises();
+
+    var rows = mount.querySelectorAll('.phalcon-debugbar-history-request');
+    rows[0].click();
+    rows[1].click();
+    await dom.flushPromises();
+    failFirst(new Error('network'));
+    await dom.flushPromises();
+
+    assert.equal(rows[1].classList.contains('is-selected'), true);
+    assert.equal(rows[0].disabled, false);
+});
+
 test('request history reports clear failures and restores controls', async function () {
     var calls = 0;
     var cleared = false;
