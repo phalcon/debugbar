@@ -30,15 +30,17 @@ final class OnUncaughtExceptionTest extends AbstractUnitTestCase
     public function testSupportDebugOnUncaughtException(): void
     {
         $message = uniqid('var-');
-        $debug   = new Debug();
+
+        /**
+         * The handler discards the buffers that start after the component is
+         * created and echoes the rendered HTML, so create it inside the buffer
+         * that the test reads.
+         */
+        ob_start();
+        $debug = new Debug();
         $debug->setShowBackTrace(false);
         $exception = new Exception($message, 1234);
 
-        /**
-         * The handler clears one active output-buffer level and echoes the
-         * rendered HTML, so wrap the call in two levels and read the outer one.
-         */
-        ob_start();
         ob_start();
         $result = $debug->onUncaughtException($exception);
         /** @var string $actual */
@@ -47,6 +49,40 @@ final class OnUncaughtExceptionTest extends AbstractUnitTestCase
         $this->assertTrue($result);
         $this->assertStringContainsString('<!DOCTYPE html>', $actual);
         $this->assertStringContainsString($message, $actual);
+    }
+
+    public function testSupportDebugOnUncaughtExceptionDiscardsAllNestedBuffers(): void
+    {
+        $level = ob_get_level();
+
+        /**
+         * The handler discards the buffers that start after the component
+         * is created, so create it inside the buffer that the test reads.
+         */
+        ob_start();
+        $debug = new Debug();
+        $debug->setShowBackTrace(false);
+
+        ob_start();
+        echo 'layout-output';
+        ob_start();
+        echo 'partial-output';
+        ob_start();
+        echo 'view-output';
+
+        $debug->onUncaughtException(new Exception(uniqid('var-'), 1234));
+        /** @var string $actual */
+        $actual = ob_get_clean();
+
+        $remaining = ob_get_level() - $level;
+        while (ob_get_level() > $level) {
+            ob_end_clean();
+        }
+
+        $this->assertSame(0, $remaining);
+        $this->assertStringStartsWith('<!DOCTYPE html>', $actual);
+        $this->assertStringNotContainsString('layout-output', $actual);
+        $this->assertStringNotContainsString('partial-output', $actual);
     }
 
     public function testSupportDebugOnUncaughtExceptionResetsIsActiveWhenRenderingFails(): void
@@ -61,10 +97,10 @@ final class OnUncaughtExceptionTest extends AbstractUnitTestCase
         $isActive = new ReflectionProperty(Debug::class, 'isActive');
         $isActive->setValue(null, false);
 
+        ob_start();
         $debug = new Debug();
         $debug->setRenderer($renderer);
 
-        ob_start();
         ob_start();
         try {
             $debug->onUncaughtException(new Exception(uniqid('var-'), 1234));
@@ -103,15 +139,16 @@ final class OnUncaughtExceptionTest extends AbstractUnitTestCase
         $isActive = new ReflectionProperty(Debug::class, 'isActive');
         $isActive->setValue(null, false);
 
+        /**
+         * The handler discards the buffers that start after the component is
+         * created and echoes the rendered output, so create it inside the
+         * buffer that the test reads.
+         */
+        ob_start();
         $debug = new Debug();
         $debug->setRenderer($renderer);
         $exception = new Exception(uniqid('var-'), 1234);
 
-        /**
-         * The handler clears one active output-buffer level and echoes the
-         * rendered output, so wrap the call in two levels and read the outer.
-         */
-        ob_start();
         ob_start();
         $result = $debug->onUncaughtException($exception);
         /** @var string $output */
@@ -139,13 +176,13 @@ final class OnUncaughtExceptionTest extends AbstractUnitTestCase
     public function testSupportDebugOnUncaughtExceptionWhenAlreadyActive(): void
     {
         $message   = uniqid('var-');
-        $debug     = new Debug();
         $exception = new Exception($message, 1234);
 
         $isActive = new ReflectionProperty(Debug::class, 'isActive');
         $isActive->setValue(null, true);
 
         ob_start();
+        $debug = new Debug();
         ob_start();
         $result = $debug->onUncaughtException($exception);
         /** @var string $actual */
@@ -159,11 +196,11 @@ final class OnUncaughtExceptionTest extends AbstractUnitTestCase
 
     public function testSupportDebugOnUncaughtExceptionWhenAlreadyActiveEscapesTheMessage(): void
     {
-        $debug    = new Debug();
         $isActive = new ReflectionProperty(Debug::class, 'isActive');
         $isActive->setValue(null, true);
 
         ob_start();
+        $debug = new Debug();
         ob_start();
         $debug->onUncaughtException(new Exception('<img src=x onerror=alert(1)>', 1234));
         /** @var string $actual */

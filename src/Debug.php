@@ -37,6 +37,7 @@ use const ENT_SUBSTITUTE;
  * @property array<array-key, mixed> $blacklist
  * @property array<array-key, mixed> $data
  * @property bool                    $isActive
+ * @property int                     $outputLevel
  * @property Renderer                $renderer
  * @property ReportBuilder           $reportBuilder
  * @property bool                    $showBackTrace
@@ -73,10 +74,13 @@ class Debug
 
     protected string $uri = "https://assets.phalcon.io/debug/6.0.x/";
 
+    private int $outputLevel;
+
     private ?Superglobals $superglobals = null;
 
     public function __construct()
     {
+        $this->outputLevel   = ob_get_level();
         $this->renderer      = new HtmlRenderer();
         $this->reportBuilder = new ReportBuilder();
     }
@@ -206,13 +210,13 @@ class Debug
      */
     public function onUncaughtException(Throwable $exception): bool
     {
-        $obLevel = ob_get_level();
-
         /**
-         * Cancel the output buffer if active
+         * Cancel the output buffers that started after this component was
+         * created. Stop if a buffer cannot be removed.
          */
-        if ($obLevel > 0) {
-            ob_end_clean();
+        $discarded = true;
+        while ($discarded && ob_get_level() > $this->outputLevel) {
+            $discarded = ob_end_clean();
         }
 
         /**
