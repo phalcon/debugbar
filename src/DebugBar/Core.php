@@ -238,6 +238,15 @@ final class Core
     }
 
     /**
+     * The redactor built from the `redact` config. The integrations give it to
+     * the bridges.
+     */
+    public function getRedactor(): Redactor
+    {
+        return $this->redactor;
+    }
+
+    /**
      * Runs the response step. It does nothing when the bar did not boot.
      */
     public function handle(ResponseInterface $response): void

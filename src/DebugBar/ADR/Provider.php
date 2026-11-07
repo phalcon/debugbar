@@ -80,7 +80,7 @@ final class Provider implements ProviderContract
         }
 
         $eventsManager->attach('application:afterHandle', $this->responseListener($listener, $bar, $request));
-        (new Bridge($bar))->subscribe($eventsManager);
+        (new Bridge($bar, $this->core->getRedactor()))->subscribe($eventsManager);
     }
 
     /**
