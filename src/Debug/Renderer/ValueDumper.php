@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\Debug\Renderer;
 
+use ReflectionMethod;
+
 use function count;
 use function get_class;
 use function gettype;
@@ -107,6 +109,19 @@ class ValueDumper
         );
     }
 
+    /**
+     * Returns true when the dump() method of the object is public, is not
+     * static, and has no required parameters
+     */
+    private function canCallDump(object $variable): bool
+    {
+        $method = new ReflectionMethod($variable, 'dump');
+
+        return true === $method->isPublic()
+            && true !== $method->isStatic()
+            && 0 === $method->getNumberOfRequiredParameters();
+    }
+
     private function dumpBool(bool $variable): string
     {
         return $variable ? 'true' : 'false';
@@ -126,7 +141,7 @@ class ValueDumper
     {
         $className = get_class($variable);
 
-        if (true === method_exists($variable, 'dump')) {
+        if (true === method_exists($variable, 'dump') && true === $this->canCallDump($variable)) {
             $dumpedObject = $variable->dump();
 
             return 'Object(' . $className . ': ' . $this->dumpArray((array) $dumpedObject) . ')';

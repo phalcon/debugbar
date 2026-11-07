@@ -161,6 +161,20 @@ final class OutputBranchesTest extends AbstractUnitTestCase
         $this->assertStringContainsString('private', $actual);
     }
 
+    public function testDetailedUninitializedPropertyIsMarked(): void
+    {
+        $object = new class () {
+            public int $count;
+        };
+
+        $actual = (new Dump([], true))->variable($object);
+
+        $this->assertStringContainsString(
+            'count</span> (<span style="color:purple">public</span>) = [uninitialized]',
+            $actual,
+        );
+    }
+
     public function testFloat(): void
     {
         $this->assertStringContainsString('Float', (new Dump())->variable(3.14));

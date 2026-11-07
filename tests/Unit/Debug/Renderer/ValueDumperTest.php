@@ -100,6 +100,70 @@ final class ValueDumperTest extends AbstractUnitTestCase
         fclose($resource);
     }
 
+    public function testDumpCallsADumpMethodWithOptionalParameters(): void
+    {
+        $object = new class () {
+            /**
+             * @return array<array-key, mixed>
+             */
+            public function dump(int $depth = 1): array
+            {
+                return ['depth' => $depth];
+            }
+        };
+
+        $this->assertSame(
+            'Object(' . get_class($object) . ': [depth] =&gt; 1)',
+            (new ValueDumper())->dump($object)
+        );
+    }
+
+    public function testDumpSkipsADumpMethodWithRequiredParameters(): void
+    {
+        $object = new class () {
+            /**
+             * @return array<array-key, mixed>
+             */
+            public function dump(int $depth): array
+            {
+                return ['depth' => $depth];
+            }
+        };
+
+        $this->assertSame('Object(' . get_class($object) . ')', (new ValueDumper())->dump($object));
+    }
+
+    public function testDumpSkipsAPrivateDumpMethod(): void
+    {
+        $object = new class () {
+            /**
+             * @return array<array-key, mixed>
+             */
+            // @phpstan-ignore method.unused (the test checks that ValueDumper does not call it)
+            private function dump(): array
+            {
+                return ['k' => 'v'];
+            }
+        };
+
+        $this->assertSame('Object(' . get_class($object) . ')', (new ValueDumper())->dump($object));
+    }
+
+    public function testDumpSkipsAStaticDumpMethod(): void
+    {
+        $object = new class () {
+            /**
+             * @return array<array-key, mixed>
+             */
+            public static function dump(): array
+            {
+                return ['k' => 'v'];
+            }
+        };
+
+        $this->assertSame('Object(' . get_class($object) . ')', (new ValueDumper())->dump($object));
+    }
+
     public function testEscapeQuotes(): void
     {
         $this->assertSame('a&#039;b&quot;c', (new ValueDumper())->escape('a\'b"c'));

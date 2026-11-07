@@ -565,9 +565,14 @@ class Dump implements TemplateAware
                 'type'  => $type,
             ];
 
+            $formatted = '[uninitialized]';
+            if (true === $property->isInitialized($variable)) {
+                $formatted = $this->formatValue($property->getValue($variable), '', $tab + 1, $seen, $parents);
+            }
+
             $output .= str_repeat($space, $tab)
                 . $this->toInterpolate($message, $context)
-                . $this->formatValue($property->getValue($variable), '', $tab + 1, $seen, $parents)
+                . $formatted
                 . "\n";
         }
 
