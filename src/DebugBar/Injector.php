@@ -19,6 +19,7 @@ use function is_string;
 use function mb_strtolower;
 use function str_contains;
 use function stripos;
+use function strlen;
 use function strripos;
 use function substr;
 
@@ -31,7 +32,8 @@ final class Injector
 {
     /**
      * Inserts the head assets and bar body just before the last `</body>`.
-     * Content with no `</body>` does not change.
+     * Content with no `</body>` does not change. A `Content-Length` header gets
+     * the new length.
      */
     public function inject(ResponseInterface $response, string $head, string $body): ResponseInterface
     {
@@ -42,11 +44,14 @@ final class Injector
             return $response;
         }
 
-        $response->setContent(
-            substr($content, 0, $position)
+        $content = substr($content, 0, $position)
             . $head . $body
-            . substr($content, $position)
-        );
+            . substr($content, $position);
+
+        $response->setContent($content);
+        if (is_string($response->getHeaders()->get('Content-Length'))) {
+            $response->setContentLength(strlen($content));
+        }
 
         return $response;
     }
@@ -67,12 +72,12 @@ final class Injector
 
     /**
      * Whether the bar may be injected: an HTML page with a `</body>` tag, not a
-     * redirect, not AJAX. A file download, an empty response, JSON and an HTML
-     * fragment have no `</body>`.
+     * redirect, not AJAX, not compressed. A file download, an empty response,
+     * JSON and an HTML fragment have no `</body>`.
      */
     public function shouldInject(ResponseInterface $response, bool $isAjax = false): bool
     {
-        if (true === $isAjax) {
+        if (true === $isAjax || is_string($response->getHeaders()->get('Content-Encoding'))) {
             return false;
         }
 

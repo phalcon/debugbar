@@ -39,6 +39,17 @@ final class InjectorTest extends AbstractUnitTestCase
         $this->assertSame('<html><body>hi<assets><bar></body></html>', $response->getContent());
     }
 
+    public function testInjectUpdatesTheContentLength(): void
+    {
+        $response = new Response();
+        $response->setContent('<html><body>hi</body></html>');
+        $response->setContentLength(28);
+
+        (new Injector())->inject($response, 'H', 'B');
+
+        $this->assertSame('30', $response->getHeaders()->get('Content-Length'));
+    }
+
     public function testIsHtmlForAnHtmlContentType(): void
     {
         $response = new Response();
@@ -115,6 +126,15 @@ final class InjectorTest extends AbstractUnitTestCase
     {
         $response = new Response();
         $response->setStatusCode(204);
+
+        $this->assertFalse((new Injector())->shouldInject($response));
+    }
+
+    public function testShouldNotInjectCompressedContent(): void
+    {
+        $response = new Response();
+        $response->setHeader('Content-Encoding', 'gzip');
+        $response->setContent('<html><body></body></html>');
 
         $this->assertFalse((new Injector())->shouldInject($response));
     }
