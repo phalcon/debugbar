@@ -30,6 +30,7 @@ use function explode;
 use function file;
 use function get_class;
 use function get_included_files;
+use function is_array;
 use function is_file;
 use function is_readable;
 use function mb_strtolower;
@@ -187,6 +188,8 @@ class ReportBuilder
     }
 
     /**
+     * Removes the blacklisted keys at every depth
+     *
      * @param array<array-key, mixed> $source
      * @param array<array-key, mixed> $blacklist
      *
@@ -197,7 +200,7 @@ class ReportBuilder
         $result = [];
         foreach ($source as $key => $value) {
             if (!isset($blacklist[mb_strtolower((string) $key)])) {
-                $result[$key] = $value;
+                $result[$key] = is_array($value) ? $this->filter($value, $blacklist) : $value;
             }
         }
 
