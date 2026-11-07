@@ -254,6 +254,36 @@ final class ReportBuilderTest extends AbstractUnitTestCase
         $this->assertSame([], $report->getBacktrace());
     }
 
+    public function testRequestBlacklistFiltersNestedKeys(): void
+    {
+        $report = (new ReportBuilder())->build(
+            new Exception('boom', 7),
+            new ReportOptions(
+                ['request' => ['password' => 1, 'token' => 1], 'server' => []],
+                true,
+                true,
+                false,
+                'https://cdn/',
+                []
+            ),
+            new Superglobals(
+                [
+                    'user' => [
+                        'name'     => 'alice',
+                        'password' => 'nested-secret',
+                        'profile'  => ['city' => 'Athens', 'TOKEN' => 'deep-secret'],
+                    ],
+                ],
+                []
+            )
+        );
+
+        $this->assertSame(
+            ['user' => ['name' => 'alice', 'profile' => ['city' => 'Athens']]],
+            $report->getRequest()
+        );
+    }
+
     public function testRequestBlacklistIsApplied(): void
     {
         $report = (new ReportBuilder())->build(
