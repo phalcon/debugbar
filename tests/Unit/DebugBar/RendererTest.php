@@ -16,6 +16,8 @@ namespace Phalcon\Tests\Unit\DebugBar;
 use Phalcon\DebugBar\Renderer;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 
+use function dirname;
+
 final class RendererTest extends AbstractUnitTestCase
 {
     public function testAssetsPathIsProtected(): void
@@ -74,7 +76,7 @@ final class RendererTest extends AbstractUnitTestCase
     public function testGetTemplateReturnsExactHeadTemplate(): void
     {
         $expected = '<style%nonce%>%css%</style>' . "\n"
-            . '<script%nonce% defer>%js%</script>';
+            . '<script%nonce%>%js%</script>';
 
         $this->assertSame($expected, (new Renderer())->getTemplate('head'));
     }
@@ -85,6 +87,14 @@ final class RendererTest extends AbstractUnitTestCase
 
         $this->assertStringContainsString('nonce="abc123"', $renderer->render([], 'abc123'));
         $this->assertStringContainsString('nonce="abc123"', $renderer->renderHead('abc123'));
+    }
+
+    public function testNonceIsEscaped(): void
+    {
+        $renderer = new Renderer();
+
+        $this->assertStringContainsString('nonce="a&quot;b&lt;c"', $renderer->render([], 'a"b<c'));
+        $this->assertStringContainsString('nonce="a&quot;b&lt;c"', $renderer->renderHead('a"b<c'));
     }
 
     public function testRenderEmitsTheJsonDataBlock(): void
@@ -123,6 +133,14 @@ final class RendererTest extends AbstractUnitTestCase
         $this->assertStringContainsString('phalcon-debugbar-data', $html);
     }
 
+    public function testRenderHeadMinifiesTheSourceWhenTheMinifiedFileIsMissing(): void
+    {
+        $html = $this->rendererWithAssets('source')->renderHead();
+
+        $this->assertStringContainsString('.source-css{color:#fff}', $html);
+        $this->assertStringContainsString('var sourceJs=1', $html);
+    }
+
     public function testRenderHeadUsesCssMinifierForStyles(): void
     {
         // The CSS minifier shortens #ffffff to #fff; running the JS minifier on
@@ -130,6 +148,14 @@ final class RendererTest extends AbstractUnitTestCase
         $html = (new Renderer())->renderHead();
 
         $this->assertStringNotContainsString('#ffffff', $html);
+    }
+
+    public function testRenderHeadUsesTheMinifiedFiles(): void
+    {
+        $this->assertSame(
+            '<style>.minified-css{color:red}</style>' . "\n" . '<script>var minifiedJs=1;</script>',
+            $this->rendererWithAssets('minified')->renderHead()
+        );
     }
 
     public function testRenderReplacesInvalidUtf8(): void
@@ -148,5 +174,19 @@ final class RendererTest extends AbstractUnitTestCase
 
         $this->assertStringContainsString('CUSTOM', $html);
         $this->assertStringNotContainsString('phalcon-debugbar-data', $html);
+    }
+
+    private function rendererWithAssets(string $directory): Renderer
+    {
+        return new class (dirname(__DIR__, 2) . '/support/assets/DebugBar/' . $directory . '/') extends Renderer {
+            public function __construct(private readonly string $path)
+            {
+            }
+
+            protected function assetsPath(): string
+            {
+                return $this->path;
+            }
+        };
     }
 }
