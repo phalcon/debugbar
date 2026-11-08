@@ -86,6 +86,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Debug page: copy on `http://` pages, show "Copy failed" when a copy fails, and encode the paths in the PhpStorm and VS Code links. [#101](https://github.com/phalcon/debugbar/issues/101)
 - Keep host CSS out of the bar tables, code blocks and buttons, stop history requests after 10 seconds, and show "Unable to load" in a history row that fails. [#102](https://github.com/phalcon/debugbar/issues/102)
 - Pin `pie.phar` to a release with a sha256 check, build the PHP 8.1 Docker image, declare `ext-mbstring`, and list the Phalcon version that each feature needs. [#104](https://github.com/phalcon/debugbar/issues/104)
+- Name the collapse toggle and the tabs for screen readers, close the open panel or the history with Escape, and fix two `Phalcon\Debug` docblocks. [#106](https://github.com/phalcon/debugbar/issues/106)
 - Test HTML writes, the collapse state and `localStorage` errors in the JS tests, and keep every listener in the fake DOM. [#103](https://github.com/phalcon/debugbar/issues/103)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
