@@ -34,6 +34,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Request history does not set its cookie when output started before the response, so `setcookie()` gives no warning. [#32](https://github.com/phalcon/debugbar/issues/32)
 - `history.url` cannot be `/`. The documentation states that the history endpoint wins over an application route with the same path, for each HTTP method. [#32](https://github.com/phalcon/debugbar/issues/32)
 - The documentation states that a browser in request history is one history cookie, so all its windows and tabs count as one for `history.max_browsers`. [#32](https://github.com/phalcon/debugbar/issues/32)
+- The debug page exceptions implement `Phalcon\Debug\Contracts\DebugThrowable`. [#95](https://github.com/phalcon/debugbar/issues/95)
 
 ### Changed
 
@@ -90,6 +91,10 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Open the ADR debug page only for an exception logged at `error` level or higher, and show a lower-level exception only in the `exceptions` panel. [#107](https://github.com/phalcon/debugbar/issues/107)
 - Share one renderer and one CSS block for the exceptions and logs panels, and show an exception with no trace as a plain line. [#108](https://github.com/phalcon/debugbar/issues/108)
 - Test HTML writes, the collapse state and `localStorage` errors in the JS tests, and keep every listener in the fake DOM. [#103](https://github.com/phalcon/debugbar/issues/103)
+
+### Removed
+
+- `HistoryController::clearAction()` and `indexAction()`, `Phalcon\DebugBar\Version` and `CodeFragment::getMode()`, which nothing used. [#95](https://github.com/phalcon/debugbar/issues/95)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
 
