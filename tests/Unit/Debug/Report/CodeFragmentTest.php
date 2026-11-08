@@ -20,9 +20,8 @@ final class CodeFragmentTest extends AbstractUnitTestCase
 {
     public function testGettersReturnConstructorValues(): void
     {
-        $fragment = new CodeFragment('fragment', 3, 5, 9, ["<?php\n", "echo 1;\n"]);
+        $fragment = new CodeFragment(3, 5, 9, ["<?php\n", "echo 1;\n"]);
 
-        $this->assertSame('fragment', $fragment->getMode());
         $this->assertSame(3, $fragment->getFirstLine());
         $this->assertSame(5, $fragment->getLine());
         $this->assertSame(9, $fragment->getLastLine());

@@ -372,7 +372,7 @@ final class ProviderTest extends AbstractUnitTestCase
         $request->method('getServer')->willReturn('GET');
         $request->method('getQuery')->willReturn('unknown-id');
 
-        $this->assertSame(404, $this->historyController(['request' => $request])->indexAction()->getStatusCode());
+        $this->assertSame(404, $this->historyController(['request' => $request])->openAction()->getStatusCode());
     }
 
     public function testHistoryControllerWithNoRequestServiceUsesANewRequest(): void
@@ -380,7 +380,7 @@ final class ProviderTest extends AbstractUnitTestCase
         $_ENV[self::ENV_VAR]       = 'dev';
         $_SERVER['REQUEST_METHOD'] = 'GET';
 
-        $this->assertSame(200, $this->historyController([])->indexAction()->getStatusCode());
+        $this->assertSame(200, $this->historyController([])->openAction()->getStatusCode());
     }
 
     public function testHistoryDoesNotResolveResponseServicesAtBoot(): void

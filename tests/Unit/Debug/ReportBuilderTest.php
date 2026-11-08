@@ -202,7 +202,6 @@ final class ReportBuilderTest extends AbstractUnitTestCase
         /** @var CodeFragment $fragment */
         $fragment = $method->invoke($builder, $file, 20, true);
 
-        $this->assertSame('fragment', $fragment->getMode());
         $this->assertSame(13, $fragment->getFirstLine());
         $this->assertSame(20, $fragment->getLine());
         $this->assertSame(25, $fragment->getLastLine());
@@ -219,7 +218,6 @@ final class ReportBuilderTest extends AbstractUnitTestCase
         /** @var CodeFragment $fragment */
         $fragment = $method->invoke($builder, $file, 20, false);
 
-        $this->assertSame('full', $fragment->getMode());
         $this->assertSame(1, $fragment->getFirstLine());
         $this->assertSame(20, $fragment->getLine());
         $this->assertSame(30, $fragment->getLastLine());

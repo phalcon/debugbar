@@ -13,11 +13,12 @@ declare(strict_types=1);
 
 namespace Phalcon\Debug\Exceptions;
 
+use Phalcon\Debug\Contracts\DebugThrowable;
 use Phalcon\Support\Exception as SupportException;
 
 /**
  * Exceptions thrown in Phalcon\Debug will use this class
  */
-class Exception extends SupportException
+class Exception extends SupportException implements DebugThrowable
 {
 }

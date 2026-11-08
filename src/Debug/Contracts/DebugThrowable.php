@@ -16,8 +16,9 @@ namespace Phalcon\Debug\Contracts;
 use Throwable as BaseThrowable;
 
 /**
- * Catch-all marker implemented by every exception this package throws, so
- * integrators can catch `Throwable` to trap anything from the bar.
+ * Catch-all marker implemented by every exception of the debug page
+ * (`Phalcon\Debug`), so integrators can catch `DebugThrowable` to trap
+ * anything from it.
  */
 interface DebugThrowable extends BaseThrowable
 {

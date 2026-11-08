@@ -250,7 +250,7 @@ final class HtmlRendererTest extends AbstractUnitTestCase
                     [],
                     '/app/x.php',
                     1,
-                    new CodeFragment('fragment', 1, 1, 1, ["\$name = 'caf\xE9';\n"])
+                    new CodeFragment(1, 1, 1, ["\$name = 'caf\xE9';\n"])
                 ),
             ]
         );
@@ -370,7 +370,6 @@ final class HtmlRendererTest extends AbstractUnitTestCase
     private function buildReport(): ExceptionReport
     {
         $fragment = new CodeFragment(
-            'fragment',
             3,
             4,
             5,

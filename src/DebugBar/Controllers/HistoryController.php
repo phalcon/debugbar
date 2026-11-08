@@ -40,16 +40,6 @@ final class HistoryController implements ControllerInterface
         $this->handler = new HistoryHandler($history, $accessGate, $historyRequest, $historyResponse);
     }
 
-    public function clearAction(): ResponseInterface
-    {
-        return $this->handler->clear();
-    }
-
-    public function indexAction(): ResponseInterface
-    {
-        return $this->handler->index();
-    }
-
     public function openAction(): ResponseInterface
     {
         return $this->handler->open();

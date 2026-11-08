@@ -150,7 +150,7 @@ final class FilesystemHistory implements History
         if (null === $directory) {
             return null;
         }
-        $file = $directory . '/' . basename($id) . '.json';
+        $file = $directory . '/' . $id . '.json';
         if ($this->isExpired($file)) {
             $this->removeEntry($file);
             $this->removeDirectoryIfEmpty($directory);

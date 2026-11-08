@@ -48,9 +48,9 @@ final class HistoryControllerTest extends AbstractUnitTestCase
         $_SERVER['REMOTE_ADDR'] = '203.0.113.10';
         $history                = new FilesystemHistory(new HistoryOptions());
 
-        foreach (['indexAction', 'clearAction'] as $action) {
-            $response = $this->executeWithServices(
-                $action,
+        foreach (['GET', 'DELETE'] as $method) {
+            $_SERVER['REQUEST_METHOD'] = $method;
+            $response                  = $this->executeWithServices(
                 new Request(),
                 new Response(),
                 $history,
@@ -65,10 +65,9 @@ final class HistoryControllerTest extends AbstractUnitTestCase
     {
         $history = new FilesystemHistory(new HistoryOptions());
 
-        foreach ([['indexAction', 'POST'], ['clearAction', 'GET']] as [$action, $method]) {
+        foreach (['POST', 'PUT'] as $method) {
             $_SERVER['REQUEST_METHOD'] = $method;
             $response                  = $this->executeWithServices(
-                $action,
                 new Request(),
                 new Response(),
                 $history,
@@ -109,7 +108,6 @@ final class HistoryControllerTest extends AbstractUnitTestCase
         foreach (['', ['invalid']] as $id) {
             $_GET     = ['id' => $id];
             $response = $this->executeWithServices(
-                'indexAction',
                 new Request(),
                 new Response(),
                 new FilesystemHistory(new HistoryOptions()),
@@ -162,7 +160,7 @@ final class HistoryControllerTest extends AbstractUnitTestCase
 
             $_SERVER['REQUEST_METHOD'] = 'DELETE';
             $_GET                      = [];
-            $clear                     = $this->execute($history, 'clear');
+            $clear                     = $this->execute($history);
             $this->assertSame(200, $clear->getStatusCode());
             $clearBody = json_decode($clear->getContent(), true);
             $this->assertIsArray($clearBody);
@@ -220,7 +218,6 @@ final class HistoryControllerTest extends AbstractUnitTestCase
         $_GET                      = ['id' => '20260903120000-123456-deadbeef'];
 
         $response = $this->executeWithServices(
-            'indexAction',
             new Request(),
             new Response(),
             new FilesystemHistory(new HistoryOptions()),
@@ -240,12 +237,11 @@ final class HistoryControllerTest extends AbstractUnitTestCase
         $this->assertSame($expectedBody, json_decode($response->getContent(), true));
     }
 
-    private function execute(History $history, string $action = 'index'): Response
+    private function execute(History $history): Response
     {
         $response  = new Response();
 
         return $this->executeWithServices(
-            'clear' === $action ? 'clearAction' : 'indexAction',
             new Request(),
             $response,
             $history,
@@ -254,14 +250,13 @@ final class HistoryControllerTest extends AbstractUnitTestCase
     }
 
     private function executeWithServices(
-        string $action,
         RequestInterface $request,
         Response $response,
         History $history,
         AccessGate $access
     ): Response {
         $controller = new HistoryController($history, $access, $request, $response);
-        $result     = $controller->{$action}();
+        $result     = $controller->openAction();
 
         $this->assertInstanceOf(Response::class, $result);
 
