@@ -88,6 +88,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Pin `pie.phar` to a release with a sha256 check, build the PHP 8.1 Docker image, declare `ext-mbstring`, and list the Phalcon version that each feature needs. [#104](https://github.com/phalcon/debugbar/issues/104)
 - Name the collapse toggle and the tabs for screen readers, close the open panel or the history with Escape, and fix two `Phalcon\Debug` docblocks. [#106](https://github.com/phalcon/debugbar/issues/106)
 - Open the ADR debug page only for an exception logged at `error` level or higher, and show a lower-level exception only in the `exceptions` panel. [#107](https://github.com/phalcon/debugbar/issues/107)
+- Share one renderer and one CSS block for the exceptions and logs panels, and show an exception with no trace as a plain line. [#108](https://github.com/phalcon/debugbar/issues/108)
 - Test HTML writes, the collapse state and `localStorage` errors in the JS tests, and keep every listener in the fake DOM. [#103](https://github.com/phalcon/debugbar/issues/103)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
