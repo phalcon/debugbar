@@ -1290,3 +1290,100 @@ test('the collapse toggle works when localStorage throws', function () {
     dom.findByClass(mount, 'phalcon-debugbar-toggle').click();
     assert.equal(mount.classList.contains('is-collapsed'), true);
 });
+
+function twoTabsPayload() {
+    return {
+        data: {messages: {panel: []}, route: {panel: []}},
+        meta: {
+            widgets: {
+                messages: {label: 'Messages', panel: 'list'},
+                route: {label: 'Route', panel: 'list'}
+            }
+        }
+    };
+}
+
+function selectedTabs(tabs) {
+    return tabs.map(function (tab) {
+        return tab.getAttribute('aria-selected');
+    });
+}
+
+test('the collapse toggle has a name and reports whether the bar is open', function () {
+    var mount = renderPayload(messagesPayload());
+    var toggle = dom.findByClass(mount, 'phalcon-debugbar-toggle');
+
+    assert.equal(toggle.getAttribute('aria-label'), 'Toggle Phalcon DebugBar');
+    assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+
+    toggle.click();
+
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+});
+
+test('the tabs are an ARIA tab list that marks the selected tab', function () {
+    var mount = renderPayload(twoTabsPayload());
+    var tabs = mount.querySelectorAll('.phalcon-debugbar-tab');
+
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-tabs').getAttribute('role'), 'tablist');
+    assert.deepEqual(tabs.map(function (tab) {
+        return tab.getAttribute('role');
+    }), ['tab', 'tab']);
+    assert.deepEqual(selectedTabs(tabs), ['false', 'false']);
+
+    tabs[1].click();
+    assert.deepEqual(selectedTabs(tabs), ['false', 'true']);
+
+    tabs[0].click();
+    assert.deepEqual(selectedTabs(tabs), ['true', 'false']);
+
+    tabs[0].click();
+    assert.deepEqual(selectedTabs(tabs), ['false', 'false']);
+});
+
+test('Escape in the bar closes the open panel, and other keys do nothing', function () {
+    var mount = renderPayload(twoTabsPayload());
+    var tab = mount.querySelectorAll('.phalcon-debugbar-tab')[0];
+    var body = dom.findByClass(mount, 'phalcon-debugbar-body');
+
+    tab.click();
+    mount.keydown('Enter');
+    assert.equal(body.style.display, 'block');
+
+    mount.keydown('Escape');
+    assert.equal(body.style.display, 'none');
+    assert.equal(tab.classList.contains('is-active'), false);
+    assert.equal(tab.getAttribute('aria-selected'), 'false');
+});
+
+test('Escape in the bar closes the request history', async function () {
+    var mount = renderPayload({
+        data: {
+            request: {panel: {Method: 'GET', URI: '/orders'}, metrics: {method: 'GET', uri: '/orders'}},
+            history: {panel: {url: '/_debugbar/open'}}
+        },
+        meta: {
+            widgets: {
+                request: {
+                    label: 'Request',
+                    panel: 'grid',
+                    request: {method: ['metrics', 'method'], uri: ['metrics', 'uri']}
+                },
+                history: {label: 'History', panel: 'history'}
+            }
+        }
+    }, {
+        fetch: function () {
+            return Promise.resolve(response({requests: []}));
+        }
+    });
+
+    dom.findByClass(mount, 'phalcon-debugbar-request-control').click();
+    await dom.flushPromises();
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-history-browser').style.display, 'block');
+
+    mount.keydown('Escape');
+
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-history-browser').style.display, 'none');
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-request-control').getAttribute('aria-expanded'), 'false');
+});
