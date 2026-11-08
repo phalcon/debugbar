@@ -82,6 +82,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Inline the shipped minified assets instead of minifying them for each response, escape the nonce, and remove `defer` from the inline script. [#97](https://github.com/phalcon/debugbar/issues/97)
 - Explain in `Provider` why the boot request uses `get()` and the history request uses `getShared()`. [#98](https://github.com/phalcon/debugbar/issues/98)
 - Show `true` and `false` for booleans in messages, show `[]`, `null` and the class name of an object in the grid, and time each query from its own start (0 when there is no start). [#99](https://github.com/phalcon/debugbar/issues/99)
+- Debug page: show the previous exceptions, fix the API links, read each file one time, drop the arguments from the `debugVar()` backtrace, match `\vendor\`, and end the line of a skipped `Dump` key. [#100](https://github.com/phalcon/debugbar/issues/100)
 - Test HTML writes, the collapse state and `localStorage` errors in the JS tests, and keep every listener in the fake DOM. [#103](https://github.com/phalcon/debugbar/issues/103)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
