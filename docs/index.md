@@ -227,7 +227,7 @@ The provider decorates the router (`Phalcon\Contracts\ADR\Router\Router`) with `
 
    Do not resolve the router during registration. `extend()` on a resolved service throws `CannotExtendResolved`. In a blocked environment, the provider does not change the router.
 
-The `debug_page` key shows the debug page (`Phalcon\Debug`) for a server error. It is off by default. The provider reads the exception from the bar, so add `ExceptionAdapter` to your logger.
+The `debug_page` key shows the debug page (`Phalcon\Debug`) for a server error. It is off by default. The provider reads the exception from the bar, so add `ExceptionAdapter` to your logger. Only an exception logged at `error` level or higher opens the debug page. An exception logged at a lower level shows only in the `exceptions` panel, so log an exception that your application handles at `warning` or lower.
 
 ```php
 <?php

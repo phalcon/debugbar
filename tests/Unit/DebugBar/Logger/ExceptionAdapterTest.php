@@ -20,9 +20,11 @@ use Phalcon\DebugBar\Debug;
 use Phalcon\DebugBar\DebugBar;
 use Phalcon\DebugBar\Logger\ExceptionAdapter;
 use Phalcon\DebugBar\Security\Redactor;
+use Phalcon\Logger\Enum;
 use Phalcon\Logger\Item;
 use Phalcon\Logger\Logger;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 
 final class ExceptionAdapterTest extends AbstractUnitTestCase
@@ -41,6 +43,33 @@ final class ExceptionAdapterTest extends AbstractUnitTestCase
         parent::tearDown();
     }
 
+    /**
+     * @return array<string, array{0: int}>
+     */
+    public static function errorLevelProvider(): array
+    {
+        return [
+            'emergency' => [Enum::EMERGENCY],
+            'alert'     => [Enum::ALERT],
+            'critical'  => [Enum::CRITICAL],
+            'error'     => [Enum::ERROR],
+        ];
+    }
+
+    /**
+     * @return array<string, array{0: int}>
+     */
+    public static function lowerLevelProvider(): array
+    {
+        return [
+            'warning' => [Enum::WARNING],
+            'notice'  => [Enum::NOTICE],
+            'info'    => [Enum::INFO],
+            'debug'   => [Enum::DEBUG],
+            'custom'  => [Enum::CUSTOM],
+        ];
+    }
+
     public function testAdapterCreatedBeforeTheBarBootsForwardsToTheBar(): void
     {
         $logger = new Logger('debug', ['debugbar' => new ExceptionAdapter()]);
@@ -53,6 +82,55 @@ final class ExceptionAdapterTest extends AbstractUnitTestCase
 
         $this->assertSame(1, $collector->collect()['badge']);
         $this->assertSame($exception, $bar->getLastException());
+    }
+
+    #[DataProvider('errorLevelProvider')]
+    public function testAnExceptionAtErrorLevelOrHigherIsTheLastException(int $level): void
+    {
+        $collector = new ExceptionsCollector();
+        $bar       = (new DebugBar())->addCollector($collector);
+        Debug::setBar($bar);
+        $exception = new RuntimeException('boom');
+
+        (new ExceptionAdapter())->process(
+            new Item('failed', 'level', $level, new DateTimeImmutable(), ['exception' => $exception])
+        );
+
+        $this->assertSame(1, $collector->collect()['badge']);
+        $this->assertSame($exception, $bar->getLastException());
+    }
+
+    /**
+     * A handled exception that is logged below error level must not open the
+     * debug page of an ADR application.
+     */
+    #[DataProvider('lowerLevelProvider')]
+    public function testAnExceptionBelowErrorLevelShowsInThePanelButIsNotTheLastException(int $level): void
+    {
+        $collector = new ExceptionsCollector();
+        $bar       = (new DebugBar())->addCollector($collector);
+        Debug::setBar($bar);
+
+        (new ExceptionAdapter())->process(
+            new Item('handled', 'level', $level, new DateTimeImmutable(), ['exception' => new RuntimeException('boom')])
+        );
+
+        $this->assertSame(1, $collector->collect()['badge']);
+        $this->assertNull($bar->getLastException());
+    }
+
+    public function testAnExceptionBelowErrorLevelWithNoExceptionsCollectorIsIgnored(): void
+    {
+        $bar = new DebugBar();
+        Debug::setBar($bar);
+
+        $exception = new RuntimeException('boom');
+
+        (new ExceptionAdapter())->process(
+            new Item('handled', 'warning', Enum::WARNING, new DateTimeImmutable(), ['exception' => $exception])
+        );
+
+        $this->assertNull($bar->getLastException());
     }
 
     public function testCloseReturnsTrue(): void
