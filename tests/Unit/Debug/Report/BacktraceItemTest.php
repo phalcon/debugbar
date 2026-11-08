@@ -32,7 +32,7 @@ final class BacktraceItemTest extends AbstractUnitTestCase
 
     public function testGettersReturnConstructorValues(): void
     {
-        $fragment = new CodeFragment('full', 1, 4, 9, ["<?php\n", "echo 1;\n"]);
+        $fragment = new CodeFragment(1, 4, 9, ["<?php\n", "echo 1;\n"]);
 
         $item = new BacktraceItem(
             'myFunction',

@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Phalcon\Debug\Exceptions;
 
-class RuntimeWarning extends \ErrorException
+use Phalcon\Debug\Contracts\DebugThrowable;
+
+class RuntimeWarning extends \ErrorException implements DebugThrowable
 {
 }

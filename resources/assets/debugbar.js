@@ -647,8 +647,9 @@
             return;
         }
 
-        var data = payload.data || {};
-        var widgets = (payload.meta && payload.meta.widgets) || {};
+        // renderData() sets both before any panel reads them.
+        var data;
+        var widgets;
 
         var bar = el('div', 'phalcon-debugbar-bar');
         var historyBrowser = el('div', 'phalcon-debugbar-history-browser');
@@ -775,9 +776,9 @@
         }
 
         function renderData(nextPayload, preferredActive, requestMetadata) {
-            payload = nextPayload || {};
-            data = payload.data || {};
-            widgets = (payload.meta && payload.meta.widgets) || {};
+            var current = nextPayload || {};
+            data = current.data || {};
+            widgets = (current.meta && current.meta.widgets) || {};
             tabs.innerHTML = '';
             body.innerHTML = '';
             body.style.display = 'none';

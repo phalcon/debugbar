@@ -23,7 +23,6 @@ final class CodeFragment
      * @param array<int, string> $lines
      */
     public function __construct(
-        private readonly string $mode,
         private readonly int $firstLine,
         private readonly int $line,
         private readonly int $lastLine,
@@ -52,10 +51,5 @@ final class CodeFragment
     public function getLines(): array
     {
         return $this->lines;
-    }
-
-    public function getMode(): string
-    {
-        return $this->mode;
     }
 }
