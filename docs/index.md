@@ -317,6 +317,7 @@ The second argument to `Provider` is a nested array. Every key is optional. `Pha
 | `history.max_requests` | `int`                 | `100`                    | Maximum stored requests per browser.                             |
 | `history.max_browsers` | `int`                 | `10`                     | Maximum browsers with stored requests. A browser is one history cookie, so its windows and tabs count as one. The least recently updated is evicted first. |
 | `history.ttl_seconds` | `int`                  | `86400`                  | Lifetime in seconds; active-browser entries are checked immediately. |
+| `max_rows`         | `int`                     | `1000`                   | Maximum rows in each of the `cache`, `database`, `exceptions`, `logger`, `messages` and `view` collectors. The collector keeps the first rows. The badge counts all the rows, and a last row shows how many rows were dropped. |
 | `redact.hidden`    | `list<string>`            | `[]`                     | Keys dropped from the output entirely.                           |
 | `redact.mask`      | `list<string>`            | `[]`                     | Extra keys whose values are masked (added to the defaults).      |
 | `redact.unmask`    | `list<string>`            | `[]`                     | Patterns for masked keys whose values show. `*` matches any characters. |
