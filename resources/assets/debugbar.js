@@ -665,10 +665,12 @@
         var body = el('div', 'phalcon-debugbar-body');
         var row = el('div', 'phalcon-debugbar-row');
         var tabs = el('div', 'phalcon-debugbar-tabs');
+        tabs.setAttribute('role', 'tablist');
         var indicators = el('div', 'phalcon-debugbar-indicators');
         var toggle = el('button', 'phalcon-debugbar-toggle', '⚡');
         toggle.type = 'button';
         toggle.title = 'Toggle Phalcon DebugBar';
+        toggle.setAttribute('aria-label', 'Toggle Phalcon DebugBar');
         body.style.display = 'none';
 
         var active = null;
@@ -679,11 +681,19 @@
         var historyTrigger = null;
         var activeBeforeHistory = null;
 
+        // A metric indicator also opens a panel, but only a tab has aria-selected.
+        function setSelected(node, selected) {
+            node.classList.toggle('is-active', selected);
+            if (node.getAttribute('role') === 'tab') {
+                node.setAttribute('aria-selected', selected ? 'true' : 'false');
+            }
+        }
+
         function closePanel() {
             body.style.display = 'none';
             active = null;
             Array.prototype.forEach.call(row.querySelectorAll('[data-panel-tab]'), function (child) {
-                child.classList.remove('is-active');
+                setSelected(child, false);
             });
         }
 
@@ -738,6 +748,7 @@
             } else {
                 mount.classList.remove('is-collapsed');
             }
+            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
         }
 
         toggle.addEventListener('click', function () {
@@ -746,10 +757,23 @@
             writeCollapsed(collapsed);
         });
 
+        // The listener is on the bar, so it gets only the keys pressed while the focus is in the bar.
+        mount.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+
+            if (historyOpen) {
+                setHistoryOpen(false);
+            } else if (active !== null) {
+                closePanel();
+            }
+        });
+
         function activate(name, tab, entry, type) {
             closePanel();
             setHistoryOpen(false);
-            tab.classList.add('is-active');
+            setSelected(tab, true);
             body.innerHTML = '';
             var summary = renderSummary(entry.summary);
             if (summary) {
@@ -813,6 +837,8 @@
 
                 var tab = el('button', 'phalcon-debugbar-tab');
                 tab.type = 'button';
+                tab.setAttribute('role', 'tab');
+                tab.setAttribute('aria-selected', 'false');
                 tab.appendChild(el('span', 'phalcon-debugbar-tab-label', label));
                 if (hasBadge(entry.badge)) {
                     tab.appendChild(el('span', 'phalcon-debugbar-badge', scalar(entry.badge)));

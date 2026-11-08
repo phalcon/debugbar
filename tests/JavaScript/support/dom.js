@@ -116,6 +116,13 @@ TestElement.prototype.click = function () {
     }
 };
 
+// Sends a key to the element, as when the focus is inside it.
+TestElement.prototype.keydown = function (key) {
+    (this._listeners.keydown || []).forEach(function (listener) {
+        listener({key: key});
+    });
+};
+
 TestElement.prototype.querySelectorAll = function (selector) {
     var className = selector.charAt(0) === '.' ? selector.slice(1) : '';
     var attribute = /^\[([^\]]+)\]$/.exec(selector);

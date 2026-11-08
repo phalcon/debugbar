@@ -87,7 +87,7 @@ class Debug
     }
 
     /**
-     * Clears are variables added previously
+     * Clears the variables added previously
      *
      * @return $this
      */
@@ -289,7 +289,9 @@ class Debug
     }
 
     /**
-     * Sets if files the exception's backtrace must be showed
+     * Sets the keys to remove from the request and the server data. The
+     * array has a `request` and a `server` list of keys. A key matches at
+     * every depth.
      *
      * @param array<array-key, mixed> $blacklist
      *
