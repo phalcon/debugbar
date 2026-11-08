@@ -15,6 +15,7 @@ namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\DebugBarTypes;
 
+use function array_pop;
 use function count;
 use function hrtime;
 use function is_string;
@@ -23,7 +24,8 @@ use function trim;
 
 /**
  * Records SQL queries. `startQuery()` starts the time, and `finishQuery()` takes
- * the statement and the bindings.
+ * the statement and the bindings. A stack pairs each start with its finish, so
+ * nested queries are timed correctly.
  *
  * @phpstan-import-type database_envelope from DebugBarTypes
  * @phpstan-type db_query array{sql: string, bindings: array<array-key, mixed>, time: int|float}
@@ -45,7 +47,10 @@ final class DatabaseCollector extends AbstractCollector
      */
     private array $queries = [];
 
-    private float | int $started = 0;
+    /**
+     * @var list<float|int>
+     */
+    private array $starts = [];
 
     public function __construct(private readonly int $maxRows = self::DEFAULT_MAX_ROWS)
     {
@@ -98,12 +103,14 @@ final class DatabaseCollector extends AbstractCollector
     }
 
     /**
-     * Records a query. Call `startQuery()` first: the time starts there.
+     * Records a query. The time starts at the last `startQuery()` that has no
+     * finish. With no such start, the time is 0.
      *
      * @param array<array-key, mixed> $bindings
      */
     public function finishQuery(string $sql, array $bindings = []): void
     {
+        $start = array_pop($this->starts);
         if (!$this->acceptsRow(count($this->queries))) {
             return;
         }
@@ -111,13 +118,13 @@ final class DatabaseCollector extends AbstractCollector
         $this->queries[] = [
             'sql'      => $sql,
             'bindings' => $bindings,
-            'time'     => hrtime(true) - $this->started,
+            'time'     => (null === $start) ? 0 : hrtime(true) - $start,
         ];
     }
 
     public function startQuery(): void
     {
-        $this->started = hrtime(true);
+        $this->starts[] = hrtime(true);
     }
 
     /**

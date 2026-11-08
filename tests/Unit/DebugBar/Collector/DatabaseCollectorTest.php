@@ -22,6 +22,20 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
 {
     use PanelContractTrait;
 
+    public function testADroppedQueryStillEndsItsStart(): void
+    {
+        $collector = new DatabaseCollector(1);
+        $property  = new ReflectionProperty(DatabaseCollector::class, 'starts');
+        $property->setAccessible(true);
+
+        for ($index = 0; $index < 3; $index++) {
+            $collector->startQuery();
+            $collector->finishQuery('SELECT ' . $index);
+        }
+
+        $this->assertSame([], $property->getValue($collector));
+    }
+
     public function testAnInfiniteBindingKeepsTheOtherBindings(): void
     {
         $collector = new DatabaseCollector();
@@ -126,6 +140,23 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
         $this->assertSame('SELECT 1', $collector->collect()['panel'][0]['message']);
     }
 
+    public function testFinishQueryWithNoStartRecordsZeroTime(): void
+    {
+        $collector = new DatabaseCollector();
+
+        $collector->finishQuery('SELECT 1');
+        $collector->startQuery();
+        $collector->finishQuery('SELECT 2');
+        usleep(10000);
+        $collector->finishQuery('SELECT 3');
+
+        $panel = $collector->collect()['panel'];
+
+        $this->assertSame(['SELECT 1', 'SELECT 2', 'SELECT 3'], array_column($panel, 'message'));
+        $this->assertSame('0ms', $panel[0]['label']);
+        $this->assertSame('0ms', $panel[2]['label']);
+    }
+
     public function testInvalidUtf8InABindingIsReplaced(): void
     {
         $collector = new DatabaseCollector();
@@ -168,6 +199,22 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
 
         $this->assertSame('database', $collector->getName());
         $this->assertPanelContract($collector);
+    }
+
+    public function testNestedQueriesPairWithTheirOwnStart(): void
+    {
+        $collector = new DatabaseCollector();
+
+        $collector->startQuery();
+        usleep(20000);
+        $collector->startQuery();
+        $collector->finishQuery('SELECT inner');
+        $collector->finishQuery('SELECT outer');
+
+        $panel = $collector->collect()['panel'];
+
+        $this->assertSame(['SELECT inner', 'SELECT outer'], array_column($panel, 'message'));
+        $this->assertGreaterThanOrEqual(20.0, (float) $panel[1]['label']);
     }
 
     public function testRowsAboveTheLimitAreDropped(): void

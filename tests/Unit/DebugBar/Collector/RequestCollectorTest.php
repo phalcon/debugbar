@@ -95,7 +95,7 @@ final class RequestCollectorTest extends AbstractUnitTestCase
         $this->assertSame('POST', $collected['metrics'][RequestCollector::METRIC_METHOD]);
         $this->assertSame('/login', $collected['metrics'][RequestCollector::METRIC_URI]);
         $this->assertSame('phalcon', $panel['Query.q']);
-        $this->assertSame('', $panel['Query.n']);
+        $this->assertSame('null', $panel['Query.n']);
         $this->assertSame('sarah-connor', $panel['Post.username']);
         $this->assertSame('***', $panel['Post.password']);
         $this->assertSame('phalcon-test', $panel['Headers.User-Agent']);

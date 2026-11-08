@@ -17,6 +17,7 @@ use Phalcon\DebugBar\Contracts\MessageAware;
 use Phalcon\DebugBar\DebugBarTypes;
 
 use function count;
+use function is_bool;
 use function is_scalar;
 use function is_string;
 
@@ -80,6 +81,10 @@ final class MessagesCollector extends AbstractCollector implements MessageAware
     {
         if (is_string($value)) {
             return $value;
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
         }
 
         if (is_scalar($value)) {
