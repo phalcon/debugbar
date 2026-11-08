@@ -11,6 +11,9 @@ on:
 env:
   # Phalcon v5 C extension constraint (installed from source via PIE)
   PHALCON_CONSTRAINT: "^5.0"
+  # PIE release and the sha256 of its pie.phar. Update both for a new release.
+  PIE_VERSION: "1.5.5"
+  PIE_SHA256: "2ca0dff6868f1b53c095625674deef38ac698588e0a25e4321cd834a5b7553bc"
   EXTENSIONS: "fileinfo, json, mbstring, pdo, pdo_sqlite, xml"
 
 permissions: { }
@@ -110,7 +113,8 @@ jobs:
       - name: "Install Phalcon v5 (cphalcon) via PIE"
         if: matrix.variant == 'v5'
         run: |
-          curl -fsSL https://github.com/php/pie/releases/latest/download/pie.phar -o pie.phar
+          curl -fsSL "https://github.com/php/pie/releases/download/${{ env.PIE_VERSION }}/pie.phar" -o pie.phar
+          echo "${{ env.PIE_SHA256 }}  pie.phar" | sha256sum --check --strict
           sudo "$(which php)" pie.phar install --skip-enable-extension --no-interaction "phalcon/cphalcon:${{ env.PHALCON_CONSTRAINT }}"
           echo "extension=phalcon.so" | sudo tee /etc/php/${{ matrix.php }}/cli/conf.d/80-phalcon.ini
           php -m | grep -i phalcon

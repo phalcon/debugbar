@@ -10,9 +10,15 @@ The bar runs only in development. It refuses to boot when the environment is und
 ## Requirements
 
 - PHP 8.1 or later.
-- A Phalcon runtime: the Phalcon 5 C extension `v5.17.0` or later, or the Phalcon 6 PHP implementation (`phalcon/phalcon`). ADR support needs Phalcon `v5.18.0` or later, or Phalcon 6. The Database panel in an ADR application needs Phalcon `v5.19.0` or later, or Phalcon 6.
+- A Phalcon runtime: the Phalcon 5 C extension (`ext-phalcon`) `v5.17.0` or later, or Phalcon 6 (the `phalcon/phalcon` package). Some features need a later Phalcon 5 release, as the table below shows.
 - `matthiasmullie/minify`, pulled in automatically by Composer. The package ships the bar's CSS and JavaScript minified. The renderer uses this library only when a custom assets directory has no minified files.
 - `phalcon/traits`, pulled in automatically by Composer. The debug page uses its traits.
+
+| Feature                                                   | Phalcon 5          | Phalcon 6 |
+|-----------------------------------------------------------|--------------------|-----------|
+| MVC applications, `Phalcon\DebugBar\Core`, the debug page | `v5.17.0` or later | Yes       |
+| ADR applications (`Phalcon\DebugBar\ADR\Provider`)        | `v5.18.0` or later | Yes       |
+| The Database panel in an ADR application                  | `v5.19.0` or later | Yes       |
 
 ## Installation
 

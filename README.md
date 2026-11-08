@@ -13,10 +13,7 @@
 [![Discord][discord-badge]][discord-link]
 [![Contributors][contributors-badge]][contributors-link]
 
-A web debug bar and debugger for the [Phalcon Framework](https://phalcon.io) -
-a status bar injected into your application's HTML that surfaces per-request
-diagnostics (messages, logs, timing, database queries, request, route, and more),
-plus the migrated Phalcon debug/exception page.
+A web debug bar and debugger for the [Phalcon Framework](https://phalcon.io) - a status bar injected into your application's HTML that surfaces per-request diagnostics (messages, logs, timing, database queries, request, route, and more), plus the migrated Phalcon debug/exception page.
 
 > **Status:** under active development. Fork of
 > [snowair's Phalcon Debugbar](https://github.com/snowair/phalcon-debugbar),
@@ -27,6 +24,7 @@ plus the migrated Phalcon debug/exception page.
 - PHP >= 8.1
 - Phalcon 5 `v5.17.0` or later (the `ext-phalcon` C extension) **or**
   Phalcon 6 (the `phalcon/phalcon` package)
+- ADR applications need Phalcon 5 `v5.18.0` or later, or Phalcon 6. The Database panel in an ADR application needs Phalcon 5 `v5.19.0` or later, or Phalcon 6.
 
 ## Installation
 
@@ -36,8 +34,7 @@ composer require phalcon/debugbar
 
 ## Development
 
-This repository mirrors the Phalcon library conventions and ships a Docker dev
-environment.
+This repository mirrors the Phalcon library conventions and ships a Docker dev environment.
 
 ```bash
 cp resources/.env.example .env
@@ -46,14 +43,11 @@ docker compose exec app composer install
 docker compose exec app composer test
 ```
 
-Useful scripts: `composer test`, `composer analyze`, `composer cs`,
-`composer cs-fixer`. Switch the Phalcon major with the `PHALCON_VARIANT`
-build arg (`v5` default, or `v6`).
+Useful scripts: `composer test`, `composer analyze`, `composer cs`, `composer cs-fixer`. Switch the Phalcon major with the `PHALCON_VARIANT` build arg (`v5` default, or `v6`).
 
 ## License
 
-Phalcon DebugBar is open-sourced software licensed under the
-[BSD 3-Clause license](LICENSE.txt).
+Phalcon DebugBar is open-sourced software licensed under the [BSD 3-Clause license](LICENSE.txt).
 
 [packagist-version-badge]:   https://img.shields.io/packagist/v/phalcon/debugbar?include_prereleases&style=flat-square&logo=packagist&logoColor=white
 [packagist-version-link]:    https://packagist.org/packages/phalcon/debugbar
