@@ -648,9 +648,7 @@ test('request history reports clear failures and restores controls', async funct
 });
 
 test('indicator collectors render once on the right and open their panels', function () {
-    var dataNode = new dom.TestElement('script');
-    var mount = new dom.TestElement('div');
-    dataNode.textContent = JSON.stringify({
+    var mount = renderPayload({
         data: {
             messages: {panel: []},
             time: {panel: [], badge: '12.34ms'},
@@ -691,20 +689,6 @@ test('indicator collectors render once on the right and open their panels', func
             }
         }
     });
-    global.document = dom.createDocument({
-        'phalcon-debugbar': mount,
-        'phalcon-debugbar-data': dataNode
-    });
-    global.window = {
-        localStorage: {
-            getItem: function () {
-                return null;
-            },
-            setItem: function () {}
-        }
-    };
-
-    require(debugbarPath);
 
     var labels = mount.querySelectorAll('.phalcon-debugbar-tab-label').map(function (label) {
         return label.textContent;
@@ -778,23 +762,7 @@ test('the icon names in PHP match the drawings in the client', function () {
 });
 
 test('the client renders the output of the real collectors', function () {
-    var dataNode = new dom.TestElement('script');
-    var mount = new dom.TestElement('div');
-    dataNode.textContent = JSON.stringify(panelContract().payload);
-    global.document = dom.createDocument({
-        'phalcon-debugbar': mount,
-        'phalcon-debugbar-data': dataNode
-    });
-    global.window = {
-        localStorage: {
-            getItem: function () {
-                return null;
-            },
-            setItem: function () {}
-        }
-    };
-
-    require(debugbarPath);
+    var mount = renderPayload(panelContract().payload);
 
     var tabs = mount.querySelectorAll('.phalcon-debugbar-tab');
     var labels = tabs.map(function (tab) {
@@ -939,9 +907,7 @@ test('the client accepts the stored entry of the real history code', async funct
 });
 
 test('request metrics use widget metadata when the collector has a different name', function () {
-    var dataNode = new dom.TestElement('script');
-    var mount = new dom.TestElement('div');
-    dataNode.textContent = JSON.stringify({
+    var mount = renderPayload({
         data: {
             time: {panel: [], badge: '12.34ms'},
             http: {
@@ -964,20 +930,6 @@ test('request metrics use widget metadata when the collector has a different nam
             }
         }
     });
-    global.document = dom.createDocument({
-        'phalcon-debugbar': mount,
-        'phalcon-debugbar-data': dataNode
-    });
-    global.window = {
-        localStorage: {
-            getItem: function () {
-                return null;
-            },
-            setItem: function () {}
-        }
-    };
-
-    require(debugbarPath);
 
     var labels = mount.querySelectorAll('.phalcon-debugbar-tab-label').map(function (label) {
         return label.textContent;
@@ -990,9 +942,7 @@ test('request metrics use widget metadata when the collector has a different nam
 });
 
 test('request control replaces the History tab and opens request history', async function () {
-    var dataNode = new dom.TestElement('script');
-    var mount = new dom.TestElement('div');
-    dataNode.textContent = JSON.stringify({
+    var mount = renderPayload({
         data: {
             messages: {panel: []},
             request: {
@@ -1012,19 +962,11 @@ test('request control replaces the History tab and opens request history', async
                 history: {label: 'History', panel: 'history'}
             }
         }
-    });
-    global.document = dom.createDocument({
-        'phalcon-debugbar': mount,
-        'phalcon-debugbar-data': dataNode
-    });
-    global.window = {
+    }, {
         fetch: function () {
             return Promise.resolve(response({requests: []}));
         }
-    };
-
-    delete require.cache[debugbarPath];
-    require(debugbarPath);
+    });
 
     var tabs = dom.findByClass(mount, 'phalcon-debugbar-tabs');
     var requestControl = dom.findByClass(mount, 'phalcon-debugbar-request-control');
@@ -1059,8 +1001,6 @@ test('request control replaces the History tab and opens request history', async
 });
 
 test('selecting stored data closes history and uses metadata without a request collector', async function () {
-    var dataNode = new dom.TestElement('script');
-    var mount = new dom.TestElement('div');
     var historyPanel = {url: '/_debugbar/open'};
     var widgets = {
         history: {label: 'History', panel: 'history'},
@@ -1075,7 +1015,8 @@ test('selecting stored data closes history and uses metadata without a request c
             request: {method: ['metrics', 'method'], uri: ['metrics', 'uri']}
         }
     };
-    dataNode.textContent = JSON.stringify({
+    var calls = 0;
+    var mount = renderPayload({
         data: {
             history: {panel: historyPanel},
             time: {panel: [{label: 'Request', message: '10ms'}], badge: '10ms'},
@@ -1085,13 +1026,7 @@ test('selecting stored data closes history and uses metadata without a request c
             }
         },
         meta: {widgets: widgets}
-    });
-    global.document = dom.createDocument({
-        'phalcon-debugbar': mount,
-        'phalcon-debugbar-data': dataNode
-    });
-    var calls = 0;
-    global.window = {
+    }, {
         fetch: function () {
             calls++;
             if (calls === 1) {
@@ -1114,9 +1049,7 @@ test('selecting stored data closes history and uses metadata without a request c
                 }
             }));
         }
-    };
-
-    require(debugbarPath);
+    });
     var timeIndicator = dom.findByClass(mount, 'phalcon-debugbar-metric');
     timeIndicator.click();
     assert.equal(timeIndicator.classList.contains('is-active'), true);
@@ -1141,20 +1074,13 @@ test('selecting stored data closes history and uses metadata without a request c
 });
 
 test('stored data with no widget that defines the request uses the request metadata', async function () {
-    var dataNode = new dom.TestElement('script');
-    var mount = new dom.TestElement('div');
     var historyPanel = {url: '/_debugbar/open'};
     var widgets = {history: {label: 'History', panel: 'history'}};
-    dataNode.textContent = JSON.stringify({
+    var calls = 0;
+    var mount = renderPayload({
         data: {history: {panel: historyPanel}},
         meta: {widgets: widgets}
-    });
-    global.document = dom.createDocument({
-        'phalcon-debugbar': mount,
-        'phalcon-debugbar-data': dataNode
-    });
-    var calls = 0;
-    global.window = {
+    }, {
         fetch: function () {
             calls++;
             if (calls === 1) {
@@ -1171,9 +1097,7 @@ test('stored data with no widget that defines the request uses the request metad
                 }
             }));
         }
-    };
-
-    require(debugbarPath);
+    });
     dom.findByClass(mount, 'phalcon-debugbar-request-control').click();
     await dom.flushPromises();
     dom.findByClass(mount, 'phalcon-debugbar-history-request').click();
@@ -1184,8 +1108,6 @@ test('stored data with no widget that defines the request uses the request metad
 });
 
 test('selecting stored data reopens the collector tab active before history', async function () {
-    var dataNode = new dom.TestElement('script');
-    var mount = new dom.TestElement('div');
     var historyPanel = {url: '/_debugbar/open'};
     var widgets = {
         database: {label: 'Database', panel: 'list'},
@@ -1196,20 +1118,15 @@ test('selecting stored data reopens the collector tab active before history', as
             request: {method: ['metrics', 'method'], uri: ['metrics', 'uri']}
         }
     };
-    dataNode.textContent = JSON.stringify({
+    var calls = 0;
+    var mount = renderPayload({
         data: {
             database: {panel: [{label: 'Current', message: 'SELECT 1'}]},
             history: {panel: historyPanel},
             request: {metrics: {method: 'GET', uri: '/current'}, panel: {}}
         },
         meta: {widgets: widgets}
-    });
-    global.document = dom.createDocument({
-        'phalcon-debugbar': mount,
-        'phalcon-debugbar-data': dataNode
-    });
-    var calls = 0;
-    global.window = {
+    }, {
         fetch: function () {
             calls++;
             if (calls === 1) {
@@ -1233,9 +1150,7 @@ test('selecting stored data reopens the collector tab active before history', as
                 }
             }));
         }
-    };
-
-    require(debugbarPath);
+    });
     var databaseTab = mount.querySelectorAll('.phalcon-debugbar-tab').filter(function (tab) {
         return tab.textContent === 'Database';
     })[0];
@@ -1386,4 +1301,73 @@ test('Escape in the bar closes the request history', async function () {
 
     assert.equal(dom.findByClass(mount, 'phalcon-debugbar-history-browser').style.display, 'none');
     assert.equal(dom.findByClass(mount, 'phalcon-debugbar-request-control').getAttribute('aria-expanded'), 'false');
+});
+
+// Opens the one tab of a panel of the given type and returns the rendered panel.
+function entriesPanel(type, rows) {
+    var mount = renderPayload({
+        data: {entries: {panel: rows}},
+        meta: {widgets: {entries: {label: 'Entries', panel: type}}}
+    });
+    dom.findByClass(mount, 'phalcon-debugbar-tab').click();
+
+    return dom.findByClass(mount, 'phalcon-debugbar-body').children[0];
+}
+
+// The markup as [tag, class, text] for a leaf and [tag, class, children] for the others.
+function shape(node) {
+    return node.children.length
+        ? [node.tagName, node.className, node.children.map(shape)]
+        : [node.tagName, node.className, node.textContent];
+}
+
+test('the logs panel shows a line for a log with no context and a details block for one with context', function () {
+    var panel = entriesPanel('logs', [
+        {label: 'info', message: 'login', context: '{"id":7}'},
+        {label: 'debug', message: 'ping', context: ''}
+    ]);
+
+    assert.deepEqual(shape(panel), ['DIV', 'phalcon-debugbar-logs', [
+        ['DETAILS', 'phalcon-debugbar-log', [
+            ['SUMMARY', 'phalcon-debugbar-log-summary', [
+                ['SPAN', 'phalcon-debugbar-log-label', 'info'],
+                ['SPAN', 'phalcon-debugbar-log-message', 'login']
+            ]],
+            ['PRE', 'phalcon-debugbar-log-context', '{"id":7}']
+        ]],
+        ['DIV', 'phalcon-debugbar-log', [
+            ['SPAN', 'phalcon-debugbar-log-label', 'debug'],
+            ['SPAN', 'phalcon-debugbar-log-message', 'ping']
+        ]]
+    ]]);
+});
+
+test('the exceptions panel shows a details block with the trace', function () {
+    var panel = entriesPanel('exceptions', [
+        {label: 'RuntimeException', message: 'boom (file.php:1)', trace: '#0 {main}'}
+    ]);
+
+    assert.deepEqual(shape(panel), ['DIV', 'phalcon-debugbar-exceptions', [
+        ['DETAILS', 'phalcon-debugbar-exception', [
+            ['SUMMARY', 'phalcon-debugbar-exception-summary', [
+                ['SPAN', 'phalcon-debugbar-exception-label', 'RuntimeException'],
+                ['SPAN', 'phalcon-debugbar-exception-message', 'boom (file.php:1)']
+            ]],
+            ['PRE', 'phalcon-debugbar-exception-trace', '#0 {main}']
+        ]]
+    ]]);
+});
+
+test('an exception with no trace shows as a line, as a log with no context does', function () {
+    // The "rows dropped" row of the row limit has no trace.
+    var panel = entriesPanel('exceptions', [
+        {label: 'dropped', message: '2 rows dropped', trace: ''}
+    ]);
+
+    assert.deepEqual(shape(panel), ['DIV', 'phalcon-debugbar-exceptions', [
+        ['DIV', 'phalcon-debugbar-exception', [
+            ['SPAN', 'phalcon-debugbar-exception-label', 'dropped'],
+            ['SPAN', 'phalcon-debugbar-exception-message', '2 rows dropped']
+        ]]
+    ]]);
 });

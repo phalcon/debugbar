@@ -273,45 +273,35 @@
         return node;
     }
 
-    function renderExceptions(panel) {
+    /*
+     * The exceptions and logs panels: a row with a detail (the trace or the
+     * context) opens to show it, and a row with no detail is a plain line.
+     * `kind` names the classes: phalcon-debugbar-exception-*, phalcon-debugbar-log-*.
+     */
+    function renderEntries(panel, kind, detailKey) {
         if (!Array.isArray(panel) || !panel.length) {
             return el('div', 'phalcon-debugbar-empty', 'No data');
         }
-        var wrap = el('div', 'phalcon-debugbar-exceptions');
+        var prefix = 'phalcon-debugbar-' + kind;
+        var wrap = el('div', prefix + 's');
         panel.forEach(function (row) {
             row = row || {};
-            var details = el('details', 'phalcon-debugbar-exception');
-            var summary = el('summary', 'phalcon-debugbar-exception-summary');
-            summary.appendChild(el('span', 'phalcon-debugbar-exception-label', scalar(row.label)));
-            summary.appendChild(el('span', 'phalcon-debugbar-exception-message', scalar(row.message)));
-            details.appendChild(summary);
-            details.appendChild(el('pre', 'phalcon-debugbar-exception-trace', scalar(row.trace)));
-            wrap.appendChild(details);
-        });
-        return wrap;
-    }
-
-    function renderLogs(panel) {
-        if (!Array.isArray(panel) || !panel.length) {
-            return el('div', 'phalcon-debugbar-empty', 'No data');
-        }
-        var wrap = el('div', 'phalcon-debugbar-logs');
-        panel.forEach(function (row) {
-            row = row || {};
-            var context = scalar(row.context);
-            if (context === '') {
-                var line = el('div', 'phalcon-debugbar-log');
-                line.appendChild(el('span', 'phalcon-debugbar-log-label', scalar(row.label)));
-                line.appendChild(el('span', 'phalcon-debugbar-log-message', scalar(row.message)));
+            var detail = scalar(row[detailKey]);
+            var label = el('span', prefix + '-label', scalar(row.label));
+            var message = el('span', prefix + '-message', scalar(row.message));
+            if (detail === '') {
+                var line = el('div', prefix);
+                line.appendChild(label);
+                line.appendChild(message);
                 wrap.appendChild(line);
                 return;
             }
-            var details = el('details', 'phalcon-debugbar-log');
-            var summary = el('summary', 'phalcon-debugbar-log-summary');
-            summary.appendChild(el('span', 'phalcon-debugbar-log-label', scalar(row.label)));
-            summary.appendChild(el('span', 'phalcon-debugbar-log-message', scalar(row.message)));
+            var details = el('details', prefix);
+            var summary = el('summary', prefix + '-summary');
+            summary.appendChild(label);
+            summary.appendChild(message);
             details.appendChild(summary);
-            details.appendChild(el('pre', 'phalcon-debugbar-log-context', context));
+            details.appendChild(el('pre', prefix + '-' + detailKey, detail));
             wrap.appendChild(details);
         });
         return wrap;
@@ -326,9 +316,9 @@
             case 'html':
                 return renderHtml(panel);
             case 'exceptions':
-                return renderExceptions(panel);
+                return renderEntries(panel, 'exception', 'trace');
             case 'logs':
-                return renderLogs(panel);
+                return renderEntries(panel, 'log', 'context');
             case 'grid':
             default:
                 return renderGrid(panel);
