@@ -19,8 +19,12 @@ use MatthiasMullie\Minify\JS as JsMinifier;
 use function array_keys;
 use function array_values;
 use function dirname;
+use function file_get_contents;
+use function htmlspecialchars;
+use function is_file;
 use function str_replace;
 
+use const ENT_QUOTES;
 use const JSON_HEX_AMP;
 use const JSON_HEX_APOS;
 use const JSON_HEX_QUOT;
@@ -92,7 +96,8 @@ class Renderer
     }
 
     /**
-     * The package directory holding the source `debugbar.css`/`debugbar.js`.
+     * The directory with the minified `debugbar.min.css`/`debugbar.min.js`, or
+     * with the source `debugbar.css`/`debugbar.js`.
      */
     protected function assetsPath(): string
     {
@@ -103,7 +108,7 @@ class Renderer
     {
         return match ($name) {
             'head'  => '<style%nonce%>%css%</style>' . "\n"
-                . '<script%nonce% defer>%js%</script>',
+                . '<script%nonce%>%js%</script>',
             'bar'   => '<script type="application/json" id="phalcon-debugbar-data"%nonce%>'
                 . '%data%</script>' . "\n"
                 . '<div id="phalcon-debugbar"></div>',
@@ -112,10 +117,16 @@ class Renderer
     }
 
     /**
-     * Returns the minified asset ('css' or 'js').
+     * Returns the minified asset ('css' or 'js'). It reads `debugbar.min.<type>`
+     * when the assets directory has it. If not, it minifies `debugbar.<type>`.
      */
     private function asset(string $type): string
     {
+        $minified = $this->assetsPath() . 'debugbar.min.' . $type;
+        if (is_file($minified)) {
+            return (string) file_get_contents($minified);
+        }
+
         $source   = $this->assetsPath() . 'debugbar.' . $type;
         $minifier = ('css' === $type) ? new CssMinifier($source) : new JsMinifier($source);
 
@@ -132,6 +143,6 @@ class Renderer
 
     private function nonceAttribute(?string $nonce): string
     {
-        return (null !== $nonce && '' !== $nonce) ? ' nonce="' . $nonce . '"' : '';
+        return (null !== $nonce && '' !== $nonce) ? ' nonce="' . htmlspecialchars($nonce, ENT_QUOTES) . '"' : '';
     }
 }

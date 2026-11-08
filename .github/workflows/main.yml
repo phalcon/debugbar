@@ -56,6 +56,15 @@ jobs:
       - name: "PHP CS Fixer (dry-run)"
         run: composer cs-fixer
 
+      - name: "Minified assets"
+        run: |
+          composer minify
+          if [ -n "$(git status --porcelain -- resources/assets/)" ]; then
+            git status --short -- resources/assets/
+            echo "The minified assets do not match the sources. Run composer minify and commit the result."
+            exit 1
+          fi
+
       - name: "Setup Node.js"
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
