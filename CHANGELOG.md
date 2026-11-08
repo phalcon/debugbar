@@ -79,6 +79,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Redact the ADR request attributes in the route panel. [#93](https://github.com/phalcon/debugbar/issues/93)
 - Use the name constants of the collectors and the history controller, and inject the `Injector` into the ADR debug page listener. [#94](https://github.com/phalcon/debugbar/issues/94)
 - Accept only `true` from the access callback, and leave the response without a bar when the callback or a collector fails. [#96](https://github.com/phalcon/debugbar/issues/96)
+- Inline the shipped minified assets instead of minifying them for each response, escape the nonce, and remove `defer` from the inline script. [#97](https://github.com/phalcon/debugbar/issues/97)
 - Test HTML writes, the collapse state and `localStorage` errors in the JS tests, and keep every listener in the fake DOM. [#103](https://github.com/phalcon/debugbar/issues/103)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)
