@@ -170,6 +170,27 @@ final class DatabaseCollectorTest extends AbstractUnitTestCase
         $this->assertPanelContract($collector);
     }
 
+    public function testRowsAboveTheLimitAreDropped(): void
+    {
+        $collector = new DatabaseCollector(1);
+
+        foreach (['SELECT 1', 'SELECT 2', 'SELECT 3'] as $sql) {
+            $collector->startQuery();
+            $collector->finishQuery($sql);
+        }
+
+        $envelope = $collector->collect();
+
+        $this->assertSame(3, $envelope['badge']);
+        $this->assertSame(['label' => 'queries', 'value' => 3], $envelope['summary'][0]);
+        $this->assertCount(2, $envelope['panel']);
+        $this->assertSame('SELECT 1', $envelope['panel'][0]['message']);
+        $this->assertSame(
+            ['label' => 'dropped', 'message' => '2 rows dropped', 'occurrences' => null],
+            $envelope['panel'][1]
+        );
+    }
+
     public function testStartAndFinishRecordAQueryWithNoEventsManager(): void
     {
         $collector = new DatabaseCollector();

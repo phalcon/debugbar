@@ -15,7 +15,10 @@ namespace Phalcon\Tests\Unit\DebugBar;
 
 use InvalidArgumentException;
 use Phalcon\Config\Config;
+use Phalcon\DebugBar\Collector\CacheCollector;
+use Phalcon\DebugBar\Collector\DatabaseCollector;
 use Phalcon\DebugBar\Collector\LoggerCollector;
+use Phalcon\DebugBar\Collector\ViewCollector;
 use Phalcon\DebugBar\Contracts\DebugBarThrowable;
 use Phalcon\DebugBar\Contracts\History;
 use Phalcon\DebugBar\Core;
@@ -482,6 +485,48 @@ final class CoreTest extends AbstractUnitTestCase
         $this->assertTrue($queued);
     }
 
+    public function testMaxRowsOptionReachesTheCollectors(): void
+    {
+        $_ENV[self::ENV_VAR] = 'dev';
+
+        $this->core(['max_rows' => 1])->boot();
+
+        $bar      = $this->bootedBar();
+        $cache    = $bar->getCollector('cache');
+        $database = $bar->getCollector('database');
+        $view     = $bar->getCollector('view');
+        if (
+            !$cache instanceof CacheCollector
+            || !$database instanceof DatabaseCollector
+            || !$view instanceof ViewCollector
+        ) {
+            $this->fail('Expected the cache, database and view collectors.');
+        }
+
+        foreach (['first', 'second'] as $value) {
+            $bar->info($value);
+            $bar->addLog($value, 'info');
+            $bar->addException(new RuntimeException($value));
+            $cache->addOperation('Get', $value);
+            $database->startQuery();
+            $database->finishQuery($value);
+            $view->startRender($value);
+            $view->finishRender();
+        }
+
+        $data = $bar->collect()['data'];
+        foreach (['cache', 'database', 'exceptions', 'logger', 'messages', 'view'] as $name) {
+            $panel = $data[$name]['panel'];
+            if (!is_array($panel) || !is_array($panel[1] ?? null)) {
+                $this->fail('Expected two rows in the ' . $name . ' panel.');
+            }
+
+            $this->assertSame(2, $data[$name]['badge'], $name);
+            $this->assertCount(2, $panel, $name);
+            $this->assertSame('1 row dropped', $panel[1]['message'] ?? null, $name);
+        }
+    }
+
     public function testNonceOptionReachesTheListener(): void
     {
         $_ENV[self::ENV_VAR] = 'dev';
@@ -575,6 +620,7 @@ final class CoreTest extends AbstractUnitTestCase
      *     collectors?: array<string, bool>,
      *     headers?: bool,
      *     history?: array{enabled?: bool, path?: string, base_uri?: string},
+     *     max_rows?: int,
      *     redact?: array{mask?: list<string>, hidden?: list<string>, unmask?: list<string>}
      * } $config
      */

@@ -15,6 +15,7 @@ namespace Phalcon\DebugBar;
 
 use Closure;
 use Phalcon\Config\ConfigInterface;
+use Phalcon\DebugBar\Collector\AbstractCollector;
 use Phalcon\DebugBar\Collector\CacheCollector;
 use Phalcon\DebugBar\Collector\ConfigCollector;
 use Phalcon\DebugBar\Collector\DatabaseCollector;
@@ -85,6 +86,8 @@ final class Core
 
     private ?ResponseListener $listener = null;
 
+    private int $maxRows;
+
     private ?string $nonce;
 
     private Redactor $redactor;
@@ -113,6 +116,7 @@ final class Core
         $this->collectorsConfig = $config['collectors'] ?? [];
         $this->headers          = $config['headers'] ?? true;
         $this->historyOptions   = HistoryOptions::fromConfig($config['history'] ?? []);
+        $this->maxRows          = $config['max_rows'] ?? AbstractCollector::DEFAULT_MAX_ROWS;
         $this->redactor         = new Redactor(
             [...Redactor::DEFAULT_KEYS, ...($redact['mask'] ?? [])],
             $redact['hidden'] ?? [],
@@ -288,15 +292,15 @@ final class Core
         }
 
         if ($this->isCollectorEnabled(MessagesCollector::NAME)) {
-            $collectors[] = new MessagesCollector();
+            $collectors[] = new MessagesCollector($this->maxRows);
         }
 
         if ($this->isCollectorEnabled(LoggerCollector::NAME)) {
-            $collectors[] = new LoggerCollector($this->redactor);
+            $collectors[] = new LoggerCollector($this->redactor, $this->maxRows);
         }
 
         if ($this->isCollectorEnabled(ExceptionsCollector::NAME)) {
-            $collectors[] = new ExceptionsCollector();
+            $collectors[] = new ExceptionsCollector($this->maxRows);
         }
 
         if ($this->isCollectorEnabled(TimeCollector::NAME)) {
@@ -308,11 +312,11 @@ final class Core
         }
 
         if ($this->isCollectorEnabled(DatabaseCollector::NAME)) {
-            $collectors[] = new DatabaseCollector();
+            $collectors[] = new DatabaseCollector($this->maxRows);
         }
 
         if ($this->isCollectorEnabled(ViewCollector::NAME)) {
-            $collectors[] = new ViewCollector();
+            $collectors[] = new ViewCollector($this->maxRows);
         }
 
         if ($this->isCollectorEnabled(RouteCollector::NAME)) {
@@ -320,7 +324,7 @@ final class Core
         }
 
         if ($this->isCollectorEnabled(CacheCollector::NAME)) {
-            $collectors[] = new CacheCollector();
+            $collectors[] = new CacheCollector($this->maxRows);
         }
 
         if ($this->isCollectorEnabled(RequestCollector::NAME)) {

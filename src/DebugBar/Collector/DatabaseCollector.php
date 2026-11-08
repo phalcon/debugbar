@@ -32,6 +32,7 @@ final class DatabaseCollector extends AbstractCollector
 {
     use EncodesJson;
     use FormatsDuration;
+    use LimitsRows;
 
     public const NAME = 'database';
 
@@ -45,6 +46,10 @@ final class DatabaseCollector extends AbstractCollector
     private array $queries = [];
 
     private float | int $started = 0;
+
+    public function __construct(private readonly int $maxRows = self::DEFAULT_MAX_ROWS)
+    {
+    }
 
     /**
      * @return database_envelope
@@ -75,11 +80,17 @@ final class DatabaseCollector extends AbstractCollector
             ];
         }
 
+        if (0 < $this->droppedRows) {
+            $rows[] = $this->droppedRow() + ['occurrences' => null];
+        }
+
+        $total = count($this->queries) + $this->droppedRows;
+
         return [
             'panel'   => $rows,
-            'badge'   => count($this->queries),
+            'badge'   => $total,
             'summary' => [
-                ['label' => 'queries', 'value' => count($this->queries)],
+                ['label' => 'queries', 'value' => $total],
                 ['label' => 'duplicate_runs', 'value' => $duplicateRuns],
                 ['label' => 'total_time', 'value' => $this->nanosToMs($totalNanoseconds)],
             ],
@@ -93,6 +104,10 @@ final class DatabaseCollector extends AbstractCollector
      */
     public function finishQuery(string $sql, array $bindings = []): void
     {
+        if (!$this->acceptsRow(count($this->queries))) {
+            return;
+        }
+
         $this->queries[] = [
             'sql'      => $sql,
             'bindings' => $bindings,

@@ -31,6 +31,8 @@ use function substr;
  */
 final class ExceptionsCollector extends AbstractCollector implements ExceptionAware
 {
+    use LimitsRows;
+
     public const NAME = 'exceptions';
 
     protected string $label = 'Exceptions';
@@ -42,8 +44,16 @@ final class ExceptionsCollector extends AbstractCollector implements ExceptionAw
      */
     private array $exceptions = [];
 
+    public function __construct(private readonly int $maxRows = self::DEFAULT_MAX_ROWS)
+    {
+    }
+
     public function addThrowable(Throwable $throwable): void
     {
+        if (!$this->acceptsRow(count($this->exceptions))) {
+            return;
+        }
+
         $this->exceptions[] = [
             'label'   => $this->shortClass($throwable::class),
             'message' => $throwable->getMessage()
@@ -57,9 +67,14 @@ final class ExceptionsCollector extends AbstractCollector implements ExceptionAw
      */
     public function collect(): array
     {
+        $rows = $this->exceptions;
+        if (0 < $this->droppedRows) {
+            $rows[] = $this->droppedRow() + ['trace' => ''];
+        }
+
         return [
-            'panel' => $this->exceptions,
-            'badge' => count($this->exceptions),
+            'panel' => $rows,
+            'badge' => count($this->exceptions) + $this->droppedRows,
         ];
     }
 

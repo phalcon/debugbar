@@ -76,6 +76,23 @@ final class ViewCollectorTest extends AbstractUnitTestCase
         );
     }
 
+    public function testRowsAboveTheLimitAreDropped(): void
+    {
+        $collector = new ViewCollector(1);
+
+        foreach (['first', 'second', 'third'] as $path) {
+            $collector->startRender($path);
+            $collector->finishRender();
+        }
+
+        $envelope = $collector->collect();
+
+        $this->assertSame(3, $envelope['badge']);
+        $this->assertCount(2, $envelope['panel']);
+        $this->assertSame('first', $envelope['panel'][0]['message']);
+        $this->assertSame(['label' => 'dropped', 'message' => '2 rows dropped'], $envelope['panel'][1]);
+    }
+
     public function testStartAndFinishRecordARenderWithNoEventsManager(): void
     {
         $collector = new ViewCollector();
