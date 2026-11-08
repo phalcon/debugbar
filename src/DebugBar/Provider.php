@@ -144,6 +144,12 @@ class Provider
         return $config instanceof ConfigInterface ? $config : null;
     }
 
+    /**
+     * Uses `get()`, not `getShared()`. `getShared()` stores the instance in the
+     * container, and `set()` does not clear it. A `request` service that the
+     * application registers after boot then does not reach the history, which
+     * gets the request later with `resolveSharedRequest()`.
+     */
     private function resolveRequest(?DiInterface $container): ?RequestInterface
     {
         if (null === $container || !$container->has('request')) {
