@@ -13,8 +13,11 @@ declare(strict_types=1);
 
 namespace Phalcon\DebugBar\Logger;
 
+use Phalcon\DebugBar\Collector\ExceptionsCollector;
+use Phalcon\DebugBar\Contracts\ExceptionAware;
 use Phalcon\DebugBar\Debug;
 use Phalcon\Logger\Adapter\AbstractAdapter;
+use Phalcon\Logger\Enum;
 use Phalcon\Logger\Item;
 use Throwable;
 
@@ -25,6 +28,10 @@ use Throwable;
  * `Adapter`: an MVC application that logs an exception would record it two times.
  * The adapter reads the active bar each time the logger writes, so you can create
  * it before the bar boots.
+ *
+ * Only an item at error level or higher sets the last exception, which the ADR
+ * debug page shows. An item at a lower level is an exception that the
+ * application handled: it shows only in the Exceptions panel.
  */
 final class ExceptionAdapter extends AbstractAdapter
 {
@@ -36,8 +43,22 @@ final class ExceptionAdapter extends AbstractAdapter
     public function process(Item $item): void
     {
         $exception = $item->getContext()['exception'] ?? null;
-        if ($exception instanceof Throwable) {
-            Debug::getBar()?->addException($exception);
+        $bar       = Debug::getBar();
+        if (!$exception instanceof Throwable || null === $bar) {
+            return;
+        }
+
+        if ($item->getLevel() <= Enum::ERROR) {
+            $bar->addException($exception);
+
+            return;
+        }
+
+        $collector = $bar->hasCollector(ExceptionsCollector::NAME)
+            ? $bar->getCollector(ExceptionsCollector::NAME)
+            : null;
+        if ($collector instanceof ExceptionAware) {
+            $collector->addThrowable($exception);
         }
     }
 }
