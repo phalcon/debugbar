@@ -21,6 +21,15 @@
     color: #e2e2ef;
 }
 
+/* Host rules must not change the buttons of the bar. A rule of the bar with a
+   class has a higher specificity, so it still sets its own values. */
+#phalcon-debugbar button {
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    text-transform: none;
+}
+
 /* Collapsed: shrink to the bottom-right handle so the host page's own
    bottom-left controls (logout, etc.) are never covered. */
 #phalcon-debugbar.is-collapsed {
@@ -309,6 +318,16 @@
     box-shadow: inset 3px 0 #7c3aed;
 }
 
+#phalcon-debugbar .phalcon-debugbar-history-request-error {
+    display: none;
+    grid-column: 1 / -1;
+    color: #ff6b81;
+}
+
+#phalcon-debugbar .phalcon-debugbar-history-request.is-error .phalcon-debugbar-history-request-error {
+    display: block;
+}
+
 #phalcon-debugbar .phalcon-debugbar-history-method {
     color: #a78bfa;
     font-weight: 700;
@@ -353,6 +372,16 @@
     #phalcon-debugbar .phalcon-debugbar-history-time {
         display: none;
     }
+}
+
+/* Host rules must not set the colors of the panel tables and code blocks. */
+#phalcon-debugbar table,
+#phalcon-debugbar tr,
+#phalcon-debugbar th,
+#phalcon-debugbar td,
+#phalcon-debugbar pre {
+    background: transparent;
+    color: inherit;
 }
 
 #phalcon-debugbar table {

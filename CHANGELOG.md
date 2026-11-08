@@ -84,6 +84,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Show `true` and `false` for booleans in messages, show `[]`, `null` and the class name of an object in the grid, and time each query from its own start (0 when there is no start). [#99](https://github.com/phalcon/debugbar/issues/99)
 - Debug page: show the previous exceptions, fix the API links, read each file one time, drop the arguments from the `debugVar()` backtrace, match `\vendor\`, and end the line of a skipped `Dump` key. [#100](https://github.com/phalcon/debugbar/issues/100)
 - Debug page: copy on `http://` pages, show "Copy failed" when a copy fails, and encode the paths in the PhpStorm and VS Code links. [#101](https://github.com/phalcon/debugbar/issues/101)
+- Keep host CSS out of the bar tables, code blocks and buttons, stop history requests after 10 seconds, and show "Unable to load" in a history row that fails. [#102](https://github.com/phalcon/debugbar/issues/102)
 - Test HTML writes, the collapse state and `localStorage` errors in the JS tests, and keep every listener in the fake DOM. [#103](https://github.com/phalcon/debugbar/issues/103)
 
 ## [0.4.0](https://github.com/phalcon/debugbar/releases/tag/v0.4.0) (2026-07-14)

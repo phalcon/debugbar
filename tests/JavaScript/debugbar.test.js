@@ -458,6 +458,113 @@ test('request history restores a row after a detail failure', async function () 
     assert.equal(request.classList.contains('is-selected'), false);
 });
 
+test('a history request that does not end times out after 10 seconds', async function () {
+    var timers = [];
+    global.document = dom.createDocument();
+    global.window = {
+        AbortController: AbortController,
+        setTimeout: function (callback, delay) {
+            timers.push({callback: callback, delay: delay});
+            return timers.length;
+        },
+        clearTimeout: function () {},
+        fetch: function (url, options) {
+            return new Promise(function (resolve, reject) {
+                if (options.signal) {
+                    options.signal.addEventListener('abort', function () {
+                        reject(new Error('aborted'));
+                    });
+                }
+            });
+        }
+    };
+    var mount = new dom.TestElement('div');
+
+    renderHistoryBrowser(mount, historyOptions());
+    await dom.flushPromises();
+
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-history-action').disabled, true);
+    assert.deepEqual(timers.map(function (timer) {
+        return timer.delay;
+    }), [10000]);
+
+    timers[0].callback();
+    await dom.flushPromises();
+
+    assert.equal(
+        dom.findByClass(mount, 'phalcon-debugbar-history-error').textContent,
+        'Unable to load request history'
+    );
+    assert.equal(dom.findByClass(mount, 'phalcon-debugbar-history-action').disabled, false);
+});
+
+test('a history request that ends clears its timeout', async function () {
+    var results = [response({requests: []}), errorResponse(503)];
+    var cleared = [];
+    global.document = dom.createDocument();
+
+    for (var index = 0; index < results.length; index++) {
+        global.window = {
+            AbortController: AbortController,
+            setTimeout: function () {
+                return 'timer';
+            },
+            clearTimeout: function (id) {
+                cleared.push(id);
+            },
+            fetch: function () {
+                return Promise.resolve(results[index]);
+            }
+        };
+        renderHistoryBrowser(new dom.TestElement('div'), historyOptions());
+        await dom.flushPromises();
+    }
+
+    assert.deepEqual(cleared, ['timer', 'timer']);
+});
+
+test('a detail failure shows "Unable to load" in its row until the next click', async function () {
+    var details = [];
+    global.document = dom.createDocument();
+    global.window = {
+        fetch: function (url) {
+            if (url.includes('?id=first')) {
+                var detail = deferred();
+                details.push(detail);
+
+                return detail.promise;
+            }
+
+            return Promise.resolve(response({
+                requests: [{id: 'first', method: 'GET', uri: '/first', status: 200}]
+            }));
+        }
+    };
+    var mount = new dom.TestElement('div');
+
+    renderHistoryBrowser(mount, historyOptions());
+    await dom.flushPromises();
+
+    var row = dom.findByClass(mount, 'phalcon-debugbar-history-request');
+    row.click();
+    details[0].resolve(errorResponse(404));
+    await dom.flushPromises();
+
+    assert.equal(row.classList.contains('is-error'), true);
+    assert.equal(
+        dom.findByClass(row, 'phalcon-debugbar-history-request-error').textContent,
+        'Unable to load'
+    );
+
+    row.click();
+    assert.equal(row.classList.contains('is-error'), false);
+    details[1].reject(new Error('network'));
+    await dom.flushPromises();
+
+    assert.equal(row.classList.contains('is-error'), true);
+    assert.equal(row.querySelectorAll('.phalcon-debugbar-history-request-error').length, 1);
+});
+
 test('request history restores a superseded row after its detail fails', async function () {
     var failFirst = null;
     global.document = dom.createDocument();

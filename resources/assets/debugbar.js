@@ -18,6 +18,7 @@
 
     var STORAGE_KEY = 'phalcon-debugbar-collapsed';
     var HISTORY_VERSION = 1;
+    var REQUEST_TIMEOUT_MS = 10000;
 
     function ready(fn) {
         if (document.readyState !== 'loading') {
@@ -369,12 +370,34 @@
         options.headers = options.headers || {};
         options.headers.Accept = 'application/json';
 
+        // A request that does not end must not keep the history controls disabled.
+        var timer = null;
+        if (window.AbortController && window.setTimeout && window.clearTimeout) {
+            var controller = new window.AbortController();
+            options.signal = controller.signal;
+            timer = window.setTimeout(function () {
+                controller.abort();
+            }, REQUEST_TIMEOUT_MS);
+        }
+
+        function stopTimer() {
+            if (timer !== null) {
+                window.clearTimeout(timer);
+            }
+        }
+
         return window.fetch(url, options).then(function (response) {
             if (!response.ok) {
                 throw new Error('HTTP ' + response.status);
             }
 
             return response.json();
+        }).then(function (data) {
+            stopTimer();
+            return data;
+        }, function (error) {
+            stopTimer();
+            throw error;
         });
     }
 
@@ -505,6 +528,7 @@
                     button.appendChild(el('span', 'phalcon-debugbar-history-status', scalar(request.status)));
                     button.appendChild(el('time', 'phalcon-debugbar-history-time', scalar(request.requested_at)));
 
+                    var rowError = null;
                     button.addEventListener('click', function () {
                         var selection = requestGuard.startDetail();
                         if (selection === null) {
@@ -512,6 +536,7 @@
                         }
 
                         button.disabled = true;
+                        button.classList.remove('is-error');
                         loadJson(historyUrl(url, id)).then(function (detail) {
                             if (!requestGuard.isDetailCurrent(selection)) {
                                 button.disabled = false;
@@ -536,6 +561,11 @@
                             button.disabled = false;
                         }).catch(function () {
                             button.disabled = false;
+                            button.classList.add('is-error');
+                            if (rowError === null) {
+                                rowError = el('span', 'phalcon-debugbar-history-request-error', 'Unable to load');
+                                button.appendChild(rowError);
+                            }
                         });
                     });
 
