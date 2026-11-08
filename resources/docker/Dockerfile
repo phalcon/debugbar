@@ -6,6 +6,9 @@ FROM php:${PHP_VERSION}-cli AS base
 ARG PHP_VERSION=8.5
 ARG PHALCON_VARIANT=v5
 ARG PHALCON_V5_CONSTRAINT="^5.0"
+# PIE release and the sha256 of its pie.phar. Update both for a new release.
+ARG PIE_VERSION=1.5.5
+ARG PIE_SHA256=2ca0dff6868f1b53c095625674deef38ac698588e0a25e4321cd834a5b7553bc
 ARG UID=1000
 ARG GID=1000
 ARG USER=debugbar
@@ -35,7 +38,8 @@ RUN <<EOT
 set -eux
 apt-get update -y
 apt-get install -yq --no-install-recommends ${PHPIZE_DEPS} libtool
-curl -fsSL https://github.com/php/pie/releases/latest/download/pie.phar -o /usr/local/bin/pie
+curl -fsSL "https://github.com/php/pie/releases/download/${PIE_VERSION}/pie.phar" -o /usr/local/bin/pie
+echo "${PIE_SHA256}  /usr/local/bin/pie" | sha256sum --check --strict
 chmod +x /usr/local/bin/pie
 pie install --no-interaction pecl/pcov
 # Phalcon v5 C extension (v5 variant only; v6 uses the phalcon/phalcon composer package)
