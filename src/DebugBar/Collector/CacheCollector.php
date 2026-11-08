@@ -25,6 +25,8 @@ use function count;
  */
 final class CacheCollector extends AbstractCollector
 {
+    use LimitsRows;
+
     public const NAME = 'cache';
 
     protected string $label = 'Cache';
@@ -36,8 +38,16 @@ final class CacheCollector extends AbstractCollector
      */
     private array $operations = [];
 
+    public function __construct(private readonly int $maxRows = self::DEFAULT_MAX_ROWS)
+    {
+    }
+
     public function addOperation(string $operation, string $key): void
     {
+        if (!$this->acceptsRow(count($this->operations))) {
+            return;
+        }
+
         $this->operations[] = [
             'label'   => $operation,
             'message' => $key,
@@ -49,9 +59,14 @@ final class CacheCollector extends AbstractCollector
      */
     public function collect(): array
     {
+        $rows = $this->operations;
+        if (0 < $this->droppedRows) {
+            $rows[] = $this->droppedRow();
+        }
+
         return [
-            'panel' => $this->operations,
-            'badge' => count($this->operations),
+            'panel' => $rows,
+            'badge' => count($this->operations) + $this->droppedRows,
         ];
     }
 }

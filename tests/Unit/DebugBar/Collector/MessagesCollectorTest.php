@@ -44,6 +44,26 @@ final class MessagesCollectorTest extends AbstractUnitTestCase
         $this->assertPanelContract($collector);
     }
 
+    public function testRowsAboveTheLimitAreDropped(): void
+    {
+        $collector = new MessagesCollector(1);
+
+        $collector->addMessage('first', 'info');
+        $collector->addMessage('second', 'info');
+        $collector->addMessage('third', 'error');
+
+        $envelope = $collector->collect();
+
+        $this->assertSame(3, $envelope['badge']);
+        $this->assertSame(
+            [
+                ['label' => 'info', 'message' => 'first'],
+                ['label' => 'dropped', 'message' => '2 rows dropped'],
+            ],
+            $envelope['panel']
+        );
+    }
+
     public function testStringifiesScalarMessages(): void
     {
         $collector = new MessagesCollector();

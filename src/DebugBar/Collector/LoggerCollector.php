@@ -40,6 +40,7 @@ use const JSON_PRETTY_PRINT;
 final class LoggerCollector extends AbstractCollector implements LoggerAware
 {
     use EncodesJson;
+    use LimitsRows;
 
     public const NAME = 'logger';
 
@@ -52,8 +53,10 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
      */
     private array $logs = [];
 
-    public function __construct(private readonly Redactor $redactor)
-    {
+    public function __construct(
+        private readonly Redactor $redactor,
+        private readonly int $maxRows = self::DEFAULT_MAX_ROWS
+    ) {
     }
 
     /**
@@ -61,6 +64,10 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
      */
     public function addLog(string $message, string $level, array $context = []): void
     {
+        if (!$this->acceptsRow(count($this->logs))) {
+            return;
+        }
+
         $this->logs[] = [
             'label'   => $level,
             'message' => $message,
@@ -73,9 +80,14 @@ final class LoggerCollector extends AbstractCollector implements LoggerAware
      */
     public function collect(): array
     {
+        $rows = $this->logs;
+        if (0 < $this->droppedRows) {
+            $rows[] = $this->droppedRow() + ['context' => ''];
+        }
+
         return [
-            'panel' => $this->logs,
-            'badge' => count($this->logs),
+            'panel' => $rows,
+            'badge' => count($this->logs) + $this->droppedRows,
         ];
     }
 

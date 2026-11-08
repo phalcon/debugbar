@@ -31,6 +31,7 @@ use function is_string;
 final class MessagesCollector extends AbstractCollector implements MessageAware
 {
     use EncodesJson;
+    use LimitsRows;
 
     public const NAME = 'messages';
 
@@ -43,8 +44,16 @@ final class MessagesCollector extends AbstractCollector implements MessageAware
      */
     private array $messages = [];
 
+    public function __construct(private readonly int $maxRows = self::DEFAULT_MAX_ROWS)
+    {
+    }
+
     public function addMessage(mixed $message, string $label): void
     {
+        if (!$this->acceptsRow(count($this->messages))) {
+            return;
+        }
+
         $this->messages[] = [
             'label'   => $label,
             'message' => $this->valueToString($message),
@@ -56,9 +65,14 @@ final class MessagesCollector extends AbstractCollector implements MessageAware
      */
     public function collect(): array
     {
+        $rows = $this->messages;
+        if (0 < $this->droppedRows) {
+            $rows[] = $this->droppedRow();
+        }
+
         return [
-            'panel' => $this->messages,
-            'badge' => count($this->messages),
+            'panel' => $rows,
+            'badge' => count($this->messages) + $this->droppedRows,
         ];
     }
 

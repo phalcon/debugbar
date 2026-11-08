@@ -42,6 +42,25 @@ final class ExceptionsCollectorTest extends AbstractUnitTestCase
         $this->assertSame('CannotUseInProduction', $envelope['panel'][0]['label']);
     }
 
+    public function testRowsAboveTheLimitAreDropped(): void
+    {
+        $collector = new ExceptionsCollector(1);
+
+        $collector->addThrowable(new RuntimeException('first'));
+        $collector->addThrowable(new RuntimeException('second'));
+        $collector->addThrowable(new RuntimeException('third'));
+
+        $envelope = $collector->collect();
+
+        $this->assertSame(3, $envelope['badge']);
+        $this->assertCount(2, $envelope['panel']);
+        $this->assertStringStartsWith('first (', $envelope['panel'][0]['message']);
+        $this->assertSame(
+            ['label' => 'dropped', 'message' => '2 rows dropped', 'trace' => ''],
+            $envelope['panel'][1]
+        );
+    }
+
     public function testThrowableMessageFormat(): void
     {
         $collector = new ExceptionsCollector();

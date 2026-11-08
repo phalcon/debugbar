@@ -147,4 +147,24 @@ final class LoggerCollectorTest extends AbstractUnitTestCase
         $this->assertSame('logs', $collector->getWidget()['panel']);
         $this->assertPanelContract($collector);
     }
+
+    public function testRowsAboveTheLimitAreDropped(): void
+    {
+        $collector = new LoggerCollector(new Redactor(), 1);
+
+        $collector->addLog('first', 'info');
+        $collector->addLog('second', 'info');
+        $collector->addLog('third', 'error');
+
+        $envelope = $collector->collect();
+
+        $this->assertSame(3, $envelope['badge']);
+        $this->assertSame(
+            [
+                ['label' => 'info', 'message' => 'first', 'context' => ''],
+                ['label' => 'dropped', 'message' => '2 rows dropped', 'context' => ''],
+            ],
+            $envelope['panel']
+        );
+    }
 }

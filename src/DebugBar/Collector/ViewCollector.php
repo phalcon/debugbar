@@ -31,6 +31,7 @@ use function hrtime;
 final class ViewCollector extends AbstractCollector
 {
     use FormatsDuration;
+    use LimitsRows;
 
     public const NAME = 'view';
 
@@ -48,6 +49,10 @@ final class ViewCollector extends AbstractCollector
      */
     private array $rendered = [];
 
+    public function __construct(private readonly int $maxRows = self::DEFAULT_MAX_ROWS)
+    {
+    }
+
     /**
      * @return list_envelope
      */
@@ -61,9 +66,13 @@ final class ViewCollector extends AbstractCollector
             ];
         }
 
+        if (0 < $this->droppedRows) {
+            $rows[] = $this->droppedRow();
+        }
+
         return [
             'panel' => $rows,
-            'badge' => count($this->rendered),
+            'badge' => count($this->rendered) + $this->droppedRows,
         ];
     }
 
@@ -74,7 +83,7 @@ final class ViewCollector extends AbstractCollector
     public function finishRender(): void
     {
         $entry = array_pop($this->pending);
-        if (null === $entry) {
+        if (null === $entry || !$this->acceptsRow(count($this->rendered))) {
             return;
         }
 

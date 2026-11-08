@@ -75,6 +75,7 @@ All notable changes to `phalcon/debugbar` are documented here. The format is bas
 - Stop the request control from showing `[object Object]` when there is no request panel. [#88](https://github.com/phalcon/debugbar/issues/88)
 - Enable a history row again when its request fails after another row was clicked. [#89](https://github.com/phalcon/debugbar/issues/89)
 - Use the same JSON flags in each panel, show a `Throwable` in a log context, and keep the context when one value cannot be encoded. [#91](https://github.com/phalcon/debugbar/issues/91)
+- Keep at most `max_rows` rows (default 1000) in the cache, database, exceptions, logger, messages and view collectors, and show the number of dropped rows. [#92](https://github.com/phalcon/debugbar/issues/92)
 - Redact the ADR request attributes in the route panel. [#93](https://github.com/phalcon/debugbar/issues/93)
 - Use the name constants of the collectors and the history controller, and inject the `Injector` into the ADR debug page listener. [#94](https://github.com/phalcon/debugbar/issues/94)
 - Accept only `true` from the access callback, and leave the response without a bar when the callback or a collector fails. [#96](https://github.com/phalcon/debugbar/issues/96)

@@ -76,6 +76,7 @@ namespace Phalcon\DebugBar;
  *     debug_page?: bool|\Phalcon\Debug,
  *     headers?: bool,
  *     history?: history_config,
+ *     max_rows?: int,
  *     redact?: array{mask?: list<string>, hidden?: list<string>, unmask?: list<string>}
  * }
  */

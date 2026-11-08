@@ -27,6 +27,11 @@ use Phalcon\DebugBar\DebugBarTypes;
  */
 abstract class AbstractCollector implements Renderable
 {
+    /**
+     * Default row limit of the collectors that use `LimitsRows`
+     */
+    public const DEFAULT_MAX_ROWS = 1000;
+
     public const NAME = '';
 
     /**
