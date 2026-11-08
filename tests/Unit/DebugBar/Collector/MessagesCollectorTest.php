@@ -69,10 +69,12 @@ final class MessagesCollectorTest extends AbstractUnitTestCase
         $collector = new MessagesCollector();
         $collector->addMessage(42, 'info');
         $collector->addMessage(true, 'debug');
+        $collector->addMessage(false, 'debug');
 
         $panel = $collector->collect()['panel'];
 
         $this->assertSame('42', $panel[0]['message']);
-        $this->assertSame('1', $panel[1]['message']);
+        $this->assertSame('true', $panel[1]['message']);
+        $this->assertSame('false', $panel[2]['message']);
     }
 }

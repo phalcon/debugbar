@@ -15,6 +15,7 @@ namespace Phalcon\DebugBar\Collector;
 
 use Phalcon\DebugBar\DebugBarTypes;
 
+use function get_debug_type;
 use function is_array;
 use function is_bool;
 use function is_float;
@@ -24,6 +25,8 @@ use function is_string;
 /**
  * Flattens a nested (already-redacted) array into the flat `array<string, scalar>`
  * a grid panel expects, joining nested keys with dots and stringifying leaves.
+ * An empty array shows as `[]`. A leaf that is not a scalar shows its type:
+ * `null`, or the class name of an object.
  * Shared by the snapshot collectors that render a grid.
  *
  * @phpstan-import-type grid_panel from DebugBarTypes
@@ -40,6 +43,12 @@ trait FlattensToGrid
         $result = [];
         foreach ($data as $key => $value) {
             $name = ('' === $prefix) ? (string) $key : $prefix . '.' . $key;
+
+            if ([] === $value) {
+                $result[$name] = '[]';
+
+                continue;
+            }
 
             if (is_array($value)) {
                 foreach ($this->flatten($value, $name) as $nestedKey => $nestedValue) {
@@ -69,6 +78,6 @@ trait FlattensToGrid
             return (string) $value;
         }
 
-        return '';
+        return get_debug_type($value);
     }
 }

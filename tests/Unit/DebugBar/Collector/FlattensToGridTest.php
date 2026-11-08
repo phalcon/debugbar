@@ -15,6 +15,7 @@ namespace Phalcon\Tests\Unit\DebugBar\Collector;
 
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
 use Phalcon\Tests\Support\DebugBar\Fixtures\GridFixture;
+use stdClass;
 
 final class FlattensToGridTest extends AbstractUnitTestCase
 {
@@ -29,6 +30,7 @@ final class FlattensToGridTest extends AbstractUnitTestCase
             ],
             'flag'  => false,
             'empty' => null,
+            'list'  => [],
         ]);
 
         $this->assertSame(
@@ -38,13 +40,14 @@ final class FlattensToGridTest extends AbstractUnitTestCase
                 'nested.ok'    => 'true',
                 'nested.ratio' => '1.5',
                 'flag'         => 'false',
-                'empty'        => '',
+                'empty'        => 'null',
+                'list'         => '[]',
             ],
             $result,
         );
     }
 
-    public function testUnsupportedLeafBecomesEmptyString(): void
+    public function testObjectLeafShowsItsClassName(): void
     {
         $stringable = new class () {
             public function __toString(): string
@@ -53,8 +56,8 @@ final class FlattensToGridTest extends AbstractUnitTestCase
             }
         };
 
-        $result = (new GridFixture())->toGrid(['object' => $stringable]);
+        $result = (new GridFixture())->toGrid(['object' => new stdClass(), 'stringable' => $stringable]);
 
-        $this->assertSame(['object' => ''], $result);
+        $this->assertSame(['object' => 'stdClass', 'stringable' => 'class@anonymous'], $result);
     }
 }
