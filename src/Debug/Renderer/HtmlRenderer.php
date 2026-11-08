@@ -41,6 +41,8 @@ use const PHP_VERSION;
  * in ValueDumper. All styling and interactivity (theme, tabs, syntax
  * highlighting, copy/editor links) are provided by the external
  * debug.css / debug.js assets.
+ *
+ * @phpstan-import-type previous_exception from ExceptionReport
  */
 class HtmlRenderer implements Renderer
 {
@@ -122,6 +124,7 @@ class HtmlRenderer implements Renderer
                 'file'           => $this->values->escape($report->getFile()),
                 'line'           => (string)$report->getLine(),
                 'phpVersion'     => PHP_VERSION,
+                'previous'       => $this->renderPreviousExceptions($report->getPreviousExceptions()),
             ]
         );
 
@@ -155,10 +158,13 @@ class HtmlRenderer implements Renderer
 
     /**
      * Frames whose file lives outside a vendor directory are application code.
+     * The check also finds the Windows form, `\\vendor\\`.
      */
     private function isApp(string | null $file): bool
     {
-        return null !== $file && false === strpos($file, '/vendor/');
+        return null !== $file
+            && false === strpos($file, '/vendor/')
+            && false === strpos($file, '\\vendor\\');
     }
 
     /**
@@ -240,6 +246,27 @@ class HtmlRenderer implements Renderer
                 ]
             )
             . $this->getTemplate('panelClose');
+    }
+
+    /**
+     * @param list<previous_exception> $previousExceptions
+     */
+    private function renderPreviousExceptions(array $previousExceptions): string
+    {
+        $html = '';
+        foreach ($previousExceptions as $previous) {
+            $html .= $this->toInterpolate(
+                $this->getTemplate('previousException'),
+                [
+                    'className'      => $this->values->escape($previous['className']),
+                    'escapedMessage' => $this->values->escape($previous['message']),
+                    'file'           => $this->values->escape($previous['file']),
+                    'line'           => (string)$previous['line'],
+                ]
+            );
+        }
+
+        return $html;
     }
 
     private function renderSignature(BacktraceItem $item): string

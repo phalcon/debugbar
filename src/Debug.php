@@ -27,6 +27,7 @@ use Throwable;
 use function htmlspecialchars;
 use function mb_strtolower;
 
+use const DEBUG_BACKTRACE_IGNORE_ARGS;
 use const ENT_QUOTES;
 use const ENT_SUBSTITUTE;
 
@@ -106,7 +107,7 @@ class Debug
     {
         $this->data[] = [
             $variable,
-            debug_backtrace(),
+            debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS),
             time(),
         ];
 
