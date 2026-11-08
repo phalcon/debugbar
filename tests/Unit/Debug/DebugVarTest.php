@@ -15,9 +15,25 @@ namespace Phalcon\Tests\Unit\Debug;
 
 use Phalcon\Debug;
 use Phalcon\Talon\PHPUnit\AbstractUnitTestCase;
+use ReflectionProperty;
 
 final class DebugVarTest extends AbstractUnitTestCase
 {
+    public function testDebugVarStoresTheBacktraceWithNoArgumentsOrObjects(): void
+    {
+        $debug = new Debug();
+        $debug->debugVar('test variable');
+
+        $property = new ReflectionProperty(Debug::class, 'data');
+        /** @var list<array{0: mixed, 1: list<array<string, mixed>>, 2: int}> $data */
+        $data  = $property->getValue($debug);
+        $frame = $data[0][1][0];
+
+        $this->assertSame('debugVar', $frame['function']);
+        $this->assertArrayNotHasKey('args', $frame);
+        $this->assertArrayNotHasKey('object', $frame);
+    }
+
     /**
      * @author Phalcon Team <team@phalcon.io>
      * @since  2020-02-04

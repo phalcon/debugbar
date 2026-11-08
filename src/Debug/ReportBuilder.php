@@ -18,6 +18,7 @@ use Phalcon\Debug\Report\CodeFragment;
 use Phalcon\Debug\Report\ExceptionReport;
 use Phalcon\Debug\Report\ReportOptions;
 use Phalcon\Debug\Report\Superglobals;
+use Phalcon\Support\Version;
 use Phalcon\Traits\Php\InfoTrait;
 use Phalcon\Traits\Support\Helper\Arr\GetTrait;
 use ReflectionClass;
@@ -50,6 +51,13 @@ class ReportBuilder
     use InfoTrait;
 
     /**
+     * The lines of each file that the current report read
+     *
+     * @var array<string, list<string>>
+     */
+    private array $fileLines = [];
+
+    /**
      * @throws ReflectionException
      */
     public function build(
@@ -57,7 +65,8 @@ class ReportBuilder
         ReportOptions $options,
         Superglobals $superglobals
     ): ExceptionReport {
-        $showBackTrace = $options->getShowBackTrace();
+        $this->fileLines = [];
+        $showBackTrace   = $options->getShowBackTrace();
 
         $report = new ExceptionReport(
             get_class($exception),
@@ -67,6 +76,20 @@ class ReportBuilder
             $showBackTrace,
             $options->getUri()
         );
+
+        $previousExceptions = [];
+        $previous           = $exception->getPrevious();
+        while (null !== $previous) {
+            $previousExceptions[] = [
+                'className' => get_class($previous),
+                'message'   => $previous->getMessage(),
+                'file'      => $previous->getFile(),
+                'line'      => $previous->getLine(),
+            ];
+            $previous = $previous->getPrevious();
+        }
+
+        $report->setPreviousExceptions($previousExceptions);
 
         if (true !== $showBackTrace) {
             return $report;
@@ -105,11 +128,7 @@ class ReportBuilder
 
     private function buildFragment(string $file, int $line, bool $showFileFragment): CodeFragment
     {
-        $lines = (is_file($file) && is_readable($file)) ? file($file) : false;
-        if (false === $lines) {
-            $lines = [];
-        }
-
+        $lines       = $this->readLines($file);
         $numberLines = count($lines);
 
         if (true === $showFileFragment) {
@@ -208,6 +227,24 @@ class ReportBuilder
     }
 
     /**
+     * Reads each file one time for each report.
+     *
+     * @return list<string>
+     */
+    private function readLines(string $file): array
+    {
+        if (!isset($this->fileLines[$file])) {
+            $lines                  = (is_file($file) && is_readable($file)) ? file($file) : false;
+            $this->fileLines[$file] = (false === $lines) ? [] : $lines;
+        }
+
+        return $this->fileLines[$file];
+    }
+
+    /**
+     * The classes of this package (`Phalcon\Debug`, `Phalcon\DebugBar`) have no
+     * API page, so they get no link.
+     *
      * @param class-string $className
      *
      * @throws ReflectionException
@@ -216,8 +253,16 @@ class ReportBuilder
     {
         if (str_starts_with($className, 'Phalcon\\')) {
             $parts = explode('\\', $className);
+            if ('Debug' === $parts[1] || 'DebugBar' === $parts[1]) {
+                return null;
+            }
 
-            return 'https://docs.phalcon.io/6.0/en/api/' . $parts[0] . '_' . $parts[1];
+            $version = new Version();
+
+            return 'https://docs.phalcon.io/'
+                . $version->getPart(Version::VERSION_MAJOR) . '.'
+                . $version->getPart(Version::VERSION_MEDIUM)
+                . '/api/' . mb_strtolower($parts[0] . '_' . $parts[1]) . '/';
         }
 
         $reflection = new ReflectionClass($className);

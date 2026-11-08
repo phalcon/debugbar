@@ -16,6 +16,8 @@ namespace Phalcon\Debug\Report;
 /**
  * Carries all data collected for an exception, ready to be rendered. Holds no
  * presentation logic.
+ *
+ * @phpstan-type previous_exception array{className: string, message: string, file: string, line: int}
  */
 final class ExceptionReport
 {
@@ -32,6 +34,11 @@ final class ExceptionReport
     private int $memoryUsage = 0;
 
     private int $peakMemoryUsage = 0;
+
+    /**
+     * @var list<previous_exception>
+     */
+    private array $previousExceptions = [];
 
     /**
      * @var array<array-key, mixed>
@@ -105,6 +112,16 @@ final class ExceptionReport
     }
 
     /**
+     * The previous exceptions of the exception, from the nearest to the first.
+     *
+     * @return list<previous_exception>
+     */
+    public function getPreviousExceptions(): array
+    {
+        return $this->previousExceptions;
+    }
+
+    /**
      * @return array<array-key, mixed>
      */
     public function getRequest(): array
@@ -173,6 +190,16 @@ final class ExceptionReport
     public function setPeakMemoryUsage(int $peakMemoryUsage): static
     {
         $this->peakMemoryUsage = $peakMemoryUsage;
+
+        return $this;
+    }
+
+    /**
+     * @param list<previous_exception> $previousExceptions
+     */
+    public function setPreviousExceptions(array $previousExceptions): static
+    {
+        $this->previousExceptions = $previousExceptions;
 
         return $this;
     }

@@ -285,6 +285,13 @@ final class OutputBranchesTest extends AbstractUnitTestCase
         $this->assertStringContainsString("\n    [skipped]\n", $actual);
     }
 
+    public function testSkippedKeyEndsItsLine(): void
+    {
+        $actual = (new Dump())->variable(['config' => 1, 'other' => 2], 'config');
+
+        $this->assertStringContainsString("=> \n  [", $actual);
+    }
+
     public function testSkipsDiInterface(): void
     {
         $actual = (new Dump())->variable(new Di());

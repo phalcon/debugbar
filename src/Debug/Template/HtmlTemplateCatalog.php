@@ -60,8 +60,13 @@ final class HtmlTemplateCatalog implements TemplateCatalog
         <div class='meta'>
             <span class='item'><code>%file%</code> : <code>%line%</code></span>
             <span class='sep'>|</span><span class='item'>PHP <code>%phpVersion%</code></span>
-        </div>
+        </div>%previous%
     </div>",
+            'previousException' => "
+        <div class='meta'>
+            <span class='item'>Previous: <code>%className%</code> %escapedMessage%</span>
+            <span class='sep'>|</span><span class='item'><code>%file%</code> : <code>%line%</code></span>
+        </div>",
             'tabs'           => "
     <div class='tabs' role='tablist'>
         <button class='tab is-active' data-tab='backtrace'>Backtrace "
