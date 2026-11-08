@@ -28,6 +28,9 @@ EOT
 # Composer
 COPY --from=composer/composer:2 /usr/bin/composer /usr/bin/composer
 
+# Node.js for the JavaScript tests (`node --test`), the same major version as CI
+COPY --from=node:26-slim /usr/local/bin/node /usr/local/bin/node
+
 RUN <<EOT
 set -eux
 apt-get update -y
