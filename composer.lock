@@ -783,16 +783,16 @@
         },
         {
             "name": "friendsofphp/php-cs-fixer",
-            "version": "v3.95.29",
+            "version": "v3.95.30",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHP-CS-Fixer/PHP-CS-Fixer.git",
-                "reference": "60e424d3e54b15b0174924fb123783aae0de7b0c"
+                "reference": "e85cafc4d861c122839d5409eda3325ac0ec0300"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHP-CS-Fixer/PHP-CS-Fixer/zipball/60e424d3e54b15b0174924fb123783aae0de7b0c",
-                "reference": "60e424d3e54b15b0174924fb123783aae0de7b0c",
+                "url": "https://api.github.com/repos/PHP-CS-Fixer/PHP-CS-Fixer/zipball/e85cafc4d861c122839d5409eda3325ac0ec0300",
+                "reference": "e85cafc4d861c122839d5409eda3325ac0ec0300",
                 "shasum": ""
             },
             "require": {
@@ -875,7 +875,7 @@
             ],
             "support": {
                 "issues": "https://github.com/PHP-CS-Fixer/PHP-CS-Fixer/issues",
-                "source": "https://github.com/PHP-CS-Fixer/PHP-CS-Fixer/tree/v3.95.29"
+                "source": "https://github.com/PHP-CS-Fixer/PHP-CS-Fixer/tree/v3.95.30"
             },
             "funding": [
                 {
@@ -883,8 +883,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-06T16:25:42+00:00",
-            "published-time": "2026-11-06T16:25:52+00:00"
+            "time": "2026-11-09T14:32:19+00:00",
+            "published-time": "2026-11-09T14:32:30+00:00"
         },
         {
             "name": "masterminds/html5",
@@ -1958,16 +1958,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "10.5.66",
+            "version": "10.5.67",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "747c9889613d0b3ffa08b74272e50ed3b8fa6d72"
+                "reference": "1f3e67dd433817bddfc64afab63977cc4b011374"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/747c9889613d0b3ffa08b74272e50ed3b8fa6d72",
-                "reference": "747c9889613d0b3ffa08b74272e50ed3b8fa6d72",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/1f3e67dd433817bddfc64afab63977cc4b011374",
+                "reference": "1f3e67dd433817bddfc64afab63977cc4b011374",
                 "shasum": ""
             },
             "require": {
@@ -2039,7 +2039,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/phpunit/issues",
                 "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-                "source": "https://github.com/sebastianbergmann/phpunit/tree/10.5.66"
+                "source": "https://github.com/sebastianbergmann/phpunit/tree/10.5.67"
             },
             "funding": [
                 {
@@ -2047,8 +2047,8 @@
                     "type": "other"
                 }
             ],
-            "time": "2026-10-05T05:46:26+00:00",
-            "published-time": "2026-10-05T05:47:29+00:00"
+            "time": "2026-11-13T11:07:03+00:00",
+            "published-time": "2026-11-13T11:07:54+00:00"
         },
         {
             "name": "psr/container",
